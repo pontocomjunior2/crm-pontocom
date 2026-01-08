@@ -23,7 +23,7 @@ import {
 import { orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 
-const OrderList = ({ onEditOrder, onAddNewOrder }) => {
+const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -103,6 +103,9 @@ const OrderList = ({ onEditOrder, onAddNewOrder }) => {
         try {
             await orderAPI.convert(id);
             fetchOrders();
+            if (onNavigate) {
+                onNavigate('faturamento');
+            }
         } catch (error) {
             console.error('Error converting order:', error);
             alert('Erro ao converter pedido: ' + error.message);
@@ -249,8 +252,8 @@ const OrderList = ({ onEditOrder, onAddNewOrder }) => {
                                     <tr key={order.id} className="hover:bg-white/[0.02] transition-colors group">
                                         <td className="pl-6 py-4 w-[50px]">
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                                    order.entregue ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                                        'bg-white/5 text-white/20 border-white/10'
+                                                order.entregue ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                                    'bg-white/5 text-white/20 border-white/10'
                                                 }`} title={getStatusLabel(order)}>
                                                 <CheckCircle2 size={18} />
                                             </div>

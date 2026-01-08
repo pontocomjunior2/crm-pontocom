@@ -25,6 +25,7 @@ import ClientForm from './components/ClientForm';
 import OrderForm from './components/OrderForm';
 import ClientList from './components/ClientList';
 import OrderList from './components/OrderList';
+import FaturamentoList from './components/FaturamentoList';
 import LocutorList from './components/LocutorList';
 import LocutorForm from './components/LocutorForm';
 import { dashboardAPI } from './services/api';
@@ -460,6 +461,7 @@ const App = () => {
                   key={refreshTrigger}
                   onEditOrder={handleEditOrder}
                   onAddNewOrder={handleAddNewOrder}
+                  onNavigate={setActiveTab}
                 />
               </div>
             )}
@@ -474,7 +476,16 @@ const App = () => {
               </div>
             )}
 
-            {activeTab !== 'dashboard' && activeTab !== 'clientes' && (
+            {activeTab === 'faturamento' && (
+              <div className="p-8 max-w-[1400px] mx-auto h-full flex flex-col">
+                <FaturamentoList
+                  key={refreshTrigger}
+                  onEditOrder={handleEditOrder}
+                />
+              </div>
+            )}
+
+            {activeTab !== 'dashboard' && activeTab !== 'clientes' && activeTab !== 'pedidos' && activeTab !== 'locutores' && activeTab !== 'faturamento' && (
               <div className="p-20 text-center animate-in fade-in duration-500">
                 <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6">
                   <Package size={40} className="text-[#444444]" />
