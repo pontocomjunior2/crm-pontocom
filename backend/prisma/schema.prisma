@@ -1,0 +1,78 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id               String   @id @default(uuid())
+  name             String
+  razaoSocial      String?
+  cnpj_cpf         String   @unique
+  dataCriacao      String?  // Armazenado como string para facilitar importação do XML
+  status           String   @default("ativado")
+  inscricaoEstadual String?
+  emailPrincipal   String?
+  telefonePrincipal String?
+  cep              String?
+  estado           String?
+  cidade           String?
+  endereco         String?
+  numero           String?
+  bairro           String?
+  complemento      String?
+  nomeContato      String?
+  emailContato     String?
+  dataAniversario  String?
+  observacoes      String?  @db.Text
+  orders           Order[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Order {
+  id               String   @id @default(uuid())
+  date             DateTime @default(now())
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id])
+  title            String   // Nome do áudio/arquivo
+  locutor          String
+  tipo             String   // OFF ou PRODUZIDO
+  cacheValor       Decimal  @db.Decimal(10, 2)
+  vendaValor       Decimal  @db.Decimal(10, 2)
+  comentarios      String?  @db.Text
+  faturado         Boolean  @default(false)
+  entregue         Boolean  @default(false)
+  
+  // Financeiro extra
+  precisaNF        Boolean  @default(false)
+  emiteBoleto      Boolean  @default(false)
+  dataFaturar      DateTime?
+  vencimento       DateTime?
+  pago             Boolean  @default(false)
+  statusEnvio      String   @default("PENDENTE") // PENDENTE, ENVIADO
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ADMIN
+  USER
+}

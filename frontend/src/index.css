@@ -1,0 +1,327 @@
+/* CSS imports MUST be at the top */
+@import "tailwindcss";
+@import "@fontsource/outfit/400.css";
+@import "@fontsource/outfit/600.css";
+@import "@fontsource/outfit/700.css";
+@import "@fontsource/inter/300.css";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+@theme {
+  /* Pontocom Audio Dark Theme - Brand Colors */
+  --color-bg-main: #0F0F0F;
+  --color-bg-secondary: #0A0A0A;
+  --color-bg-card: #161616;
+  --color-bg-card-hover: #1E1E1E;
+  --color-bg-elevated: #232323;
+
+  /* Orange Gradient - Primary Brand */
+  --color-accent-primary: #FF9500;
+  --color-accent-secondary: #FF5E3A;
+
+  /* Utility Colors */
+  --color-success: #03CC0B;
+  --color-info: #4063E6;
+  --color-warning: #FF9500;
+  --color-danger: #FF5E3A;
+
+  /* Text Colors */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #DDDDDD;
+  --color-text-muted: #999999;
+  --color-text-disabled: #666666;
+
+  /* Fonts */
+  --font-body: "Inter", sans-serif;
+  --font-display: "Outfit", sans-serif;
+}
+
+:root {
+  /* Legacy support */
+  --bg-page: #0F0F0F;
+  --bg-card: #161616;
+  --accent-primary: #FF9500;
+  --indicator-color: #FF9500;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-bg-main);
+  color: var(--color-text-secondary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Gradient Utilities */
+.gradient-primary {
+  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
+}
+
+.gradient-primary-hover {
+  background: linear-gradient(180deg, #FFa520 0%, #FF6E4A 100%);
+}
+
+.gradient-text {
+  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glassmorphism Effects */
+.glass-card {
+  background: rgba(22, 22, 22, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glass-sidebar {
+  background: rgba(22, 22, 22, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Sidebar Navigation */
+.sidebar-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-[13px] font-medium relative;
+  color: #999999;
+}
+
+.sidebar-item:hover {
+  background: rgba(255, 149, 0, 0.05);
+  color: #DDDDDD;
+}
+
+.sidebar-item.active {
+  background: rgba(255, 149, 0, 0.1);
+  color: #FF9500;
+  font-weight: 600;
+}
+
+.sidebar-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 60%;
+  width: 3px;
+  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px rgba(255, 149, 0, 0.5);
+}
+
+/* Card Styles */
+.card-dark {
+  @apply bg-[#161616] border border-white/5 rounded-2xl shadow-lg transition-all duration-300;
+}
+
+.card-dark:hover {
+  @apply bg-[#1E1E1E] border-white/10 shadow-xl;
+  transform: translateY(-2px);
+}
+
+.card-elevated {
+  @apply bg-[#1E1E1E] border border-white/10 rounded-2xl shadow-xl;
+}
+
+/* Status Badges */
+.badge-novo {
+  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);
+}
+
+.badge-producao {
+  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  background: #4063E6;
+  color: #FFFFFF;
+}
+
+.badge-entregue {
+  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  background: #03CC0B;
+  color: #FFFFFF;
+}
+
+.badge-faturado {
+  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  background: rgba(255, 255, 255, 0.1);
+  color: #DDDDDD;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.badge-pendente {
+  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
+  background: rgba(255, 149, 0, 0.2);
+  color: #FF9500;
+  border: 1px solid rgba(255, 149, 0, 0.3);
+}
+
+/* Button Styles */
+.btn-primary {
+  @apply px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-200;
+  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.3);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #FFa520 0%, #FF6E4A 100%);
+  box-shadow: 0 6px 20px rgba(255, 149, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  @apply px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-200;
+  background: rgba(255, 255, 255, 0.05);
+  color: #DDDDDD;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Search Input */
+.search-dark {
+  @apply bg-[#161616] border border-white/10 rounded-full px-5 py-3 w-full max-w-md flex items-center gap-3 transition-all;
+  color: #DDDDDD;
+}
+
+.search-dark:focus-within {
+  @apply bg-[#1E1E1E] border-[#FF9500]/30;
+  box-shadow: 0 0 0 4px rgba(255, 149, 0, 0.1);
+}
+
+/* Scrollbar Customization - Dark Theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Custom Scrollbar for content areas */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 149, 0, 0.2);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 149, 0, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slideInRight 0.5s ease-out forwards;
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Glow Effects */
+.glow-orange {
+  box-shadow: 0 0 20px rgba(255, 149, 0, 0.3);
+}
+
+.glow-orange-strong {
+  box-shadow: 0 0 30px rgba(255, 149, 0, 0.5);
+}
+
+/* Text Shadows for Depth */
+.text-shadow {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Divider */
+.divider-dark {
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Overlay */
+.overlay-dark {
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+}
