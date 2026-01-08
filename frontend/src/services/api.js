@@ -20,6 +20,13 @@ const fetchAPI = async (endpoint, options = {}) => {
     return response.json();
 };
 
+// Dashboard API calls
+export const dashboardAPI = {
+    get: async () => {
+        return fetchAPI('/dashboard');
+    }
+};
+
 // Client API calls
 export const clientAPI = {
     list: async (params = {}) => {
@@ -79,6 +86,44 @@ export const orderAPI = {
 
     delete: async (id) => {
         return fetchAPI(`/orders/${id}`, {
+            method: 'DELETE',
+        });
+    },
+
+    convert: async (id) => {
+        return fetchAPI(`/orders/${id}/convert`, {
+            method: 'PATCH',
+        });
+    },
+};
+
+// Locutor API calls
+export const locutorAPI = {
+    list: async (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return fetchAPI(`/locutores${queryString ? `?${queryString}` : ''}`);
+    },
+
+    get: async (id) => {
+        return fetchAPI(`/locutores/${id}`);
+    },
+
+    create: async (data) => {
+        return fetchAPI('/locutores', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+
+    update: async (id, data) => {
+        return fetchAPI(`/locutores/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+
+    delete: async (id) => {
+        return fetchAPI(`/locutores/${id}`, {
             method: 'DELETE',
         });
     },

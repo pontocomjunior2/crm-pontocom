@@ -1,0 +1,265 @@
+import React, { useState, useEffect } from 'react';
+import {
+    Mic2,
+    Search,
+    Trash2,
+    Edit,
+    Plus,
+    Loader2,
+    ChevronLeft,
+    ChevronRight,
+    Mail,
+    Phone,
+    Music,
+    ExternalLink,
+    AlertCircle,
+    CheckCircle2
+} from 'lucide-react';
+import { locutorAPI } from '../services/api';
+import { formatPhone, formatCurrency } from '../utils/formatters';
+
+const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
+    const [locutores, setLocutores] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [statusFilter, setStatusFilter] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+
+    useEffect(() => {
+        fetchLocutores();
+    }, [statusFilter]);
+
+    const fetchLocutores = async () => {
+        setLoading(true);
+        try {
+            const data = await locutorAPI.list({
+                search,
+                status: statusFilter
+            });
+            setLocutores(data);
+        } catch (error) {
+            console.error('Error fetching locutores:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearchSubmit = (e) => {
+        e.preventDefault();
+        fetchLocutores();
+    };
+
+    const handleDelete = async (id) => {
+        setDeleting(true);
+        try {
+            await locutorAPI.delete(id);
+            setDeleteConfirm(null);
+            fetchLocutores();
+        } catch (error) {
+            console.error('Error deleting locutor:', error);
+        } finally {
+            setDeleting(false);
+        }
+    };
+
+    return (
+        <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Header & Actions */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <Mic2 className="text-[#FF9500]" size={24} />
+                        Gerenciamento de Locutores
+                    </h2>
+                    <p className="text-sm text-[#999999] mt-1">Total de {locutores.length} locutores cadastrados</p>
+                </div>
+
+                <button
+                    onClick={onAddNewLocutor}
+                    className="btn-primary flex items-center gap-2 px-6"
+                >
+                    <Plus size={18} />
+                    <span>Novo Locutor</span>
+                </button>
+            </div>
+
+            {/* Filters & Search */}
+            <div className="card-glass-dark p-4 rounded-2xl mb-6 border border-white/5">
+                <div className="flex flex-col lg:flex-row gap-4">
+                    <form onSubmit={handleSearchSubmit} className="flex-1 relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Pesquisar por nome ou especialidade..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#444444] text-sm"
+                        />
+                    </form>
+
+                    <div className="flex gap-2">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#FF9500]/50"
+                        >
+                            <option value="">Todos os Status</option>
+                            <option value="DISPONIVEL">Disponível</option>
+                            <option value="INDISPONIVEL">Indisponível</option>
+                            <option value="FERIAS">Em Férias</option>
+                        </select>
+
+                        <button
+                            onClick={fetchLocutores}
+                            className="btn-secondary px-6 text-sm"
+                        >
+                            Atualizar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Table Content */}
+            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-white/5 text-[#999999] text-[11px] uppercase tracking-wider font-bold">
+                                <th className="px-6 py-4">Locutor / Contato</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-center">Preço (OFF)</th>
+                                <th className="px-6 py-4 text-center">Preço (PROD)</th>
+                                <th className="px-6 py-4 text-center">Trabalhos</th>
+                                <th className="px-6 py-4 text-right">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divider-dark">
+                            {loading ? (
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <tr key={i} className="animate-pulse">
+                                        <td colSpan="6" className="px-6 py-8">
+                                            <div className="h-4 bg-white/5 rounded w-full"></div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : locutores.length === 0 ? (
+                                <tr>
+                                    <td colSpan="6" className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center gap-3 text-[#666666]">
+                                            <Mic2 size={48} className="opacity-20" />
+                                            <p className="text-lg">Nenhum locutor encontrado</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ) : (
+                                locutores.map((locutor) => (
+                                    <tr key={locutor.id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <td className="px-6 py-4">
+                                            <div className="flex flex-col">
+                                                <span className="text-white font-medium text-sm group-hover:text-[#FF9500] transition-colors">
+                                                    {locutor.name}
+                                                </span>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <Phone size={10} className="text-[#666666]" />
+                                                    <span className="text-[10px] text-[#666666]">
+                                                        {formatPhone(locutor.phone) || 'Sem telefone'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`status-badge ${locutor.status === 'DISPONIVEL' ? 'status-delivered' :
+                                                    locutor.status === 'FERIAS' ? 'status-faturado' : 'status-cancelled'
+                                                }`}>
+                                                {locutor.status === 'DISPONIVEL' ? 'Disponível' :
+                                                    locutor.status === 'FERIAS' ? 'Em Férias' : 'Indisponível'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="text-white text-xs font-bold">
+                                                {formatCurrency(locutor.priceOff)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="text-white text-xs font-bold">
+                                                {formatCurrency(locutor.priceProduzido)}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="px-2 py-1 rounded-md bg-white/5 text-white text-[10px] font-bold">
+                                                {locutor._count?.orders || 0}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2">
+                                                {locutor.reelsUrl && (
+                                                    <a
+                                                        href={locutor.reelsUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-[#FF9500] hover:text-white transition-all shadow-sm"
+                                                        title="Ouvir Reel/Portfólio"
+                                                    >
+                                                        <Music size={16} />
+                                                    </a>
+                                                )}
+                                                <button
+                                                    onClick={() => onEditLocutor(locutor)}
+                                                    className="p-2 hover:bg-white/10 rounded-lg text-[#999999] hover:text-white transition-all shadow-sm"
+                                                    title="Editar"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setDeleteConfirm(locutor)}
+                                                    className="p-2 hover:bg-red-500/20 rounded-lg text-[#999999] hover:text-red-400 transition-all shadow-sm"
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Delete Confirmation Modal */}
+            {deleteConfirm && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-[#161616] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <AlertCircle size={32} className="text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white text-center mb-2">Excluir Locutor?</h3>
+                        <p className="text-sm text-[#999999] text-center mb-8">
+                            O locutor <span className="text-white font-bold">{deleteConfirm.name}</span> será removido permanentemente do sistema.
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={() => handleDelete(deleteConfirm.id)}
+                                disabled={deleting}
+                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                            >
+                                {deleting ? <Loader2 size={18} className="animate-spin" /> : 'Confirmar Exclusão'}
+                            </button>
+                            <button
+                                onClick={() => setDeleteConfirm(null)}
+                                disabled={deleting}
+                                className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-all"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default LocutorList;

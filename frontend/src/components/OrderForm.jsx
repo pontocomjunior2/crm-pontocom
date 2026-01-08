@@ -2,19 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
-import { clientAPI, orderAPI } from '../services/api';
+import { clientAPI, orderAPI, locutorAPI } from '../services/api';
 
 const OrderForm = ({ order = null, onClose, onSuccess }) => {
     const [clients, setClients] = useState([]);
+    const [locutores, setLocutores] = useState([]);
     const [loadingClients, setLoadingClients] = useState(true);
+    const [loadingLocutores, setLoadingLocutores] = useState(true);
     const [formData, setFormData] = useState({
         clientId: order?.clientId || '',
         title: order?.title || '',
         locutor: order?.locutor || '',
+        locutorId: order?.locutorId || '',
         tipo: order?.tipo || 'OFF',
         cacheValor: order?.cacheValor || 0,
         vendaValor: order?.vendaValor || 0,
         comentarios: order?.comentarios || '',
+        status: order?.status || 'PEDIDO',
         faturado: order?.faturado || false,
         entregue: order?.entregue || false,
         precisaNF: order?.precisaNF || false,
@@ -34,9 +38,10 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         margemPercentual: '0.00'
     });
 
-    // Load clients on mount
+    // Load data on mount
     useEffect(() => {
         loadClients();
+        loadLocutores();
     }, []);
 
     // Recalculate margins when values change
@@ -56,6 +61,17 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         }
     };
 
+    const loadLocutores = async () => {
+        try {
+            const data = await locutorAPI.list({ status: 'DISPONIVEL' });
+            setLocutores(data || []);
+        } catch (error) {
+            console.error('Error loading locutores:', error);
+        } finally {
+            setLoadingLocutores(false);
+        }
+    };
+
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
 
@@ -65,6 +81,30 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
             // Handle currency input
             const numericValue = parseFloat(value) || 0;
             setFormData(prev => ({ ...prev, [name]: numericValue }));
+        } else if (name === 'locutorId') {
+            const selectedLocutor = locutores.find(l => l.id === value);
+            if (selectedLocutor) {
+                const cache = formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido;
+                setFormData(prev => ({
+                    ...prev,
+                    locutorId: value,
+                    locutor: selectedLocutor.name,
+                    cacheValor: cache
+                }));
+            } else {
+                setFormData(prev => ({ ...prev, locutorId: '', locutor: '' }));
+            }
+        } else if (name === 'tipo') {
+            const currentLocutor = locutores.find(l => l.id === formData.locutorId);
+            const newCache = currentLocutor
+                ? (value === 'OFF' ? currentLocutor.priceOff : currentLocutor.priceProduzido)
+                : formData.cacheValor;
+
+            setFormData(prev => ({
+                ...prev,
+                tipo: value,
+                cacheValor: newCache
+            }));
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
@@ -189,8 +229,8 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                 {/* Message Alert */}
                 {message.text && (
                     <div className={`mx-6 mt-4 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
-                            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-                            : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                        ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                        : 'bg-red-500/10 border border-red-500/30 text-red-400'
                         }`}>
                         {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                         <span className="text-sm font-medium">{message.text}</span>
@@ -243,14 +283,30 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                             <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
                                 Locutor / Voz
                             </label>
-                            <input
-                                type="text"
-                                name="locutor"
-                                value={formData.locutor}
+                            <select
+                                name="locutorId"
+                                value={formData.locutorId}
                                 onChange={handleChange}
-                                className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
-                                placeholder="Nome do locutor ou voz de IA"
-                            />
+                                disabled={loadingLocutores}
+                                className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all font-medium"
+                            >
+                                <option value="">Selecione um locutor...</option>
+                                {locutores.map(l => (
+                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                ))}
+                                <option value="OUTRO">-- Outro (Livre) --</option>
+                            </select>
+
+                            {formData.locutorId === 'OUTRO' && (
+                                <input
+                                    type="text"
+                                    name="locutor"
+                                    value={formData.locutor}
+                                    onChange={handleChange}
+                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white mt-2 focus:outline-none focus:border-[#FF9500]/50 transition-all"
+                                    placeholder="Digite o nome do locutor..."
+                                />
+                            )}
                         </div>
 
                         <div>

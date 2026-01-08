@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -18,23 +18,84 @@ import {
   ChevronRight,
   Headphones,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 import ClientForm from './components/ClientForm';
 import OrderForm from './components/OrderForm';
+import ClientList from './components/ClientList';
+import OrderList from './components/OrderList';
+import LocutorList from './components/LocutorList';
+import LocutorForm from './components/LocutorForm';
+import { dashboardAPI } from './services/api';
+import { formatCurrency } from './utils/formatters';
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showClientForm, setShowClientForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [showLocutorForm, setShowLocutorForm] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedLocutor, setSelectedLocutor] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Dashboard Metrics - Audio Production Specific
-  const stats = [
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      setLoadingDashboard(true);
+      try {
+        const data = await dashboardAPI.get();
+        setDashboardData(data);
+      } catch (error) {
+        console.error('Error fetching dashboard:', error);
+      } finally {
+        setLoadingDashboard(false);
+      }
+    };
+
+    fetchDashboard();
+  }, [refreshTrigger]);
+
+  const handleEditClient = (client) => {
+    setSelectedClient(client);
+    setShowClientForm(true);
+  };
+
+  const handleAddNewClient = () => {
+    setSelectedClient(null);
+    setShowClientForm(true);
+  };
+
+  const handleEditOrder = (order) => {
+    setSelectedOrder(order);
+    setShowOrderForm(true);
+  };
+
+  const handleAddNewOrder = () => {
+    setSelectedOrder(null);
+    setShowOrderForm(true);
+  };
+
+  const handleEditLocutor = (locutor) => {
+    setSelectedLocutor(locutor);
+    setShowLocutorForm(true);
+  };
+
+  const handleAddNewLocutor = () => {
+    setSelectedLocutor(null);
+    setShowLocutorForm(true);
+  };
+
+  // Dashboard Metrics - Derived from real data
+  const stats = dashboardData ? [
     {
       title: 'Receita Total',
-      value: 'R$ 84.750',
-      trend: '+12.5%',
-      sub: 'vs mês anterior',
+      value: formatCurrency(dashboardData.metrics.totalRevenue),
+      trend: '+0%', // Placeholder
+      sub: 'acumulado total',
       icon: <DollarSign size={20} />,
       color: 'from-orange-500 to-orange-600',
       bgColor: 'bg-orange-500/10',
@@ -42,8 +103,8 @@ const App = () => {
     },
     {
       title: 'Pedidos Ativos',
-      value: '28',
-      trend: '+8.2%',
+      value: dashboardData.metrics.activeOrders.toString(),
+      trend: 'ESTÁVEL',
       sub: 'em produção',
       icon: <Package size={20} />,
       color: 'from-blue-500 to-blue-600',
@@ -52,9 +113,9 @@ const App = () => {
     },
     {
       title: 'Custos com Cachê',
-      value: 'R$ 18.200',
-      trend: '+5.3%',
-      sub: 'margem 78%',
+      value: formatCurrency(dashboardData.metrics.totalCache),
+      trend: `${Math.round((dashboardData.metrics.totalCache / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
+      sub: 'em relação à receita',
       icon: <Headphones size={20} />,
       color: 'from-purple-500 to-purple-600',
       bgColor: 'bg-purple-500/10',
@@ -62,88 +123,18 @@ const App = () => {
     },
     {
       title: 'Clientes Ativos',
-      value: '142',
-      trend: '+15.1%',
-      sub: '12 novos',
+      value: dashboardData.metrics.activeClients.toString(),
+      trend: '+1',
+      sub: 'clientes totais',
       icon: <Users size={20} />,
       color: 'from-green-500 to-green-600',
       bgColor: 'bg-green-500/10',
       textColor: 'text-green-500'
     },
-  ];
+  ] : [];
 
-  // Recent Orders
-  const recentOrders = [
-    {
-      id: 'PED-1284',
-      client: 'Rádio Bandeirantes',
-      title: 'Spot Promoção Black Friday',
-      type: 'PRODUZIDO',
-      locutor: 'Vini Almeida',
-      status: 'NOVO',
-      time: '5min atrás',
-      value: 'R$ 850,00',
-      statusColor: 'badge-novo'
-    },
-    {
-      id: 'PED-1283',
-      client: 'Supermercados Pão de Açúcar',
-      title: 'Locução OFF Institucional',
-      type: 'OFF',
-      locutor: 'Marcela Santos',
-      status: 'EM PRODUÇÃO',
-      time: '1h atrás',
-      value: 'R$ 450,00',
-      statusColor: 'badge-producao'
-    },
-    {
-      id: 'PED-1282',
-      client: 'Banco Itaú',
-      title: 'Campanha Crédito Consignado',
-      type: 'PRODUZIDO',
-      locutor: 'Edu Martins',
-      status: 'ENTREGUE',
-      time: '3h atrás',
-      value: 'R$ 1.200,00',
-      statusColor: 'badge-entregue'
-    },
-    {
-      id: 'PED-1281',
-      client: 'Farmácias São Paulo',
-      title: 'Espera Telefônica',
-      type: 'PRODUZIDO',
-      locutor: 'Alyssa Rodrigues',
-      status: 'FATURADO',
-      time: '5h atrás',
-      value: 'R$ 680,00',
-      statusColor: 'badge-faturado'
-    },
-  ];
-
-  // Pending Invoices
-  const pendingInvoices = [
-    {
-      client: 'Rádio Jovem Pan',
-      orders: 3,
-      total: 'R$ 2.450,00',
-      dueDate: 'Hoje',
-      priority: 'high'
-    },
-    {
-      client: 'TV Globo',
-      orders: 5,
-      total: 'R$ 4.800,00',
-      dueDate: 'Amanhã',
-      priority: 'high'
-    },
-    {
-      client: 'Magazine Luiza',
-      orders: 2,
-      total: 'R$ 1.100,00',
-      dueDate: '15/01',
-      priority: 'medium'
-    },
-  ];
+  const recentOrders = dashboardData?.recentOrders || [];
+  const pendingInvoices = dashboardData?.pendingInvoices || [];
 
   return (
     <div className="flex h-screen w-full bg-[#0F0F0F] p-4 lg:p-6 gap-4 lg:gap-6 justify-center overflow-hidden font-body">
@@ -178,11 +169,7 @@ const App = () => {
             ].map((item) => (
               <button
                 key={item.id}
-                onClick={() => {
-                  setActiveTab(item.id);
-                  if (item.id === 'clientes') setShowClientForm(true);
-                  if (item.id === 'pedidos') setShowOrderForm(true);
-                }}
+                onClick={() => setActiveTab(item.id)}
                 className={`sidebar-item w-full group ${activeTab === item.id ? 'active' : ''}`}
               >
                 <span className={`transition-colors ${activeTab === item.id ? 'text-[#FF9500]' : 'text-[#999999] group-hover:text-[#DDDDDD]'}`}>
@@ -235,7 +222,15 @@ const App = () => {
           {/* Header */}
           <header className="h-20 px-8 border-b divider-dark flex items-center justify-between flex-shrink-0 bg-[#161616]/50">
             <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-white font-display tracking-tight text-shadow">Visão Geral</h1>
+              <h1 className="text-xl font-bold text-white font-display tracking-tight text-shadow">
+                {activeTab === 'dashboard' && 'Visão Geral'}
+                {activeTab === 'clientes' && 'Clientes'}
+                {activeTab === 'pedidos' && 'Pedidos'}
+                {activeTab === 'locutores' && 'Locutores'}
+                {activeTab === 'faturamento' && 'Faturamento'}
+                {activeTab === 'relatorios' && 'Relatórios'}
+                {activeTab === 'configuracoes' && 'Configurações'}
+              </h1>
               <span className="text-xs text-[#999999] font-medium">Bem-vindo de volta, Júnior 👋</span>
             </div>
 
@@ -268,169 +263,228 @@ const App = () => {
             </div>
           </header>
 
-          {/* Scrollable Content */}
+          {/* Dynamic Content Area */}
           <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0F0F0F]">
-            <div className="p-8 space-y-8 max-w-[1400px] mx-auto">
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-fade-in">
-                {stats.map((stat, i) => (
-                  <div key={i} className="card-dark p-6 group cursor-pointer">
-                    <div className="flex items-start justify-between mb-4">
-                      <div>
-                        <span className="text-[11px] font-bold text-[#666666] uppercase tracking-wider block mb-2">
-                          {stat.title}
-                        </span>
-                        <h3 className="text-3xl font-bold text-white mb-1 text-shadow">
-                          {stat.value}
-                        </h3>
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-[11px] font-black px-2 py-0.5 rounded ${stat.trend.includes('+')
-                            ? 'bg-green-500/20 text-green-400'
-                            : 'bg-red-500/20 text-red-400'
-                            }`}>
-                            {stat.trend}
-                          </span>
-                          <span className="text-[11px] text-[#666666] font-medium">{stat.sub}</span>
-                        </div>
-                      </div>
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgColor} ${stat.textColor} group-hover:scale-110 transition-transform`}>
-                        {stat.icon}
-                      </div>
-                    </div>
-                    <div className={`h-1 rounded-full bg-gradient-to-r ${stat.color} opacity-50`}></div>
+            {activeTab === 'dashboard' && (
+              <div className="p-8 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-500">
+                {loadingDashboard ? (
+                  <div className="flex flex-col items-center justify-center h-[60vh]">
+                    <Loader2 size={48} className="text-[#FF9500] animate-spin mb-4" />
+                    <p className="text-[#666666] font-medium">Carregando painel...</p>
                   </div>
-                ))}
-              </div>
-
-              {/* Main Content Grid */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-                {/* Recent Orders - 2 columns */}
-                <div className="xl:col-span-2 card-dark p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h3 className="text-lg font-bold text-white mb-1">Pedidos Recentes</h3>
-                      <p className="text-xs text-[#666666]">Últimas atividades de produção</p>
-                    </div>
-                    <button className="text-xs font-bold gradient-text hover:opacity-80 transition-opacity uppercase tracking-wide flex items-center gap-1">
-                      Ver todos
-                      <ChevronRight size={14} />
+                ) : !dashboardData ? (
+                  <div className="flex flex-col items-center justify-center h-[60vh]">
+                    <AlertCircle size={48} className="text-red-500 mb-4 opacity-50" />
+                    <p className="text-[#666666] font-medium">Erro ao carregar dados do painel.</p>
+                    <button onClick={() => setRefreshTrigger(prev => prev + 1)} className="mt-4 text-[#FF9500] hover:underline text-sm">
+                      Tentar novamente
                     </button>
                   </div>
-
-                  <div className="space-y-4">
-                    {recentOrders.map((order, i) => (
-                      <div key={i} className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all cursor-pointer group border border-white/0 hover:border-white/10">
-                        <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-xs font-black shadow-md glow-orange">
-                          <Mic2 size={18} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-sm font-bold text-white group-hover:text-[#FF9500] transition-colors truncate">
-                              {order.title}
-                            </h4>
-                            <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 text-[#666666] uppercase">
-                              {order.type}
-                            </span>
+                ) : (
+                  <>
+                    {/* Stats Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-fade-in">
+                      {stats.map((stat, i) => (
+                        <div key={i} className="card-dark p-6 group cursor-pointer">
+                          <div className="flex items-start justify-between mb-4">
+                            <div>
+                              <span className="text-[11px] font-bold text-[#666666] uppercase tracking-wider block mb-2">
+                                {stat.title}
+                              </span>
+                              <h3 className="text-3xl font-bold text-white mb-1 text-shadow">
+                                {stat.value}
+                              </h3>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-[11px] font-black px-2 py-0.5 rounded ${stat.trend.includes('+')
+                                  ? 'bg-green-500/20 text-green-400'
+                                  : 'bg-red-500/20 text-red-400'
+                                  }`}>
+                                  {stat.trend}
+                                </span>
+                                <span className="text-[11px] text-[#666666] font-medium">{stat.sub}</span>
+                              </div>
+                            </div>
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgColor} ${stat.textColor} group-hover:scale-110 transition-transform`}>
+                              {stat.icon}
+                            </div>
                           </div>
-                          <p className="text-xs text-[#666666] mb-1">
-                            {order.client} • {order.locutor}
-                          </p>
-                          <p className="text-[10px] text-[#999999]">{order.id}</p>
+                          <div className={`h-1 rounded-full bg-gradient-to-r ${stat.color} opacity-50`}></div>
                         </div>
-                        <div className="text-right">
-                          <span className={`block ${order.statusColor} mb-2`}>
-                            {order.status}
-                          </span>
-                          <span className="block text-sm font-bold text-white mb-1">{order.value}</span>
-                          <span className="text-[10px] text-[#666666] font-medium">{order.time}</span>
+                      ))}
+                    </div>
+
+                    {/* Main Content Grid */}
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+
+                      {/* Recent Orders - 2 columns */}
+                      <div className="xl:col-span-2 card-dark p-6">
+                        <div className="flex items-center justify-between mb-6">
+                          <div>
+                            <h3 className="text-lg font-bold text-white mb-1">Pedidos Recentes</h3>
+                            <p className="text-xs text-[#666666]">Últimas atividades de produção</p>
+                          </div>
+                          <button className="text-xs font-bold gradient-text hover:opacity-80 transition-opacity uppercase tracking-wide flex items-center gap-1">
+                            Ver todos
+                            <ChevronRight size={14} />
+                          </button>
                         </div>
+
+                        <div className="space-y-4">
+                          {recentOrders.map((order, i) => (
+                            <div key={i} className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all cursor-pointer group border border-white/0 hover:border-white/10">
+                              <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-xs font-black shadow-md glow-orange">
+                                <Mic2 size={18} />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="text-sm font-bold text-white group-hover:text-[#FF9500] transition-colors truncate">
+                                    {order.title}
+                                  </h4>
+                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 text-[#666666] uppercase">
+                                    {order.type}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-[#666666] mb-1">
+                                  {order.client} • {order.locutor}
+                                </p>
+                                <p className="text-[10px] text-[#999999]">{order.id}</p>
+                              </div>
+                              <div className="text-right">
+                                <span className={`block ${order.statusColor} mb-2`}>
+                                  {order.status}
+                                </span>
+                                <span className="block text-sm font-bold text-white mb-1">{order.value}</span>
+                                <span className="text-[10px] text-[#666666] font-medium">{order.time}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button className="w-full mt-6 py-3 btn-secondary flex items-center justify-center gap-2">
+                          <FileSpreadsheet size={16} />
+                          <span className="text-xs">Ver Todos os Pedidos</span>
+                        </button>
                       </div>
-                    ))}
-                  </div>
 
-                  <button className="w-full mt-6 py-3 btn-secondary flex items-center justify-center gap-2">
-                    <FileSpreadsheet size={16} />
-                    <span className="text-xs">Ver Todos os Pedidos</span>
-                  </button>
-                </div>
+                      {/* Pending Invoices - 1 column */}
+                      <div className="card-dark p-6">
+                        <div className="mb-6">
+                          <h3 className="text-lg font-bold text-white mb-1">Pendentes de Faturamento</h3>
+                          <p className="text-xs text-[#666666]">Pedidos prontos para faturar</p>
+                        </div>
 
-                {/* Pending Invoices - 1 column */}
-                <div className="card-dark p-6">
-                  <div className="mb-6">
-                    <h3 className="text-lg font-bold text-white mb-1">Pendentes de Faturamento</h3>
-                    <p className="text-xs text-[#666666]">Pedidos prontos para faturar</p>
-                  </div>
+                        <div className="space-y-4 mb-6">
+                          {pendingInvoices.map((invoice, i) => (
+                            <div key={i} className="relative">
+                              {/* Timeline dot */}
+                              <div className={`absolute left-0 top-2 w-3 h-3 rounded-full border-2 border-[#161616] ${invoice.priority === 'high' ? 'bg-[#FF5E3A]' : 'bg-[#FF9500]'
+                                } shadow-lg`}></div>
 
-                  <div className="space-y-4 mb-6">
-                    {pendingInvoices.map((invoice, i) => (
-                      <div key={i} className="relative">
-                        {/* Timeline dot */}
-                        <div className={`absolute left-0 top-2 w-3 h-3 rounded-full border-2 border-[#161616] ${invoice.priority === 'high' ? 'bg-[#FF5E3A]' : 'bg-[#FF9500]'
-                          } shadow-lg`}></div>
+                              <div className="pl-6">
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-[10px] font-bold text-[#666666] uppercase tracking-wider flex items-center gap-2">
+                                    {invoice.priority === 'high' && <AlertCircle size={12} className="text-[#FF5E3A]" />}
+                                    {invoice.dueDate}
+                                  </span>
+                                </div>
+                                <h4 className="text-sm font-bold text-white mb-2">{invoice.client}</h4>
+                                <div className="flex items-center justify-between mb-2">
+                                  <span className="text-xs text-[#999999]">{invoice.orders} pedidos</span>
+                                  <span className="text-sm font-bold text-[#FF9500]">{invoice.total}</span>
+                                </div>
+                                <button className="text-[10px] font-bold gradient-text hover:opacity-80 transition-opacity uppercase tracking-wide">
+                                  Faturar agora →
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
 
-                        <div className="pl-6">
+                        <div className="border-t divider-dark pt-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-[10px] font-bold text-[#666666] uppercase tracking-wider flex items-center gap-2">
-                              {invoice.priority === 'high' && <AlertCircle size={12} className="text-[#FF5E3A]" />}
-                              {invoice.dueDate}
-                            </span>
+                            <span className="text-xs text-[#666666] font-medium">Total Pendente</span>
+                            <span className="text-lg font-bold text-white">R$ 8.350,00</span>
                           </div>
-                          <h4 className="text-sm font-bold text-white mb-2">{invoice.client}</h4>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs text-[#999999]">{invoice.orders} pedidos</span>
-                            <span className="text-sm font-bold text-[#FF9500]">{invoice.total}</span>
-                          </div>
-                          <button className="text-[10px] font-bold gradient-text hover:opacity-80 transition-opacity uppercase tracking-wide">
-                            Faturar agora →
+                          <button className="w-full btn-primary mt-3 flex items-center justify-center gap-2">
+                            <CheckCircle2 size={16} />
+                            <span className="text-xs">Processar Todos</span>
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
 
-                  <div className="border-t divider-dark pt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs text-[#666666] font-medium">Total Pendente</span>
-                      <span className="text-lg font-bold text-white">R$ 8.350,00</span>
                     </div>
-                    <button className="w-full btn-primary mt-3 flex items-center justify-center gap-2">
-                      <CheckCircle2 size={16} />
-                      <span className="text-xs">Processar Todos</span>
-                    </button>
-                  </div>
-                </div>
 
+                    {/* Performance Chart Placeholder */}
+                    <div className="card-dark p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="text-lg font-bold text-white mb-1">Performance Mensal</h3>
+                          <p className="text-xs text-[#666666]">Comparativo de receita e custos</p>
+                        </div>
+                        <div className="flex gap-2">
+                          {['30D', '90D', '1A'].map((period) => (
+                            <button key={period} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-white/5 text-[#666666] hover:bg-white/10 hover:text-[#DDDDDD] transition-all">
+                              {period}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Chart Placeholder */}
+                      <div className="h-64 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
+                        <div className="text-center">
+                          <TrendingUp size={48} className="text-[#FF9500] mx-auto mb-4 opacity-50" />
+                          <p className="text-sm text-[#666666]">Gráfico de performance será implementado</p>
+                          <p className="text-xs text-[#666666] mt-1">Chart.js ou Recharts</p>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
+            )}
 
-              {/* Performance Chart Placeholder */}
-              <div className="card-dark p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-1">Performance Mensal</h3>
-                    <p className="text-xs text-[#666666]">Comparativo de receita e custos</p>
-                  </div>
-                  <div className="flex gap-2">
-                    {['30D', '90D', '1A'].map((period) => (
-                      <button key={period} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-white/5 text-[#666666] hover:bg-white/10 hover:text-[#DDDDDD] transition-all">
-                        {period}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Chart Placeholder */}
-                <div className="h-64 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                  <div className="text-center">
-                    <TrendingUp size={48} className="text-[#FF9500] mx-auto mb-4 opacity-50" />
-                    <p className="text-sm text-[#666666]">Gráfico de performance será implementado</p>
-                    <p className="text-xs text-[#666666] mt-1">Chart.js ou Recharts</p>
-                  </div>
-                </div>
+            {activeTab === 'clientes' && (
+              <div className="p-8 max-w-[1400px] mx-auto h-full flex flex-col">
+                <ClientList
+                  key={refreshTrigger}
+                  onEditClient={handleEditClient}
+                  onAddNewClient={handleAddNewClient}
+                />
               </div>
+            )}
 
-            </div>
+            {activeTab === 'pedidos' && (
+              <div className="p-8 max-w-[1400px] mx-auto h-full flex flex-col">
+                <OrderList
+                  key={refreshTrigger}
+                  onEditOrder={handleEditOrder}
+                  onAddNewOrder={handleAddNewOrder}
+                />
+              </div>
+            )}
+
+            {activeTab === 'locutores' && (
+              <div className="p-8 max-w-[1400px] mx-auto h-full flex flex-col">
+                <LocutorList
+                  key={refreshTrigger}
+                  onEditLocutor={handleEditLocutor}
+                  onAddNewLocutor={handleAddNewLocutor}
+                />
+              </div>
+            )}
+
+            {activeTab !== 'dashboard' && activeTab !== 'clientes' && (
+              <div className="p-20 text-center animate-in fade-in duration-500">
+                <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <Package size={40} className="text-[#444444]" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>
+                <p className="text-[#666666] max-w-xs mx-auto">
+                  Esta página está sendo preparada para receber as funcionalidades do CRM Pontocom Audio.
+                </p>
+              </div>
+            )}
           </div>
 
         </main>
@@ -439,20 +493,45 @@ const App = () => {
       {/* Form Modals */}
       {showClientForm && (
         <ClientForm
-          onClose={() => setShowClientForm(false)}
+          client={selectedClient}
+          onClose={() => {
+            setShowClientForm(false);
+            setSelectedClient(null);
+          }}
           onSuccess={() => {
             setShowClientForm(false);
-            // Refresh client list if needed
+            setSelectedClient(null);
+            setRefreshTrigger(prev => prev + 1);
           }}
         />
       )}
 
       {showOrderForm && (
         <OrderForm
-          onClose={() => setShowOrderForm(false)}
+          order={selectedOrder}
+          onClose={() => {
+            setShowOrderForm(false);
+            setSelectedOrder(null);
+          }}
           onSuccess={() => {
             setShowOrderForm(false);
-            // Refresh order list if needed
+            setSelectedOrder(null);
+            setRefreshTrigger(prev => prev + 1);
+          }}
+        />
+      )}
+
+      {showLocutorForm && (
+        <LocutorForm
+          locutor={selectedLocutor}
+          onClose={() => {
+            setShowLocutorForm(false);
+            setSelectedLocutor(null);
+          }}
+          onSave={() => {
+            setShowLocutorForm(false);
+            setSelectedLocutor(null);
+            setRefreshTrigger(prev => prev + 1);
           }}
         />
       )}
