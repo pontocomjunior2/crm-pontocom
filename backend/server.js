@@ -18,6 +18,8 @@ const PORT = process.env.PORT || 3000;
 // Import routes
 const clientRoutes = require('./routes/clients');
 const orderRoutes = require('./routes/orders');
+const dashboardRoutes = require('./routes/dashboard');
+const locutoresRoutes = require('./routes/locutores');
 
 // Middleware de Autenticação
 const authenticateToken = (req, res, next) => {
@@ -72,6 +74,8 @@ app.post('/api/auth/login', async (req, res) => {
 // Note: For now, routes are public. Add authenticateToken middleware when auth is implemented in frontend
 app.use('/api/clients', clientRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/locutores', locutoresRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -86,9 +86,9 @@ const OrderList = ({ onEditOrder, onAddNewOrder }) => {
     };
 
     const getStatusBadgeClass = (order) => {
-        if (order.status === 'VENDA') return 'status-faturado';
-        if (order.entregue) return 'status-delivered';
-        return 'status-delivered opacity-70';
+        if (order.status === 'VENDA') return 'status-faturado'; // Green/Success for finalized sale
+        if (order.entregue) return 'status-delivered'; // Blue for delivered pedido
+        return 'status-pending'; // Orange for pending pedido
     };
 
     const getStatusLabel = (order) => {
@@ -202,12 +202,12 @@ const OrderList = ({ onEditOrder, onAddNewOrder }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-white/5 text-[#999999] text-[11px] uppercase tracking-wider font-bold">
-                                <th className="px-6 py-4">ID / Data</th>
-                                <th className="px-6 py-4">Cliente / Título</th>
-                                <th className="px-6 py-4">Tipo / Locutor</th>
-                                <th className="px-6 py-4 text-right">Valores</th>
-                                <th className="px-6 py-4 text-right">Margem</th>
-                                <th className="px-6 py-4">Status</th>
+                                <th className="pl-6 py-4">Status</th>
+                                <th className="px-4 py-4">Data</th>
+                                <th className="px-4 py-4">Cliente</th>
+                                <th className="px-4 py-4">Título / Locutor</th>
+                                <th className="px-4 py-4 text-right">Valores</th>
+                                <th className="px-4 py-4 text-right hidden lg:table-cell">Margem</th>
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -235,42 +235,51 @@ const OrderList = ({ onEditOrder, onAddNewOrder }) => {
                             ) : (
                                 orders.map((order) => (
                                     <tr key={order.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-6 py-4">
+                                        <td className="pl-6 py-4 w-[50px]">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-500' :
+                                                    order.entregue ? 'bg-blue-500/10 text-blue-500' :
+                                                        'bg-orange-500/10 text-orange-500'
+                                                }`} title={getStatusLabel(order)}>
+                                                {order.status === 'VENDA' ? <CheckCircle2 size={16} /> :
+                                                    order.entregue ? <CheckCircle2 size={16} /> :
+                                                        <ShoppingCart size={16} />}
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-xs font-mono text-[#666666]">
-                                                    {order.id.substring(0, 8).toUpperCase()}
-                                                </span>
-                                                <span className="text-[11px] text-[#999999] flex items-center gap-1 mt-1">
-                                                    <Calendar size={10} />
+                                                <span className="text-[11px] text-[#999999] font-mono">
                                                     {new Date(order.date).toLocaleDateString('pt-BR')}
                                                 </span>
+                                                <span className="text-[9px] text-[#666666]">
+                                                    {order.id.substring(0, 6).toUpperCase()}
+                                                </span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-4 py-4">
+                                            <span className="text-sm font-bold text-white line-clamp-1 max-w-[150px]" title={order.client?.name}>
+                                                {order.client?.name || 'Cliente Desconhecido'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-white font-medium text-sm group-hover:text-[#FF9500] transition-colors line-clamp-1">
+                                                <button
+                                                    onClick={() => onEditOrder(order)}
+                                                    className="text-white font-medium text-sm text-left hover:text-[#FF9500] transition-colors line-clamp-1 mb-1 focus:outline-none"
+                                                >
                                                     {order.title}
-                                                </span>
-                                                <span className="text-[11px] text-[#666666] truncate max-w-[200px]">
-                                                    {order.client?.name || 'Cliente Desconhecido'}
-                                                </span>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="flex flex-col">
+                                                </button>
                                                 <div className="flex items-center gap-2">
-                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${order.tipo === 'PRODUZIDO' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'
-                                                        }`}>
+                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${order.tipo === 'PRODUZIDO' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                                         {order.tipo}
                                                     </span>
+                                                    <span className="text-[10px] text-[#999999] flex items-center gap-1">
+                                                        <Mic2 size={10} />
+                                                        {order.locutor}
+                                                    </span>
                                                 </div>
-                                                <span className="text-[11px] text-[#999999] mt-1 flex items-center gap-1">
-                                                    <Mic2 size={10} />
-                                                    {order.locutor}
-                                                </span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-4 py-4 text-right">
                                             <div className="flex flex-col">
                                                 <span className="text-white font-bold text-sm">
                                                     {formatCurrency(Number(order.vendaValor))}
@@ -280,21 +289,13 @@ const OrderList = ({ onEditOrder, onAddNewOrder }) => {
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-4 py-4 text-right hidden lg:table-cell">
                                             <div className="flex flex-col items-end">
                                                 <div className="flex items-center gap-1 text-green-400 font-bold text-xs">
                                                     <TrendingUp size={12} />
                                                     {formatCurrency(Number(order.vendaValor) - Number(order.cacheValor) - (Number(order.vendaValor) * 0.1) - ((Number(order.vendaValor) - Number(order.cacheValor)) * 0.04))}
                                                 </div>
-                                                <span className="text-[9px] text-[#666666] mt-0.5">
-                                                    Lucro líquido aprox.
-                                                </span>
                                             </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`status-badge ${getStatusBadgeClass(order)}`}>
-                                                {getStatusLabel(order)}
-                                            </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex items-center justify-end gap-2">

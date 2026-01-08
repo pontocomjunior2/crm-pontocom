@@ -49,13 +49,18 @@ router.get('/', async (req, res) => {
         }
 
         // Status filters
-        if (status === 'faturado') {
-            where.faturado = true;
-        } else if (status === 'entregue') {
-            where.entregue = true;
-        } else if (status === 'pendente') {
-            where.faturado = false;
-            where.entregue = true;
+        if (status) {
+            if (status === 'faturado') {
+                where.faturado = true;
+            } else if (status === 'entregue') {
+                where.entregue = true;
+            } else if (status === 'pendente') {
+                where.faturado = false;
+                where.entregue = true;
+            } else {
+                // Physical status (PEDIDO, VENDA)
+                where.status = status;
+            }
         }
 
         const [orders, total] = await Promise.all([
@@ -123,10 +128,13 @@ router.post('/', async (req, res) => {
             clientId,
             title,
             locutor,
+            locutorId,
             tipo,
             cacheValor,
             vendaValor,
             comentarios,
+            status = 'PEDIDO',
+            numeroVenda,
             faturado = false,
             entregue = false,
             precisaNF = false,
@@ -164,10 +172,13 @@ router.post('/', async (req, res) => {
                 clientId,
                 title,
                 locutor: locutor || '',
+                locutorId: locutorId || null,
                 tipo,
                 cacheValor: parseFloat(cacheValor) || 0,
                 vendaValor: parseFloat(vendaValor) || 0,
                 comentarios,
+                status,
+                numeroVenda: numeroVenda || null,
                 faturado,
                 entregue,
                 precisaNF,
@@ -204,10 +215,13 @@ router.put('/:id', async (req, res) => {
             clientId,
             title,
             locutor,
+            locutorId,
             tipo,
             cacheValor,
             vendaValor,
             comentarios,
+            status,
+            numeroVenda,
             faturado,
             entregue,
             precisaNF,
@@ -240,10 +254,13 @@ router.put('/:id', async (req, res) => {
                 clientId,
                 title,
                 locutor,
+                locutorId,
                 tipo,
                 cacheValor: cacheValor !== undefined ? parseFloat(cacheValor) : undefined,
                 vendaValor: vendaValor !== undefined ? parseFloat(vendaValor) : undefined,
                 comentarios,
+                status,
+                numeroVenda,
                 faturado,
                 entregue,
                 precisaNF,
@@ -269,6 +286,27 @@ router.put('/:id', async (req, res) => {
     } catch (error) {
         console.error('Error updating order:', error);
         res.status(500).json({ error: 'Failed to update order', message: error.message });
+    }
+});
+
+// PATCH /api/orders/:id/convert - Convert PEDIDO to VENDA
+router.patch('/:id/convert', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const order = await prisma.order.update({
+            where: { id },
+            data: {
+                status: 'VENDA',
+                entregue: true // Assumption: Converting to sale means it's ready/delivered
+            },
+            include: { client: true }
+        });
+
+        res.json(order);
+    } catch (error) {
+        console.error('Error converting order:', error);
+        res.status(500).json({ error: 'Failed to convert order', message: error.message });
     }
 });
 
