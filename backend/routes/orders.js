@@ -310,6 +310,27 @@ router.patch('/:id/convert', async (req, res) => {
     }
 });
 
+// PATCH /api/orders/:id/revert - Revert VENDA to PEDIDO
+router.patch('/:id/revert', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const order = await prisma.order.update({
+            where: { id },
+            data: {
+                status: 'PEDIDO',
+                entregue: false
+            },
+            include: { client: true }
+        });
+
+        res.json(order);
+    } catch (error) {
+        console.error('Error reverting order:', error);
+        res.status(500).json({ error: 'Failed to revert order', message: error.message });
+    }
+});
+
 // DELETE /api/orders/:id - Delete order
 router.delete('/:id', async (req, res) => {
     try {

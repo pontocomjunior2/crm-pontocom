@@ -77,10 +77,6 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
         if (type === 'checkbox') {
             setFormData(prev => ({ ...prev, [name]: checked }));
-        } else if (name === 'cacheValor' || name === 'vendaValor') {
-            // Handle currency input
-            const numericValue = parseFloat(value) || 0;
-            setFormData(prev => ({ ...prev, [name]: numericValue }));
         } else if (name === 'locutorId') {
             const selectedLocutor = locutores.find(l => l.id === value);
             if (selectedLocutor) {
@@ -113,6 +109,16 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
+    };
+
+    const handleCurrencyChange = (e) => {
+        const { name, value } = e.target;
+        // Remove all non-digits
+        const numericValue = value.replace(/\D/g, '');
+        // Convert to float (cents to currency)
+        const floatValue = parseFloat(numericValue) / 100;
+
+        setFormData(prev => ({ ...prev, [name]: floatValue }));
     };
 
     const handleFileChange = (e) => {
@@ -353,14 +359,12 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     Valor do Cachê (R$)
                                 </label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="cacheValor"
-                                    value={formData.cacheValor}
-                                    onChange={handleChange}
-                                    step="0.01"
-                                    min="0"
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
-                                    placeholder="0.00"
+                                    value={formatCurrency(formData.cacheValor)}
+                                    onChange={handleCurrencyChange}
+                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all font-mono"
+                                    placeholder="R$ 0,00"
                                 />
                             </div>
 
@@ -369,14 +373,12 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     Valor da Venda (R$) <span className="text-red-500">*</span>
                                 </label>
                                 <input
-                                    type="number"
+                                    type="text"
                                     name="vendaValor"
-                                    value={formData.vendaValor}
-                                    onChange={handleChange}
-                                    step="0.01"
-                                    min="0"
-                                    className={`w-full bg-[#0F0F0F] border ${errors.vendaValor ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all`}
-                                    placeholder="0.00"
+                                    value={formatCurrency(formData.vendaValor)}
+                                    onChange={handleCurrencyChange}
+                                    className={`w-full bg-[#0F0F0F] border ${errors.vendaValor ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all font-mono`}
+                                    placeholder="R$ 0,00"
                                 />
                                 {errors.vendaValor && <p className="text-red-400 text-xs mt-1">{errors.vendaValor}</p>}
                             </div>

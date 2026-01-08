@@ -91,9 +91,17 @@ export const orderAPI = {
     },
 
     convert: async (id) => {
-        return fetchAPI(`/orders/${id}/convert`, {
+        const response = await fetchAPI(`/orders/${id}/convert`, {
             method: 'PATCH',
         });
+        return response;
+    },
+
+    revert: async (id) => {
+        const response = await fetchAPI(`/orders/${id}/revert`, {
+            method: 'PATCH',
+        });
+        return response;
     },
 };
 
