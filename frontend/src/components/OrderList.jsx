@@ -339,9 +339,16 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 <span className="text-foreground font-bold text-sm leading-none">
                                                     {formatCurrency(Number(order.vendaValor))}
                                                 </span>
-                                                <span className="text-[10px] text-muted-foreground mt-1">
-                                                    Cachê: {formatCurrency(Number(order.cacheValor))}
-                                                </span>
+                                                <div className="flex items-center justify-end gap-2 mt-1">
+                                                    {order.pago && (
+                                                        <span className="text-[9px] font-black px-1 py-0.5 rounded bg-green-500 text-white uppercase tracking-wider">
+                                                            PAGO
+                                                        </span>
+                                                    )}
+                                                    <span className="text-[10px] text-muted-foreground">
+                                                        Cachê: {formatCurrency(Number(order.cacheValor))}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-right hidden lg:table-cell align-top">

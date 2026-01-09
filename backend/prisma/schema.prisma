@@ -49,6 +49,7 @@ model Order {
   clientId         String
   client           Client   @relation(fields: [clientId], references: [id])
   title            String   // Nome do áudio/arquivo
+  fileName         String?  // Nome técnico do arquivo (ex: spot_final.mp3)
   locutor          String   // Nome do locutor (texto livre para histórico)
   locutorId        String?  // Link opcional para o novo modelo de Locutor
   locutorObj       Locutor? @relation(fields: [locutorId], references: [id])
@@ -59,13 +60,13 @@ model Order {
   
   status           String   @default("PEDIDO") // PEDIDO, VENDA
   urgency          String   @default("NORMAL") // NORMAL, ALTA, URGENTE
-  numeroVenda      String?  // Rastreabilidade com o CSV/Sistema antigo
+  numeroVenda      Int?     @unique // Rastreabilidade com o CSV/Sistema antigo - Código da VENDA
   
   faturado         Boolean  @default(false)
   entregue         Boolean  @default(false)
   
   // Financeiro extra
-  precisaNF        Boolean  @default(false)
+  dispensaNF       Boolean  @default(false)
   emiteBoleto      Boolean  @default(false)
   dataFaturar      DateTime?
   vencimento       DateTime?

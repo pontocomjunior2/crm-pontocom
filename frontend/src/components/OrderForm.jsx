@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon } from 'lucide-react';
+import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
 import { clientAPI, orderAPI, locutorAPI } from '../services/api';
@@ -9,9 +9,11 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
     const [locutores, setLocutores] = useState([]);
     const [loadingClients, setLoadingClients] = useState(true);
     const [loadingLocutores, setLoadingLocutores] = useState(true);
+
     const [formData, setFormData] = useState({
         clientId: order?.clientId || '',
         title: order?.title || '',
+        fileName: order?.fileName || '',
         locutor: order?.locutor || '',
         locutorId: order?.locutorId || '',
         tipo: order?.tipo || 'OFF',
@@ -22,11 +24,38 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         urgency: order?.urgency || 'NORMAL',
         faturado: order?.faturado || false,
         entregue: order?.entregue || false,
-        precisaNF: order?.precisaNF || false,
+        precisaNF: undefined, // Removed
+        dispensaNF: order?.dispensaNF || false,
         emiteBoleto: order?.emiteBoleto || false,
         dataFaturar: order?.dataFaturar ? new Date(order.dataFaturar).toISOString().split('T')[0] : '',
         vencimento: order?.vencimento ? new Date(order.vencimento).toISOString().split('T')[0] : '',
+        pago: order?.pago || false,
     });
+
+    const [showClientDropdown, setShowClientDropdown] = useState(false);
+    const [clientSearch, setClientSearch] = useState('');
+
+    // Filter clients based on search
+    const filteredClients = clients.filter(client =>
+        client.name.toLowerCase().includes(clientSearch.toLowerCase()) ||
+        (client.razaoSocial && client.razaoSocial.toLowerCase().includes(clientSearch.toLowerCase()))
+    );
+
+    // Initial search value population
+    useEffect(() => {
+        if (formData.clientId && clients.length > 0) {
+            const selected = clients.find(c => c.id === formData.clientId);
+            if (selected) {
+                setClientSearch(selected.name);
+            }
+        }
+    }, [formData.clientId, clients.length]);
+
+    const handleSelectClient = (client) => {
+        setFormData(prev => ({ ...prev, clientId: client.id }));
+        setClientSearch(client.name);
+        setShowClientDropdown(false);
+    };
 
     const [attachments, setAttachments] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -215,6 +244,13 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            {/* Backdrop for closing dropdown */}
+            {showClientDropdown && (
+                <div
+                    className="fixed inset-0 z-40 bg-transparent"
+                    onClick={() => setShowClientDropdown(false)}
+                />
+            )}
             <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-border">
 
                 {/* Header */}
@@ -248,25 +284,69 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] custom-scrollbar" onPaste={handlePaste}>
 
-                    {/* Client Selection */}
-                    <div className="mb-6">
+                    {/* Client Selection (Searchable) */}
+                    <div className="mb-6 relative">
                         <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Cliente <span className="text-red-500">*</span>
                         </label>
-                        <select
-                            name="clientId"
-                            value={formData.clientId}
-                            onChange={handleChange}
-                            disabled={loadingClients}
-                            className={`w-full bg-input-background border ${errors.clientId ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                        >
-                            <option value="">Selecione um cliente...</option>
-                            {clients.map(client => (
-                                <option key={client.id} value={client.id}>
-                                    {client.name}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="relative">
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                <Search size={18} />
+                            </div>
+                            <input
+                                type="text"
+                                value={clientSearch}
+                                onChange={(e) => {
+                                    setClientSearch(e.target.value);
+                                    setShowClientDropdown(true);
+                                    if (formData.clientId) {
+                                        // Clear selection if user starts typing a new search
+                                        setFormData(prev => ({ ...prev, clientId: '' }));
+                                    }
+                                }}
+                                onFocus={() => setShowClientDropdown(true)}
+                                placeholder={loadingClients ? "Carregando clientes..." : "Pesquise o cliente..."}
+                                className={`w-full bg-input-background border ${errors.clientId ? 'border-red-500' : 'border-border'} rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                disabled={loadingClients}
+                            />
+                            {formData.clientId && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData(prev => ({ ...prev, clientId: '' }));
+                                        setClientSearch('');
+                                    }}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500"
+                                >
+                                    <X size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Dropdown Results */}
+                        {showClientDropdown && (
+                            <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">
+                                {filteredClients.length > 0 ? (
+                                    filteredClients.map(client => (
+                                        <button
+                                            key={client.id}
+                                            type="button"
+                                            onClick={() => handleSelectClient(client)}
+                                            className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors flex flex-col border-b border-white/5 last:border-0"
+                                        >
+                                            <span className="font-bold text-foreground text-sm">{client.name}</span>
+                                            {client.razaoSocial && (
+                                                <span className="text-[10px] text-muted-foreground">{client.razaoSocial}</span>
+                                            )}
+                                        </button>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-center text-muted-foreground text-sm">
+                                        Nenhum cliente encontrado.
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {errors.clientId && <p className="text-red-400 text-xs mt-1">{errors.clientId}</p>}
                     </div>
 
@@ -285,6 +365,25 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 placeholder="Ex: Spot Black Friday 30s"
                             />
                             {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
+                        </div>
+
+                        <div className="md:col-span-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                Nome do Arquivo
+                            </label>
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <Paperclip size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    name="fileName"
+                                    value={formData.fileName}
+                                    onChange={handleChange}
+                                    className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono text-sm"
+                                    placeholder="Ex: spot_natal_v1.mp3"
+                                />
+                            </div>
                         </div>
 
                         <div>
@@ -541,12 +640,12 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                             <label className="flex items-center gap-2 cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    name="precisaNF"
-                                    checked={formData.precisaNF}
+                                    name="dispensaNF"
+                                    checked={formData.dispensaNF}
                                     onChange={handleChange}
                                     className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
                                 />
-                                <span className="text-foreground text-sm">Precisa NF</span>
+                                <span className="text-foreground text-sm">Dispensa NF</span>
                             </label>
 
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -558,6 +657,17 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
                                 />
                                 <span className="text-foreground text-sm">Emite Boleto</span>
+                            </label>
+
+                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                                <input
+                                    type="checkbox"
+                                    name="pago"
+                                    checked={formData.pago}
+                                    onChange={handleChange}
+                                    className="w-4 h-4 text-green-500 focus:ring-green-500 focus:ring-2 rounded"
+                                />
+                                <span className="text-green-400 font-bold text-sm">Já está PAGO</span>
                             </label>
                         </div>
                     </div>

@@ -60,6 +60,26 @@ const FaturamentoList = ({ onEditOrder }) => {
             .catch(err => console.error('Erro ao copiar:', err));
     };
 
+    const handleBulkMarkAsFaturado = async () => {
+        if (!window.confirm(`Deseja marcar ${selectedOrders.length} pedidos como FATURADOS?`)) return;
+
+        setLoading(true);
+        try {
+            // Update each order
+            await Promise.all(selectedOrders.map(id =>
+                orderAPI.update(id, { faturado: true })
+            ));
+            setSelectedOrders([]);
+            fetchOrders();
+            alert('Pedidos faturados com sucesso!');
+        } catch (error) {
+            console.error('Error in bulk billing:', error);
+            alert('Erro ao realizar faturamento em lote: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const fetchOrders = async () => {
         setLoading(true);
         try {
@@ -248,9 +268,16 @@ const FaturamentoList = ({ onEditOrder }) => {
                                         </div>
                                     </td>
                                     <td className="px-4 py-4 text-right">
-                                        <span className="text-sm font-bold text-foreground block">
-                                            {formatCurrency(order.vendaValor)}
-                                        </span>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm font-bold text-foreground block">
+                                                {formatCurrency(Number(order.vendaValor))}
+                                            </span>
+                                            {order.pago && (
+                                                <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-green-500 text-white uppercase tracking-wider mt-1">
+                                                    PAGO
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-4 text-center">
                                         <button
@@ -293,27 +320,36 @@ const FaturamentoList = ({ onEditOrder }) => {
                 </span>
                 <div className="flex items-center gap-4">
                     {selectedOrders.length > 0 && (
-                        <button
-                            onClick={handleGenerateList}
-                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-200"
-                        >
-                            <Copy size={14} />
-                            Gerar Lista ({selectedOrders.length})
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleBulkMarkAsFaturado}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs font-bold rounded-lg hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20 animate-in fade-in zoom-in duration-200"
+                            >
+                                <CheckCircle2 size={14} />
+                                Marcar Faturado ({selectedOrders.length})
+                            </button>
+                            <button
+                                onClick={handleGenerateList}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-200"
+                            >
+                                <Copy size={14} />
+                                Gerar Lista
+                            </button>
+                        </div>
                     )}
                 </div>
                 <div className="flex items-center gap-6">
                     <div className="text-right">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">Total Pendente</span>
                         <span className="text-sm font-bold text-orange-400">
-                            {formatCurrency(filteredOrders.filter(o => !o.faturado).reduce((acc, curr) => acc + (curr.vendaValor || 0), 0))}
+                            {formatCurrency(filteredOrders.filter(o => !o.faturado).reduce((acc, curr) => acc + (Number(curr.vendaValor) || 0), 0))}
                         </span>
                     </div>
                     <div className="h-8 w-px bg-border"></div>
                     <div className="text-right">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">Total Faturado</span>
                         <span className="text-sm font-bold text-green-400">
-                            {formatCurrency(filteredOrders.filter(o => o.faturado).reduce((acc, curr) => acc + (curr.vendaValor || 0), 0))}
+                            {formatCurrency(filteredOrders.filter(o => o.faturado).reduce((acc, curr) => acc + (Number(curr.vendaValor) || 0), 0))}
                         </span>
                     </div>
                 </div>

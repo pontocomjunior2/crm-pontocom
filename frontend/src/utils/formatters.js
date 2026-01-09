@@ -33,11 +33,23 @@ export const formatCPF = (value) => {
 
 export const formatCurrency = (value) => {
     if (!value && value !== 0) return '';
-    const number = typeof value === 'string' ? parseFloat(value.replace(/\D/g, '')) / 100 : value;
+    let number;
+    if (typeof value === 'string') {
+        // If it's a plain numeric string (e.g. "120.00"), parse it directly
+        if (!isNaN(value) && !value.includes(',')) {
+            number = parseFloat(value);
+        } else {
+            // If it's a mask-like string (e.g. "120,00"), remove mask and divide by 100
+            number = parseFloat(value.replace(/\D/g, '')) / 100;
+        }
+    } else {
+        number = value;
+    }
+
     return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
         currency: 'BRL'
-    }).format(number);
+    }).format(number || 0);
 };
 
 export const parseCurrency = (value) => {

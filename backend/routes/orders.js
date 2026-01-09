@@ -127,6 +127,7 @@ router.post('/', async (req, res) => {
         const {
             clientId,
             title,
+            fileName,
             locutor,
             locutorId,
             tipo,
@@ -138,7 +139,7 @@ router.post('/', async (req, res) => {
             numeroVenda,
             faturado = false,
             entregue = false,
-            precisaNF = false,
+            dispensaNF = false,
             emiteBoleto = false,
             dataFaturar,
             vencimento,
@@ -172,6 +173,7 @@ router.post('/', async (req, res) => {
             data: {
                 clientId,
                 title,
+                fileName,
                 locutor: locutor || '',
                 locutorId: locutorId || null,
                 tipo,
@@ -183,7 +185,7 @@ router.post('/', async (req, res) => {
                 numeroVenda: numeroVenda || null,
                 faturado,
                 entregue,
-                precisaNF,
+                dispensaNF,
                 emiteBoleto,
                 dataFaturar: dataFaturar ? new Date(dataFaturar) : null,
                 vencimento: vencimento ? new Date(vencimento) : null,
@@ -216,6 +218,7 @@ router.put('/:id', async (req, res) => {
         const {
             clientId,
             title,
+            fileName,
             locutor,
             locutorId,
             tipo,
@@ -227,7 +230,7 @@ router.put('/:id', async (req, res) => {
             numeroVenda,
             faturado,
             entregue,
-            precisaNF,
+            dispensaNF,
             emiteBoleto,
             dataFaturar,
             vencimento,
@@ -256,6 +259,7 @@ router.put('/:id', async (req, res) => {
             data: {
                 clientId,
                 title,
+                fileName,
                 locutor,
                 locutorId,
                 tipo,
@@ -267,7 +271,7 @@ router.put('/:id', async (req, res) => {
                 numeroVenda,
                 faturado,
                 entregue,
-                precisaNF,
+                dispensaNF,
                 emiteBoleto,
                 dataFaturar: dataFaturar ? new Date(dataFaturar) : undefined,
                 vencimento: vencimento ? new Date(vencimento) : undefined,
@@ -298,11 +302,27 @@ router.patch('/:id/convert', async (req, res) => {
     try {
         const { id } = req.params;
 
+        const currentOrder = await prisma.order.findUnique({ where: { id } });
+
+        let nextVendaId = undefined;
+
+        // If not already a sale or doesn't have a number, generate one
+        if (currentOrder && !currentOrder.numeroVenda) {
+            const lastSale = await prisma.order.findFirst({
+                where: { numeroVenda: { not: null } },
+                orderBy: { numeroVenda: 'desc' }
+            });
+
+            const lastId = lastSale?.numeroVenda || 42531; // Start before 42532
+            nextVendaId = lastId + 1;
+        }
+
         const order = await prisma.order.update({
             where: { id },
             data: {
                 status: 'VENDA',
-                entregue: true // Assumption: Converting to sale means it's ready/delivered
+                entregue: true,
+                numeroVenda: nextVendaId // Will be undefined if not generating new
             },
             include: { client: true }
         });
