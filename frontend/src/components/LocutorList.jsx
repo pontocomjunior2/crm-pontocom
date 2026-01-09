@@ -160,6 +160,11 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                                 <span className="text-white font-medium text-sm group-hover:text-[#FF9500] transition-colors">
                                                     {locutor.name}
                                                 </span>
+                                                {locutor.realName && (
+                                                    <span className="text-[10px] text-[#555] font-mono leading-none mb-1">
+                                                        ({locutor.realName})
+                                                    </span>
+                                                )}
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <Phone size={10} className="text-[#666666]" />
                                                     <span className="text-[10px] text-[#666666]">
@@ -170,7 +175,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`status-badge ${locutor.status === 'DISPONIVEL' ? 'status-delivered' :
-                                                    locutor.status === 'FERIAS' ? 'status-faturado' : 'status-cancelled'
+                                                locutor.status === 'FERIAS' ? 'status-faturado' : 'status-cancelled'
                                                 }`}>
                                                 {locutor.status === 'DISPONIVEL' ? 'Disponível' :
                                                     locutor.status === 'FERIAS' ? 'Em Férias' : 'Indisponível'}
@@ -178,12 +183,12 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className="text-white text-xs font-bold">
-                                                {formatCurrency(locutor.priceOff)}
+                                                {formatCurrency(Number(locutor.priceOff))}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className="text-white text-xs font-bold">
-                                                {formatCurrency(locutor.priceProduzido)}
+                                                {formatCurrency(Number(locutor.priceProduzido))}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-center">

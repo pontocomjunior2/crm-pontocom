@@ -148,7 +148,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-white/5 text-[#999999] text-[11px] uppercase tracking-wider font-bold">
-                                <th className="px-6 py-4">Cliente / CNPJ</th>
+                                <th className="px-6 py-4">Cliente</th>
                                 <th className="px-6 py-4">Contato</th>
                                 <th className="px-6 py-4">Localização</th>
                                 <th className="px-6 py-4 flex items-center gap-1">
@@ -187,9 +187,6 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                             <div className="flex flex-col">
                                                 <span className="text-white font-medium text-sm group-hover:text-[#FF9500] transition-colors">
                                                     {client.name}
-                                                </span>
-                                                <span className="text-[11px] text-[#666666] font-mono mt-0.5">
-                                                    {formatCNPJ(client.cnpj_cpf)}
                                                 </span>
                                             </div>
                                         </td>

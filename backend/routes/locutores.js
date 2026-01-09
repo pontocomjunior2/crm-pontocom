@@ -10,7 +10,10 @@ router.get('/', async (req, res) => {
         const where = {};
 
         if (search) {
-            where.name = { contains: search, mode: 'insensitive' };
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { realName: { contains: search, mode: 'insensitive' } }
+            ];
         }
 
         if (status) {
@@ -58,12 +61,16 @@ router.post('/', async (req, res) => {
         const locutor = await prisma.locutor.create({
             data: {
                 name: data.name,
+                realName: data.realName,
                 phone: data.phone,
                 email: data.email,
                 status: data.status || 'DISPONIVEL',
                 reelsUrl: data.reelsUrl,
                 priceOff: parseFloat(data.priceOff) || 0,
                 priceProduzido: parseFloat(data.priceProduzido) || 0,
+                chavePix: data.chavePix,
+                tipoChavePix: data.tipoChavePix,
+                banco: data.banco,
                 description: data.description
             }
         });
@@ -82,12 +89,16 @@ router.put('/:id', async (req, res) => {
             where: { id },
             data: {
                 name: data.name,
+                realName: data.realName,
                 phone: data.phone,
                 email: data.email,
                 status: data.status,
                 reelsUrl: data.reelsUrl,
                 priceOff: data.priceOff !== undefined ? parseFloat(data.priceOff) : undefined,
                 priceProduzido: data.priceProduzido !== undefined ? parseFloat(data.priceProduzido) : undefined,
+                chavePix: data.chavePix,
+                tipoChavePix: data.tipoChavePix,
+                banco: data.banco,
                 description: data.description
             }
         });

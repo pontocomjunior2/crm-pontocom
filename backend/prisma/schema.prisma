@@ -57,6 +57,7 @@ model Order {
   comentarios      String?  @db.Text
   
   status           String   @default("PEDIDO") // PEDIDO, VENDA
+  urgency          String   @default("NORMAL") // NORMAL, ALTA, URGENTE
   numeroVenda      String?  // Rastreabilidade com o CSV/Sistema antigo
   
   faturado         Boolean  @default(false)
@@ -77,12 +78,16 @@ model Order {
 model Locutor {
   id              String   @id @default(uuid())
   name            String
+  realName        String?
   phone           String?
   email           String?
   status          String   @default("DISPONIVEL") // DISPONIVEL, INDISPONIVEL, FERIAS
   reelsUrl        String?
   priceOff        Decimal  @db.Decimal(10, 2) @default(0)
   priceProduzido  Decimal  @db.Decimal(10, 2) @default(0)
+  chavePix        String?
+  tipoChavePix    String?
+  banco           String?
   description     String?  @db.Text
   orders          Order[]
   createdAt       DateTime @default(now())

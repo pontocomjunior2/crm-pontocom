@@ -15,10 +15,11 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         locutor: order?.locutor || '',
         locutorId: order?.locutorId || '',
         tipo: order?.tipo || 'OFF',
-        cacheValor: order?.cacheValor || 0,
-        vendaValor: order?.vendaValor || 0,
+        cacheValor: order?.cacheValor ? Number(order.cacheValor) : 0,
+        vendaValor: order?.vendaValor ? Number(order.vendaValor) : 0,
         comentarios: order?.comentarios || '',
         status: order?.status || 'PEDIDO',
+        urgency: order?.urgency || 'NORMAL',
         faturado: order?.faturado || false,
         entregue: order?.entregue || false,
         precisaNF: order?.precisaNF || false,
@@ -261,7 +262,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                             <option value="">Selecione um cliente...</option>
                             {clients.map(client => (
                                 <option key={client.id} value={client.id}>
-                                    {client.name} {client.cnpj_cpf ? `- ${client.cnpj_cpf}` : ''}
+                                    {client.name}
                                 </option>
                             ))}
                         </select>
@@ -343,6 +344,50 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     <span className="text-white text-sm">PRODUZIDO (Com trilha)</span>
                                 </label>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Urgency Selection */}
+                    <div className="mb-6">
+                        <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                            Nível de Urgência
+                        </label>
+                        <div className="flex gap-4">
+                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-white' : 'bg-[#0F0F0F] border-white/10 text-[#666666]'}`}>
+                                <input
+                                    type="radio"
+                                    name="urgency"
+                                    value="NORMAL"
+                                    checked={formData.urgency === 'NORMAL'}
+                                    onChange={handleChange}
+                                    className="hidden"
+                                />
+                                <span className="text-sm font-bold">Normal</span>
+                            </label>
+                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-[#0F0F0F] border-white/10 text-[#666666]'}`}>
+                                <input
+                                    type="radio"
+                                    name="urgency"
+                                    value="ALTA"
+                                    checked={formData.urgency === 'ALTA'}
+                                    onChange={handleChange}
+                                    className="hidden"
+                                />
+                                <AlertCircle size={16} />
+                                <span className="text-sm font-bold">Alta</span>
+                            </label>
+                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-[#0F0F0F] border-white/10 text-[#666666]'}`}>
+                                <input
+                                    type="radio"
+                                    name="urgency"
+                                    value="URGENTE"
+                                    checked={formData.urgency === 'URGENTE'}
+                                    onChange={handleChange}
+                                    className="hidden"
+                                />
+                                <AlertCircle size={16} />
+                                <span className="text-sm font-bold">URGENTE!</span>
+                            </label>
                         </div>
                     </div>
 
@@ -575,8 +620,8 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                         )}
                     </button>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 

@@ -249,39 +249,57 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                 </tr>
                             ) : (
                                 orders.map((order) => (
-                                    <tr key={order.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="pl-6 py-4 w-[50px]">
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
+                                    <tr key={order.id} className="hover:bg-white/[0.02] transition-colors group relative">
+                                        {/* Urgency Indicator Strip */}
+                                        {order.urgency === 'URGENTE' && (
+                                            <td className="absolute left-0 top-0 bottom-0 w-[4px] bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></td>
+                                        )}
+                                        {order.urgency === 'ALTA' && (
+                                            <td className="absolute left-0 top-0 bottom-0 w-[4px] bg-orange-500"></td>
+                                        )}
+
+                                        <td className="pl-6 py-4 w-[50px] align-top">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border mt-1 ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                                                 order.entregue ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
                                                     'bg-white/5 text-white/20 border-white/10'
                                                 }`} title={getStatusLabel(order)}>
                                                 <CheckCircle2 size={18} />
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex flex-col">
-                                                <span className="text-[11px] text-[#999999] font-mono">
+                                        <td className="px-4 py-4 align-top">
+                                            <div className="flex flex-col mt-1.5">
+                                                <span className="text-[11px] text-[#999999] font-mono leading-none">
                                                     {new Date(order.date).toLocaleDateString('pt-BR')}
                                                 </span>
-                                                <span className="text-[9px] text-[#666666]">
+                                                <span className="text-[9px] text-[#666666] mt-1">
                                                     {order.id.substring(0, 6).toUpperCase()}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <span className="text-sm font-bold text-white line-clamp-1 max-w-[150px]" title={order.client?.name}>
+                                        <td className="px-4 py-4 align-top">
+                                            <span className="text-sm font-bold text-white line-clamp-1 max-w-[150px] mt-1" title={order.client?.name}>
                                                 {order.client?.name || 'Cliente Desconhecido'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-4">
-                                            <div className="flex flex-col">
+                                        <td className="px-4 py-4 align-top">
+                                            <div className="flex flex-col mt-1">
                                                 <button
                                                     onClick={() => onEditOrder(order)}
-                                                    className="text-white font-medium text-sm text-left hover:text-[#FF9500] transition-colors line-clamp-1 mb-1 focus:outline-none"
+                                                    className="text-white font-medium text-sm text-left hover:text-[#FF9500] transition-colors line-clamp-1 mb-1 focus:outline-none leading-none"
                                                 >
                                                     {order.title}
                                                 </button>
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-2 mt-1.5">
+                                                    {order.urgency === 'URGENTE' && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-wider animate-pulse">
+                                                            URGENTE
+                                                        </span>
+                                                    )}
+                                                    {order.urgency === 'ALTA' && (
+                                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 uppercase tracking-wider">
+                                                            ALTA
+                                                        </span>
+                                                    )}
                                                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${order.tipo === 'PRODUZIDO' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                                         {order.tipo}
                                                     </span>
@@ -292,26 +310,26 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 text-right">
-                                            <div className="flex flex-col">
-                                                <span className="text-white font-bold text-sm">
+                                        <td className="px-4 py-4 text-right align-top">
+                                            <div className="flex flex-col mt-1">
+                                                <span className="text-white font-bold text-sm leading-none">
                                                     {formatCurrency(Number(order.vendaValor))}
                                                 </span>
-                                                <span className="text-[10px] text-[#666666]">
+                                                <span className="text-[10px] text-[#666666] mt-1">
                                                     Cachê: {formatCurrency(Number(order.cacheValor))}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 text-right hidden lg:table-cell">
-                                            <div className="flex flex-col items-end">
+                                        <td className="px-4 py-4 text-right hidden lg:table-cell align-top">
+                                            <div className="flex flex-col items-end mt-1">
                                                 <div className="flex items-center gap-1 text-green-400 font-bold text-xs">
                                                     <TrendingUp size={12} />
                                                     {formatCurrency(Number(order.vendaValor) - Number(order.cacheValor) - (Number(order.vendaValor) * 0.1) - ((Number(order.vendaValor) - Number(order.cacheValor)) * 0.04))}
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-2">
+                                        <td className="px-6 py-4 text-right align-top">
+                                            <div className="flex items-center justify-end gap-2 mt-0.5">
                                                 {order.status === 'PEDIDO' && !order.entregue && (
                                                     <button
                                                         onClick={() => handleConvert(order.id)}

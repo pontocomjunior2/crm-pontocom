@@ -12,18 +12,23 @@ import {
     CheckCircle2
 } from 'lucide-react';
 import { locutorAPI } from '../services/api';
+import { formatCurrency, formatPhone } from '../utils/formatters';
 
 const LocutorForm = ({ locutor, onClose, onSave }) => {
     const isEditing = !!locutor;
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
+        realName: '',
         phone: '',
         email: '',
         status: 'DISPONIVEL',
         reelsUrl: '',
         priceOff: 0,
         priceProduzido: 0,
+        chavePix: '',
+        tipoChavePix: 'CPF',
+        banco: '',
         description: ''
     });
 
@@ -31,12 +36,16 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
         if (locutor) {
             setFormData({
                 name: locutor.name || '',
+                realName: locutor.realName || '',
                 phone: locutor.phone || '',
                 email: locutor.email || '',
                 status: locutor.status || 'DISPONIVEL',
                 reelsUrl: locutor.reelsUrl || '',
-                priceOff: locutor.priceOff || 0,
-                priceProduzido: locutor.priceProduzido || 0,
+                priceOff: locutor.priceOff ? Number(locutor.priceOff) : 0,
+                priceProduzido: locutor.priceProduzido ? Number(locutor.priceProduzido) : 0,
+                chavePix: locutor.chavePix || '',
+                tipoChavePix: locutor.tipoChavePix || 'CPF',
+                banco: locutor.banco || '',
                 description: locutor.description || ''
             });
         }
@@ -67,6 +76,21 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
             ...prev,
             [name]: value
         }));
+    };
+
+    const handleCurrencyChange = (e) => {
+        const { name, value } = e.target;
+        // Remove all non-digits
+        const numericValue = value.replace(/\D/g, '');
+        // Convert to float (cents to currency)
+        const floatValue = parseFloat(numericValue) / 100;
+
+        setFormData(prev => ({ ...prev, [name]: floatValue }));
+    };
+
+    const handlePhoneChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: formatPhone(value) }));
     };
 
     return (
@@ -104,14 +128,26 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                             </h3>
 
                             <div className="space-y-2">
-                                <label className="text-xs font-medium text-[#999999] ml-1">Nome do Locutor / Talent</label>
+                                <label className="text-xs font-medium text-[#999999] ml-1">Nome Interno / Artístico</label>
                                 <input
                                     required
                                     type="text"
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
-                                    placeholder="Ex: João da Silva"
+                                    placeholder="Ex: João da Silva (Nome na vitrine)"
+                                    className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#333] transition-all"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-[#999999] ml-1">Nome Real / Civil (Interno)</label>
+                                <input
+                                    type="text"
+                                    name="realName"
+                                    value={formData.realName}
+                                    onChange={handleChange}
+                                    placeholder="Nome completo para contrato/pagamento"
                                     className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#333] transition-all"
                                 />
                             </div>
@@ -122,8 +158,8 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                                     <input
                                         type="text"
                                         name="phone"
-                                        value={formData.phone}
-                                        onChange={handleChange}
+                                        value={formatPhone(formData.phone)}
+                                        onChange={handlePhoneChange}
                                         placeholder="(00) 00000-0000"
                                         className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#333] transition-all"
                                     />
@@ -185,14 +221,13 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                                         <Info size={12} className="opacity-40" title="Valor base para locução sem trilha/efeitos" />
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#444] text-xs font-bold">R$</span>
                                         <input
-                                            type="number"
-                                            step="0.01"
+                                            type="text"
                                             name="priceOff"
-                                            value={formData.priceOff}
-                                            onChange={handleChange}
-                                            className="w-full bg-[#121212] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 transition-all font-mono"
+                                            value={formatCurrency(formData.priceOff)}
+                                            onChange={handleCurrencyChange}
+                                            placeholder="R$ 0,00"
+                                            className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 transition-all font-mono"
                                         />
                                     </div>
                                 </div>
@@ -202,17 +237,65 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                                         <Info size={12} className="opacity-40" title="Valor base para locução com trilha e produção final" />
                                     </label>
                                     <div className="relative">
-                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#444] text-xs font-bold">R$</span>
                                         <input
-                                            type="number"
-                                            step="0.01"
+                                            type="text"
                                             name="priceProduzido"
-                                            value={formData.priceProduzido}
-                                            onChange={handleChange}
-                                            className="w-full bg-[#121212] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 transition-all font-mono"
+                                            value={formatCurrency(formData.priceProduzido)}
+                                            onChange={handleCurrencyChange}
+                                            placeholder="R$ 0,00"
+                                            className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 transition-all font-mono"
                                         />
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Payment/PIX SECTION */}
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold text-[#FF9500] uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span className="w-1 h-3 bg-[#FF9500] rounded-full"></span>
+                                Dados de Pagamento (PIX)
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-medium text-[#999999] ml-1">Tipo de Chave</label>
+                                    <select
+                                        name="tipoChavePix"
+                                        value={formData.tipoChavePix}
+                                        onChange={handleChange}
+                                        className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 transition-all text-sm"
+                                    >
+                                        <option value="CPF" className="bg-[#121212]">CPF</option>
+                                        <option value="CNPJ" className="bg-[#121212]">CNPJ</option>
+                                        <option value="EMAIL" className="bg-[#121212]">Email</option>
+                                        <option value="TELEFONE" className="bg-[#121212]">Telefone</option>
+                                        <option value="ALEATORIA" className="bg-[#121212]">Chave Aleatória</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2 md:col-span-2">
+                                    <label className="text-xs font-medium text-[#999999] ml-1">Chave PIX</label>
+                                    <input
+                                        type="text"
+                                        name="chavePix"
+                                        value={formData.chavePix}
+                                        onChange={handleChange}
+                                        placeholder="Chave Pix..."
+                                        className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#333] transition-all font-mono"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-[#999999] ml-1">Banco / Instituição (Opcional)</label>
+                                <input
+                                    type="text"
+                                    name="banco"
+                                    value={formData.banco}
+                                    onChange={handleChange}
+                                    placeholder="Ex: Nubank, Inter, Banco do Brasil..."
+                                    className="w-full bg-[#121212] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#333] transition-all"
+                                />
                             </div>
                         </div>
 
@@ -249,8 +332,8 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                         <span>{isEditing ? 'Salvar Alterações' : 'Confirmar Cadastro'}</span>
                     </button>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
