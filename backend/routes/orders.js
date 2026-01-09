@@ -355,6 +355,62 @@ router.patch('/:id/revert', async (req, res) => {
     }
 });
 
+// POST /api/orders/:id/clone - Duplicate an existing order
+router.post('/:id/clone', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const original = await prisma.order.findUnique({
+            where: { id }
+        });
+
+        if (!original) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Prepare clone data by removing unique/resetting fields
+        const {
+            id: _,
+            sequentialId: __,
+            numeroVenda: ___,
+            date: ____,
+            updatedAt: _____,
+            createdAt: ______,
+            ...cloneData
+        } = original;
+
+        // Reset lifecycle flags for the new entry
+        // Clones ALWAYS start as 'PEDIDO', regardless of original status
+        cloneData.status = 'PEDIDO';
+        cloneData.faturado = false;
+        cloneData.entregue = false;
+        cloneData.pago = false;
+        cloneData.dataFaturar = null;
+        cloneData.vencimento = null;
+        cloneData.statusEnvio = 'PENDENTE';
+        cloneData.numeroVenda = null;
+
+        const clonedOrder = await prisma.order.create({
+            data: cloneData,
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        razaoSocial: true,
+                        cnpj_cpf: true
+                    }
+                }
+            }
+        });
+
+        res.status(201).json(clonedOrder);
+    } catch (error) {
+        console.error('Error cloning order:', error);
+        res.status(500).json({ error: 'Failed to clone order', message: error.message });
+    }
+});
+
 // DELETE /api/orders/:id - Delete order
 router.delete('/:id', async (req, res) => {
     try {

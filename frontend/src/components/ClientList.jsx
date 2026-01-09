@@ -144,8 +144,8 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
             </div>
 
             {/* Table Content */}
-            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col">
-                <div className="overflow-x-auto">
+            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-0">
+                <div className="flex-1 overflow-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-card border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
@@ -207,14 +207,14 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                             ) : (
                                 clients.map((client) => (
                                     <tr key={client.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-2">
                                             <div className="flex flex-col">
-                                                <span className="text-foreground font-medium text-sm group-hover:text-primary transition-colors">
+                                                <span className="text-foreground font-semibold text-[13px] group-hover:text-primary transition-colors">
                                                     {client.name}
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-2">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex items-center gap-2 text-[#999999] text-xs">
                                                     <Mail size={12} className="text-[#666666]" />
@@ -226,13 +226,13 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-2">
                                             <div className="flex items-center gap-2 text-[#999999] text-xs">
                                                 <MapPin size={12} className="text-[#666666]" />
                                                 <span>{client.cidade ? `${client.cidade}/${client.estado}` : 'N/A'}</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-2">
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-1.5 bg-primary/10 px-2 py-1 rounded-lg w-fit">
                                                     <span className="text-primary font-bold text-xs">
@@ -252,7 +252,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                                 )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-2">
                                             <span className={`status-badge ${client.status === 'ativado' ? 'status-delivered' : 'status-faturado'}`}>
                                                 {client.status === 'ativado' ? 'Ativo' : 'Inativo'}
                                             </span>
@@ -283,7 +283,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                 </div>
 
                 {/* Pagination Section */}
-                <div className="mt-auto px-6 py-4 border-t divider-dark flex items-center justify-between">
+                <div className="mt-auto px-6 py-2.5 border-t divider-dark flex items-center justify-between">
                     <div className="text-[11px] text-[#666666]">
                         Mostrando {clients.length} de {pagination.total} clientes
                     </div>

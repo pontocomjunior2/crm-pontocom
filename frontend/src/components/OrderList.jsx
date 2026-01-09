@@ -19,7 +19,8 @@ import {
     FileSpreadsheet,
     ArrowUpRight,
     RotateCcw,
-    ArrowUpDown
+    ArrowUpDown,
+    Copy
 } from 'lucide-react';
 import { orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -120,6 +121,16 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         }
     };
 
+    const handleClone = async (id) => {
+        try {
+            await orderAPI.clone(id);
+            fetchOrders();
+        } catch (error) {
+            console.error('Error cloning order:', error);
+            alert('Erro ao clonar pedido: ' + error.message);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header & Actions */}
@@ -129,7 +140,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                         <ShoppingCart className="text-primary" size={24} />
                         Controle de Pedidos
                     </h2>
-                    <p className="text-sm text-muted-foreground mt-1">Total de {pagination.total} pedidos registrados</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Total de {pagination.total} pedidos registrados</p>
                 </div>
 
                 <button
@@ -142,34 +153,35 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
             </div>
 
             {/* Stats Summary Section */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                 {[
-                    { label: 'Total Registros', value: pagination.total, icon: <ShoppingCart size={16} />, color: 'text-blue-400' },
-                    { label: 'Pedidos Ativos', value: orders.filter(o => o.status === 'PEDIDO').length, icon: <Clock size={16} />, color: 'text-amber-400' },
-                    { label: 'Vendas (Histórico)', value: orders.filter(o => o.status === 'VENDA').length, icon: <TrendingUp size={16} />, color: 'text-emerald-400' },
-                    { label: 'Faturados', value: orders.filter(o => o.faturado).length, icon: <DollarSign size={16} />, color: 'text-slate-400' },
+                    { label: 'Total', value: pagination.total, icon: <ShoppingCart size={14} />, color: 'text-blue-400' },
+                    { label: 'Ativos', value: orders.filter(o => o.status === 'PEDIDO').length, icon: <Clock size={14} />, color: 'text-amber-400' },
+                    { label: 'Vendas', value: orders.filter(o => o.status === 'VENDA').length, icon: <TrendingUp size={14} />, color: 'text-emerald-400' },
+                    { label: 'Faturados', value: orders.filter(o => o.faturado).length, icon: <DollarSign size={14} />, color: 'text-slate-400' },
                 ].map((stat, i) => (
-                    <div key={i} className="card-glass-dark p-4 rounded-xl border border-white/5 flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center ${stat.color}`}>
+                    <div key={i} className="card-glass-dark p-3 rounded-xl border border-white/5 flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center ${stat.color}`}>
                             {stat.icon}
                         </div>
                         <div>
-                            <p className="text-[10px] font-bold text-[#666666] uppercase tracking-wider">{stat.label}</p>
-                            <p className="text-xl font-bold text-white">{stat.value}</p>
+                            <p className="text-[9px] font-bold text-[#666666] uppercase tracking-wider">{stat.label}</p>
+                            <p className="text-lg font-bold text-white">{stat.value}</p>
                         </div>
                     </div>
                 ))}
             </div>
 
             {/* Filters & Search */}
-            <div className="card-glass-dark p-4 rounded-2xl mb-6 border border-white/5 bg-card">
-                <div className="flex flex-col lg:flex-row gap-4">
+            <div className="card-glass-dark p-3 rounded-2xl mb-4 border border-white/5 bg-card">
+                <div className="flex flex-col lg:flex-row gap-3">
                     <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                         <input
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
+                            placeholder="Buscar pedidos..."
+                            className="w-full bg-input-background border border-border rounded-xl pl-10 pr-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-xs"
                         />
                     </form>
 
@@ -177,7 +189,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                         <select
                             value={filters.type}
                             onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                            className="bg-input-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary/50"
+                            className="bg-input-background border border-border rounded-xl px-3 py-2 text-foreground text-xs focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Tipos</option>
                             <option value="OFF">OFF</option>
@@ -187,18 +199,18 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                         <select
                             value={filters.status}
                             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                            className="bg-input-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary/50"
+                            className="bg-input-background border border-border rounded-xl px-3 py-2 text-foreground text-xs focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Status</option>
-                            <option value="PEDIDO">Apenas Pedidos</option>
-                            <option value="VENDA">Apenas Vendas (Histórico)</option>
+                            <option value="PEDIDO">Pedidos</option>
+                            <option value="VENDA">Vendas</option>
                             <option value="entregue">Entregues</option>
                             <option value="faturado">Faturados</option>
                         </select>
 
                         <button
                             onClick={fetchOrders}
-                            className="btn-secondary px-6 text-sm"
+                            className="btn-secondary px-4 py-2 text-xs"
                         >
                             Filtrar
                         </button>
@@ -207,47 +219,47 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
             </div>
 
             {/* Table Content */}
-            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col">
-                <div className="overflow-x-auto">
+            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-0">
+                <div className="flex-1 overflow-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-card border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
-                                <th className="pl-6 py-4 w-[80px] cursor-pointer hover:text-foreground transition-colors group/head">
+                            <tr className="bg-card border-b border-border text-muted-foreground text-[10px] uppercase tracking-wider font-bold">
+                                <th className="pl-6 py-2.5 w-[80px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center gap-2">
                                         Status
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 w-[120px] cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-2.5 w-[120px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center gap-2">
                                         Data
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 w-[200px] cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-2.5 w-[200px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center gap-2">
                                         Cliente
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-2.5 cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center gap-2">
                                         Título / Locutor
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 text-right w-[140px] cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-2.5 text-right w-[140px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center justify-end gap-2">
                                         Valores
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 text-right w-[140px] hidden lg:table-cell cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-2.5 text-right w-[140px] hidden lg:table-cell cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center justify-end gap-2">
                                         Margem
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 w-[120px] text-right">Ações</th>
+                                <th className="px-6 py-2.5 w-[120px] text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divider-dark">
@@ -282,7 +294,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                             <td className="absolute left-0 top-0 bottom-0 w-[4px] bg-orange-500"></td>
                                         )}
 
-                                        <td className="pl-6 py-4 w-[50px] align-top">
+                                        <td className="pl-6 py-2 w-[50px] align-top">
                                             <div className={`w-8 h-8 rounded-full flex items-center justify-center border mt-1 ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
                                                 order.entregue ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
                                                     'bg-white/5 text-white/20 border-white/10'
@@ -290,7 +302,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 <CheckCircle2 size={18} />
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 align-top">
+                                        <td className="px-4 py-2 align-top">
                                             <div className="flex flex-col mt-1.5">
                                                 <span className="text-[11px] text-[#999999] font-mono leading-none">
                                                     {new Date(order.date).toLocaleDateString('pt-BR')}
@@ -300,16 +312,16 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 align-top">
-                                            <span className="text-sm font-bold text-foreground line-clamp-1 max-w-[150px] mt-1" title={order.client?.name}>
+                                        <td className="px-4 py-2 align-top">
+                                            <span className="text-[13px] font-bold text-foreground line-clamp-1 max-w-[180px] mt-1" title={order.client?.name}>
                                                 {order.client?.name || 'Cliente Desconhecido'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-4 align-top">
+                                        <td className="px-4 py-2 align-top">
                                             <div className="flex flex-col mt-1">
                                                 <button
                                                     onClick={() => onEditOrder(order)}
-                                                    className="text-foreground font-medium text-sm text-left hover:text-primary transition-colors line-clamp-1 mb-1 focus:outline-none leading-none"
+                                                    className="text-foreground font-semibold text-[13px] text-left hover:text-primary transition-all line-clamp-1 mb-1 focus:outline-none leading-tight"
                                                 >
                                                     {order.title}
                                                 </button>
@@ -334,7 +346,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 text-right align-top">
+                                        <td className="px-4 py-2 text-right align-top">
                                             <div className="flex flex-col mt-1">
                                                 <span className="text-foreground font-bold text-sm leading-none">
                                                     {formatCurrency(Number(order.vendaValor))}
@@ -351,7 +363,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-4 text-right hidden lg:table-cell align-top">
+                                        <td className="px-4 py-2 text-right hidden lg:table-cell align-top">
                                             <div className="flex flex-col items-end mt-1">
                                                 <div className="flex items-center gap-1 text-green-400 font-bold text-xs">
                                                     <TrendingUp size={12} />
@@ -359,7 +371,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-right align-top">
+                                        <td className="px-6 py-2 text-right align-top">
                                             <div className="flex items-center justify-end gap-2 mt-0.5">
                                                 {order.status === 'PEDIDO' && !order.entregue && (
                                                     <button
@@ -379,6 +391,13 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                         <RotateCcw size={16} />
                                                     </button>
                                                 )}
+                                                <button
+                                                    onClick={() => handleClone(order.id)}
+                                                    className="p-2 hover:bg-white/10 rounded-lg text-[#999999] hover:text-white transition-all shadow-sm"
+                                                    title="Clonar Pedido"
+                                                >
+                                                    <Copy size={16} />
+                                                </button>
                                                 <button
                                                     onClick={() => onEditOrder(order)}
                                                     className="p-2 hover:bg-white/10 rounded-lg text-[#999999] hover:text-white transition-all shadow-sm"
@@ -403,7 +422,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                 </div>
 
                 {/* Pagination Section */}
-                <div className="mt-auto px-6 py-4 border-t divider-dark flex items-center justify-between">
+                <div className="mt-auto px-6 py-2.5 border-t divider-dark flex items-center justify-between">
                     <div className="text-[11px] text-[#666666]">
                         Mostrando {orders.length} de {pagination.total} pedidos
                     </div>

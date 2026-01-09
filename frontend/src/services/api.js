@@ -103,6 +103,12 @@ export const orderAPI = {
         });
         return response;
     },
+
+    clone: async (id) => {
+        return fetchAPI(`/orders/${id}/clone`, {
+            method: 'POST',
+        });
+    },
 };
 
 // Locutor API calls

@@ -68,13 +68,13 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
     return (
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header & Actions */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 flex-shrink-0">
                 <div>
                     <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                         <Mic2 className="text-primary" size={24} />
                         Gerenciamento de Locutores
                     </h2>
-                    <p className="text-sm text-[#999999] mt-1">Total de {locutores.length} locutores cadastrados</p>
+                    <p className="text-[11px] text-[#999999] mt-0.5">Total de {locutores.length} locutores cadastrados</p>
                 </div>
 
                 <button
@@ -87,16 +87,16 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
             </div>
 
             {/* Filters & Search */}
-            <div className="card-glass-dark p-4 rounded-2xl mb-6 border border-white/5">
-                <div className="flex flex-col lg:flex-row gap-4">
+            <div className="card-glass-dark p-3 rounded-2xl mb-4 border border-white/5 flex-shrink-0">
+                <div className="flex flex-col md:flex-row gap-3">
                     <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666666]" size={16} />
                         <input
                             type="text"
-                            placeholder="Pesquisar por nome ou especialidade..."
+                            placeholder="Buscar por nome ou especialidade..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
+                            className="w-full bg-input-background border border-border rounded-xl pl-10 pr-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-xs"
                         />
                     </form>
 
@@ -104,7 +104,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="bg-input-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary/50"
+                            className="bg-input-background border border-border rounded-xl px-3 py-2 text-foreground text-xs focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Status</option>
                             <option value="DISPONIVEL">Disponível</option>
@@ -114,7 +114,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
 
                         <button
                             onClick={fetchLocutores}
-                            className="btn-secondary px-6 text-sm"
+                            className="btn-secondary px-4 py-2 text-xs"
                         >
                             Atualizar
                         </button>
@@ -123,42 +123,17 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
             </div>
 
             {/* Table Content */}
-            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col">
-                <div className="overflow-x-auto">
+            <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-0">
+                <div className="flex-1 overflow-auto custom-scrollbar">
                     <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-card border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
-                                <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
-                                    <div className="flex items-center gap-2">
-                                        Locutor / Contato
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
-                                    <div className="flex items-center gap-2">
-                                        Status
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center cursor-pointer hover:text-white transition-colors group/head">
-                                    <div className="flex items-center justify-center gap-2">
-                                        Preço (OFF)
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center cursor-pointer hover:text-white transition-colors group/head">
-                                    <div className="flex items-center justify-center gap-2">
-                                        Preço (PROD)
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-center cursor-pointer hover:text-white transition-colors group/head">
-                                    <div className="flex items-center justify-center gap-2">
-                                        Trabalhos
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-right">Ações</th>
+                        <thead className="sticky top-0 z-10 bg-card border-b border-border text-[10px] uppercase text-muted-foreground font-bold tracking-wider">
+                            <tr>
+                                <th className="px-6 py-2.5">Locutor / Contato</th>
+                                <th className="px-6 py-2.5">Status</th>
+                                <th className="px-4 py-2.5 text-center">Preço (OFF)</th>
+                                <th className="px-4 py-2.5 text-center">Preço (PROD)</th>
+                                <th className="px-4 py-2.5 text-center">Trabalhos</th>
+                                <th className="px-6 py-2.5 text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divider-dark">
@@ -172,8 +147,8 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                 ))
                             ) : locutores.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 text-[#666666]">
+                                    <td colSpan="6" className="px-6 py-20 text-center text-muted-foreground">
+                                        <div className="flex flex-col items-center gap-3">
                                             <Mic2 size={48} className="opacity-20" />
                                             <p className="text-lg">Nenhum locutor encontrado</p>
                                         </div>
@@ -182,13 +157,13 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                             ) : (
                                 locutores.map((locutor) => (
                                     <tr key={locutor.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-2">
                                             <div className="flex flex-col">
-                                                <span className="text-foreground font-medium text-sm group-hover:text-primary transition-colors">
+                                                <span className="text-foreground font-semibold text-[13px] group-hover:text-primary transition-colors">
                                                     {locutor.name}
                                                 </span>
                                                 {locutor.realName && (
-                                                    <span className="text-[10px] text-[#555] font-mono leading-none mb-1">
+                                                    <span className="text-[10px] text-[#666666] font-mono leading-none mt-0.5">
                                                         ({locutor.realName})
                                                     </span>
                                                 )}
@@ -200,7 +175,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-2">
                                             <span className={`status-badge ${locutor.status === 'DISPONIVEL' ? 'status-delivered' :
                                                 locutor.status === 'FERIAS' ? 'status-faturado' : 'status-cancelled'
                                                 }`}>
@@ -208,22 +183,22 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                                     locutor.status === 'FERIAS' ? 'Em Férias' : 'Indisponível'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td className="px-4 py-2 text-center">
                                             <span className="text-white text-xs font-bold">
                                                 {formatCurrency(Number(locutor.priceOff))}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
+                                        <td className="px-4 py-2 text-center">
                                             <span className="text-white text-xs font-bold">
                                                 {formatCurrency(Number(locutor.priceProduzido))}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="px-2 py-1 rounded-md bg-white/5 text-white text-[10px] font-bold">
+                                        <td className="px-4 py-2 text-center">
+                                            <span className="px-2 py-0.5 rounded bg-white/5 text-white text-[10px] font-bold">
                                                 {locutor._count?.orders || 0}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-right">
+                                        <td className="px-6 py-2 text-right">
                                             <div className="flex items-center justify-end gap-2">
                                                 {locutor.reelsUrl && (
                                                     <a
