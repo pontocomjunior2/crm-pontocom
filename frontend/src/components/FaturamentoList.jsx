@@ -10,7 +10,10 @@ import {
     DollarSign,
     ArrowUpRight,
     Loader2,
-    Download
+    Download,
+    Copy,
+    CheckSquare,
+    Square
 } from 'lucide-react';
 import { orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -20,6 +23,42 @@ const FaturamentoList = ({ onEditOrder }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // all, faturado, pendente
+    const [selectedOrders, setSelectedOrders] = useState([]);
+
+    const handleSelectOrder = (id) => {
+        setSelectedOrders(prev => {
+            if (prev.includes(id)) {
+                return prev.filter(orderId => orderId !== id);
+            } else {
+                return [...prev, id];
+            }
+        });
+    };
+
+    const handleSelectAll = () => {
+        if (selectedOrders.length === filteredOrders.length) {
+            setSelectedOrders([]);
+        } else {
+            setSelectedOrders(filteredOrders.map(o => o.id));
+        }
+    };
+
+    const handleGenerateList = () => {
+        const selected = orders.filter(o => selectedOrders.includes(o.id));
+        if (selected.length === 0) return;
+
+        const textList = selected.map(o => {
+            const date = new Date(o.date).toLocaleDateString('pt-BR');
+            // Use sequentialId if available, fallback to something else or just skip
+            // Ensure sequentialId starts at 42531 logic is handled by backend, here we just display it
+            const id = o.sequentialId || 'N/A';
+            return `${id} - ${o.title.toUpperCase()} - ${date} (${formatCurrency(o.vendaValor)})`;
+        }).join('\n');
+
+        navigator.clipboard.writeText(textList)
+            .then(() => alert('Lista copiada para a área de transferência!'))
+            .catch(err => console.error('Erro ao copiar:', err));
+    };
 
     const fetchOrders = async () => {
         setLoading(true);
@@ -106,7 +145,16 @@ const FaturamentoList = ({ onEditOrder }) => {
                 <table className="w-full text-left border-collapse">
                     <thead className="sticky top-0 z-10 bg-card border-b border-border text-xs uppercase text-muted-foreground font-bold tracking-wider">
                         <tr>
-                            <th className="px-6 py-4">Status</th>
+                            <th className="px-6 py-4 w-[50px]">
+                                <div className="flex items-center justify-center cursor-pointer" onClick={handleSelectAll}>
+                                    {filteredOrders.length > 0 && selectedOrders.length === filteredOrders.length ? (
+                                        <CheckSquare size={18} className="text-primary" />
+                                    ) : (
+                                        <Square size={18} className="text-muted-foreground" />
+                                    )}
+                                </div>
+                            </th>
+                            <th className="px-4 py-4">ID / Status</th>
                             <th className="px-4 py-4">Data Venda</th>
                             <th className="px-4 py-4">Cliente</th>
                             <th className="px-4 py-4">Título / Detalhes</th>
@@ -137,12 +185,28 @@ const FaturamentoList = ({ onEditOrder }) => {
                         ) : (
                             filteredOrders.map((order) => (
                                 <tr key={order.id} className="hover:bg-muted/50 transition-colors group">
-                                    <td className="pl-6 py-4 w-[50px]">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${order.faturado
-                                            ? 'bg-green-500/10 text-green-500 border-green-500/20'
-                                            : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
-                                            }`} title={order.faturado ? 'Faturado' : 'Pendente de Faturamento'}>
-                                            <DollarSign size={16} />
+                                    <td className="pl-6 py-4">
+                                        <div className="flex items-center justify-center cursor-pointer" onClick={() => handleSelectOrder(order.id)}>
+                                            {selectedOrders.includes(order.id) ? (
+                                                <CheckSquare size={18} className="text-primary" />
+                                            ) : (
+                                                <Square size={18} className="text-muted-foreground/30 hover:text-muted-foreground transition-colors" />
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-4 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${order.faturado
+                                                ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                                : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
+                                                }`} title={order.faturado ? 'Faturado' : 'Pendente de Faturamento'}>
+                                                <DollarSign size={16} />
+                                            </div>
+                                            {order.sequentialId && (
+                                                <span className="font-mono text-xs text-muted-foreground">
+                                                    #{order.sequentialId}
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="px-4 py-4">
@@ -227,6 +291,17 @@ const FaturamentoList = ({ onEditOrder }) => {
                 <span className="text-xs text-muted-foreground">
                     Exibindo {filteredOrders.length} registros
                 </span>
+                <div className="flex items-center gap-4">
+                    {selectedOrders.length > 0 && (
+                        <button
+                            onClick={handleGenerateList}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20 animate-in fade-in zoom-in duration-200"
+                        >
+                            <Copy size={14} />
+                            Gerar Lista ({selectedOrders.length})
+                        </button>
+                    )}
+                </div>
                 <div className="flex items-center gap-6">
                     <div className="text-right">
                         <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">Total Pendente</span>

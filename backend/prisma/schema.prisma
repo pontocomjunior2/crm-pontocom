@@ -44,6 +44,7 @@ model Client {
 
 model Order {
   id               String   @id @default(uuid())
+  sequentialId     Int      @unique @default(autoincrement())
   date             DateTime @default(now())
   clientId         String
   client           Client   @relation(fields: [clientId], references: [id])

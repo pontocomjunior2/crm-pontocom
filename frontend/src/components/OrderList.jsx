@@ -212,19 +212,18 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-card border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
-                                <th className="pl-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="pl-6 py-4 w-[80px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center gap-2">
                                         Status
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-4 w-[120px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center gap-2">
                                         Data
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-4 w-[200px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center gap-2">
                                         Cliente
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
@@ -236,19 +235,19 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 text-right cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-4 text-right w-[140px] cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center justify-end gap-2">
                                         Valores
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-4 py-4 text-right hidden lg:table-cell cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th className="px-4 py-4 text-right w-[140px] hidden lg:table-cell cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center justify-end gap-2">
                                         Margem
                                         <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 text-right">Ações</th>
+                                <th className="px-6 py-4 w-[120px] text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divider-dark">
