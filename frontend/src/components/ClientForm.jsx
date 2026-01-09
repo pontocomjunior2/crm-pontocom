@@ -186,20 +186,20 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-[#161616] rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-white/10">
+            <div className="bg-card rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-border">
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <div className="flex items-center justify-between p-6 border-b border-border">
                     <div>
-                        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                            <Building2 size={28} className="text-[#FF9500]" />
+                        <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                            <Building2 size={28} className="text-primary" />
                             {client ? 'Editar Cliente' : 'Novo Cliente'}
                         </h2>
-                        <p className="text-sm text-[#999999] mt-1">Preencha os dados do cliente abaixo</p>
+                        <p className="text-sm text-muted-foreground mt-1">Preencha os dados do cliente abaixo</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors text-[#999999] hover:text-white"
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors text-muted-foreground hover:text-foreground"
                     >
                         <X size={24} />
                     </button>
@@ -208,8 +208,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 {/* Message Alert */}
                 {message.text && (
                     <div className={`mx-6 mt-4 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
-                            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-                            : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                        ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                        : 'bg-red-500/10 border border-red-500/30 text-red-400'
                         }`}>
                         {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                         <span className="text-sm font-medium">{message.text}</span>
@@ -221,15 +221,15 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
                     {/* Dados da Empresa */}
                     <div className="mb-8">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Building2 size={20} className="text-[#FF9500]" />
+                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                            <Building2 size={20} className="text-primary" />
                             Dados da Empresa
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* CNPJ/CPF with Lookup */}
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     CNPJ/CPF <span className="text-red-500">*</span>
                                 </label>
                                 <div className="flex gap-2">
@@ -238,7 +238,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                         name="cnpj_cpf"
                                         value={formData.cnpj_cpf}
                                         onChange={handleChange}
-                                        className={`flex-1 bg-[#0F0F0F] border ${errors.cnpj_cpf ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all`}
+                                        className={`flex-1 bg-input-background border ${errors.cnpj_cpf ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                         placeholder="00.000.000/0000-00"
                                         maxLength={18}
                                     />
@@ -256,7 +256,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Razão Social
                                 </label>
                                 <input
@@ -264,13 +264,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="razaoSocial"
                                     value={formData.razaoSocial}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="Nome da empresa"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Nome Fantasia <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -278,14 +278,14 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="name"
                                     value={formData.name}
                                     onChange={handleChange}
-                                    className={`w-full bg-[#0F0F0F] border ${errors.name ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all`}
+                                    className={`w-full bg-input-background border ${errors.name ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                     placeholder="Como é conhecida"
                                 />
                                 {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Inscrição Estadual
                                 </label>
                                 <input
@@ -293,7 +293,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="inscricaoEstadual"
                                     value={formData.inscricaoEstadual}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="000.000.000.000"
                                 />
                             </div>
@@ -302,14 +302,14 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
                     {/* Contato */}
                     <div className="mb-8">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Mail size={20} className="text-[#FF9500]" />
+                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                            <Mail size={20} className="text-primary" />
                             Contato
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Email Principal
                                 </label>
                                 <input
@@ -317,14 +317,14 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="emailPrincipal"
                                     value={formData.emailPrincipal}
                                     onChange={handleChange}
-                                    className={`w-full bg-[#0F0F0F] border ${errors.emailPrincipal ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all`}
+                                    className={`w-full bg-input-background border ${errors.emailPrincipal ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                     placeholder="contato@empresa.com.br"
                                 />
                                 {errors.emailPrincipal && <p className="text-red-400 text-xs mt-1">{errors.emailPrincipal}</p>}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Telefone Principal
                                 </label>
                                 <input
@@ -332,7 +332,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="telefonePrincipal"
                                     value={formData.telefonePrincipal}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="(11) 98765-4321"
                                     maxLength={15}
                                 />
@@ -342,14 +342,14 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
                     {/* Endereço */}
                     <div className="mb-8">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <MapPin size={20} className="text-[#FF9500]" />
+                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                            <MapPin size={20} className="text-primary" />
                             Endereço
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     CEP
                                 </label>
                                 <div className="flex gap-2">
@@ -358,7 +358,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                         name="cep"
                                         value={formData.cep}
                                         onChange={handleChange}
-                                        className="flex-1 bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                        className="flex-1 bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                         placeholder="00000-000"
                                         maxLength={9}
                                     />
@@ -374,7 +374,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                             </div>
 
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Endereço
                                 </label>
                                 <input
@@ -382,13 +382,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="endereco"
                                     value={formData.endereco}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="Rua, Avenida..."
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Número
                                 </label>
                                 <input
@@ -396,13 +396,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="numero"
                                     value={formData.numero}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="123"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Complemento
                                 </label>
                                 <input
@@ -410,13 +410,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="complemento"
                                     value={formData.complemento}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="Apto, Sala..."
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Bairro
                                 </label>
                                 <input
@@ -424,13 +424,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="bairro"
                                     value={formData.bairro}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="Centro"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Cidade
                                 </label>
                                 <input
@@ -438,13 +438,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="cidade"
                                     value={formData.cidade}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="São Paulo"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Estado
                                 </label>
                                 <input
@@ -452,7 +452,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="estado"
                                     value={formData.estado}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="SP"
                                     maxLength={2}
                                 />
@@ -462,11 +462,11 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
                     {/* Informações Adicionais */}
                     <div className="mb-6">
-                        <h3 className="text-lg font-bold text-white mb-4">Informações Adicionais</h3>
+                        <h3 className="text-lg font-bold text-foreground mb-4">Informações Adicionais</h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Nome do Contato
                                 </label>
                                 <input
@@ -474,13 +474,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="nomeContato"
                                     value={formData.nomeContato}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                     placeholder="Nome do responsável"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Email do Contato
                                 </label>
                                 <input
@@ -488,14 +488,14 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="emailContato"
                                     value={formData.emailContato}
                                     onChange={handleChange}
-                                    className={`w-full bg-[#0F0F0F] border ${errors.emailContato ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all`}
+                                    className={`w-full bg-input-background border ${errors.emailContato ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                     placeholder="contato@email.com"
                                 />
                                 {errors.emailContato && <p className="text-red-400 text-xs mt-1">{errors.emailContato}</p>}
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Data de Aniversário
                                 </label>
                                 <input
@@ -503,13 +503,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     name="dataAniversario"
                                     value={formData.dataAniversario}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Observações
                             </label>
                             <textarea
@@ -517,7 +517,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                 value={formData.observacoes}
                                 onChange={handleChange}
                                 rows={4}
-                                className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all resize-none"
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                                 placeholder="Informações adicionais sobre o cliente..."
                             />
                         </div>
@@ -525,7 +525,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 </form>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-[#0F0F0F]">
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-card">
                     <button
                         type="button"
                         onClick={onClose}

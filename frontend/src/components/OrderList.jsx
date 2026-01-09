@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     ShoppingCart,
     Search,
@@ -18,7 +18,8 @@ import {
     AlertCircle,
     FileSpreadsheet,
     ArrowUpRight,
-    RotateCcw
+    RotateCcw,
+    ArrowUpDown
 } from 'lucide-react';
 import { orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -41,11 +42,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleting, setDeleting] = useState(false);
 
-    useEffect(() => {
-        fetchOrders();
-    }, [pagination.page, pagination.limit, filters]);
-
-    const fetchOrders = async () => {
+    const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
             const response = await orderAPI.list({
@@ -65,7 +62,11 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [pagination.page, pagination.limit, search, filters]);
+
+    useEffect(() => {
+        fetchOrders();
+    }, [fetchOrders]);
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -86,11 +87,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         }
     };
 
-    const getStatusBadgeClass = (order) => {
-        if (order.status === 'VENDA') return 'status-faturado'; // Green/Success for finalized sale
-        if (order.entregue) return 'status-delivered'; // Blue for delivered pedido
-        return 'status-inactive'; // White/Faded for pedido (waiting)
-    };
+
 
     const getStatusLabel = (order) => {
         if (order.status === 'VENDA') return 'VENDA';
@@ -128,11 +125,11 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
             {/* Header & Actions */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <ShoppingCart className="text-[#FF9500]" size={24} />
+                    <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                        <ShoppingCart className="text-primary" size={24} />
                         Controle de Pedidos
                     </h2>
-                    <p className="text-sm text-[#999999] mt-1">Total de {pagination.total} pedidos registrados</p>
+                    <p className="text-sm text-muted-foreground mt-1">Total de {pagination.total} pedidos registrados</p>
                 </div>
 
                 <button
@@ -148,9 +145,9 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 {[
                     { label: 'Total Registros', value: pagination.total, icon: <ShoppingCart size={16} />, color: 'text-blue-400' },
-                    { label: 'Pedidos Ativos', value: orders.filter(o => o.status === 'PEDIDO').length, icon: <Clock size={16} />, color: 'text-orange-400' },
-                    { label: 'Vendas (Histórico)', value: orders.filter(o => o.status === 'VENDA').length, icon: <TrendingUp size={16} />, color: 'text-green-400' },
-                    { label: 'Faturados', value: orders.filter(o => o.faturado).length, icon: <DollarSign size={16} />, color: 'text-gray-400' },
+                    { label: 'Pedidos Ativos', value: orders.filter(o => o.status === 'PEDIDO').length, icon: <Clock size={16} />, color: 'text-amber-400' },
+                    { label: 'Vendas (Histórico)', value: orders.filter(o => o.status === 'VENDA').length, icon: <TrendingUp size={16} />, color: 'text-emerald-400' },
+                    { label: 'Faturados', value: orders.filter(o => o.faturado).length, icon: <DollarSign size={16} />, color: 'text-slate-400' },
                 ].map((stat, i) => (
                     <div key={i} className="card-glass-dark p-4 rounded-xl border border-white/5 flex items-center gap-4">
                         <div className={`w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center ${stat.color}`}>
@@ -165,16 +162,14 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
             </div>
 
             {/* Filters & Search */}
-            <div className="card-glass-dark p-4 rounded-2xl mb-6 border border-white/5">
+            <div className="card-glass-dark p-4 rounded-2xl mb-6 border border-white/5 bg-card">
                 <div className="flex flex-col lg:flex-row gap-4">
                     <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
                         <input
-                            type="text"
-                            placeholder="Pesquisar por título, cliente ou locutor..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#444444] text-sm"
+                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
                         />
                     </form>
 
@@ -182,7 +177,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                         <select
                             value={filters.type}
                             onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-                            className="bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#FF9500]/50"
+                            className="bg-input-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Tipos</option>
                             <option value="OFF">OFF</option>
@@ -192,7 +187,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                         <select
                             value={filters.status}
                             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-                            className="bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#FF9500]/50"
+                            className="bg-input-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Status</option>
                             <option value="PEDIDO">Apenas Pedidos</option>
@@ -216,13 +211,43 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-white/5 text-[#999999] text-[11px] uppercase tracking-wider font-bold">
-                                <th className="pl-6 py-4">Status</th>
-                                <th className="px-4 py-4">Data</th>
-                                <th className="px-4 py-4">Cliente</th>
-                                <th className="px-4 py-4">Título / Locutor</th>
-                                <th className="px-4 py-4 text-right">Valores</th>
-                                <th className="px-4 py-4 text-right hidden lg:table-cell">Margem</th>
+                            <tr className="bg-card border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
+                                <th className="pl-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center gap-2">
+                                        Status
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-4 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center gap-2">
+                                        Data
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-4 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center gap-2">
+                                        Cliente
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-4 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center gap-2">
+                                        Título / Locutor
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-4 py-4 text-right cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center justify-end gap-2">
+                                        Valores
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-4 py-4 text-right hidden lg:table-cell cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center justify-end gap-2">
+                                        Margem
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -238,10 +263,10 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                             ) : orders.length === 0 ? (
                                 <tr>
                                     <td colSpan="7" className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 text-[#666666]">
+                                        <div className="flex flex-col items-center gap-3 text-muted-foreground">
                                             <ShoppingCart size={48} className="opacity-20" />
                                             <p className="text-lg">Nenhum pedido encontrado</p>
-                                            <button onClick={onAddNewOrder} className="text-[#FF9500] hover:underline text-sm font-medium">
+                                            <button onClick={onAddNewOrder} className="text-primary hover:underline text-sm font-medium">
                                                 Clique aqui para criar o primeiro pedido
                                             </button>
                                         </div>
@@ -277,7 +302,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 align-top">
-                                            <span className="text-sm font-bold text-white line-clamp-1 max-w-[150px] mt-1" title={order.client?.name}>
+                                            <span className="text-sm font-bold text-foreground line-clamp-1 max-w-[150px] mt-1" title={order.client?.name}>
                                                 {order.client?.name || 'Cliente Desconhecido'}
                                             </span>
                                         </td>
@@ -285,7 +310,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                             <div className="flex flex-col mt-1">
                                                 <button
                                                     onClick={() => onEditOrder(order)}
-                                                    className="text-white font-medium text-sm text-left hover:text-[#FF9500] transition-colors line-clamp-1 mb-1 focus:outline-none leading-none"
+                                                    className="text-foreground font-medium text-sm text-left hover:text-primary transition-colors line-clamp-1 mb-1 focus:outline-none leading-none"
                                                 >
                                                     {order.title}
                                                 </button>
@@ -312,10 +337,10 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                         </td>
                                         <td className="px-4 py-4 text-right align-top">
                                             <div className="flex flex-col mt-1">
-                                                <span className="text-white font-bold text-sm leading-none">
+                                                <span className="text-foreground font-bold text-sm leading-none">
                                                     {formatCurrency(Number(order.vendaValor))}
                                                 </span>
-                                                <span className="text-[10px] text-[#666666] mt-1">
+                                                <span className="text-[10px] text-muted-foreground mt-1">
                                                     Cachê: {formatCurrency(Number(order.cacheValor))}
                                                 </span>
                                             </div>
@@ -342,7 +367,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                 {order.status === 'VENDA' && (
                                                     <button
                                                         onClick={() => handleRevert(order.id)}
-                                                        className="p-2 hover:bg-orange-500/20 rounded-lg text-orange-500 hover:text-orange-400 transition-all shadow-sm"
+                                                        className="p-2 hover:bg-amber-500/20 rounded-lg text-amber-500 hover:text-amber-400 transition-all shadow-sm"
                                                         title="Reverter para Pedido"
                                                     >
                                                         <RotateCcw size={16} />
@@ -393,8 +418,8 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                         key={pageNum}
                                         onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
                                         className={`min-w-[32px] h-8 rounded-md text-[11px] font-bold transition-all ${pagination.page === pageNum
-                                            ? 'bg-gradient-primary text-white shadow-lg shadow-orange-500/20'
-                                            : 'text-[#666666] hover:text-white hover:bg-white/5'
+                                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
                                             }`}
                                     >
                                         {pageNum}
@@ -416,13 +441,13 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
             {/* Delete Confirmation Modal */}
             {deleteConfirm && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                    <div className="bg-[#161616] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
                             <AlertCircle size={32} className="text-red-500" />
                         </div>
-                        <h3 className="text-xl font-bold text-white text-center mb-2">Excluir Pedido?</h3>
-                        <p className="text-sm text-[#999999] text-center mb-8">
-                            O pedido <span className="text-white font-bold">{deleteConfirm.title}</span> será excluído permanentemente do sistema.
+                        <h3 className="text-xl font-bold text-foreground text-center mb-2">Excluir Pedido?</h3>
+                        <p className="text-sm text-muted-foreground text-center mb-8">
+                            O pedido <span className="text-foreground font-bold">{deleteConfirm.title}</span> será excluído permanentemente do sistema.
                         </p>
                         <div className="flex flex-col gap-3">
                             <button

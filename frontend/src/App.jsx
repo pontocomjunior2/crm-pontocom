@@ -98,9 +98,9 @@ const App = () => {
       trend: '+0%', // Placeholder
       sub: 'acumulado total',
       icon: <DollarSign size={20} />,
-      color: 'from-orange-500 to-orange-600',
-      bgColor: 'bg-orange-500/10',
-      textColor: 'text-orange-500'
+      color: 'from-amber-400 to-amber-600',
+      bgColor: 'bg-amber-500/10',
+      textColor: 'text-amber-500'
     },
     {
       title: 'Pedidos Ativos',
@@ -138,146 +138,141 @@ const App = () => {
   const pendingInvoices = dashboardData?.pendingInvoices || [];
 
   return (
-    <div className="flex h-screen w-full bg-[#0F0F0F] p-4 lg:p-6 gap-4 lg:gap-6 justify-center overflow-hidden font-body">
+    <div className="flex h-screen w-full bg-background overflow-hidden font-body text-foreground">
 
-      {/* Wrapper de Largura Máxima */}
-      <div className="flex w-full max-w-[1800px] gap-4 lg:gap-6 h-full">
+      {/* Wrapper - Reduced padding/gap to match reference */}
+      <div className="flex w-full h-full">
 
         {/* SIDEBAR */}
-        <aside className="w-72 glass-sidebar rounded-3xl flex flex-col p-6 shadow-2xl transition-all duration-300 hover:shadow-orange-500/5 flex-shrink-0">
+        <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col flex-shrink-0">
 
           {/* Logo Section */}
-          <div className="flex items-center gap-3 mb-12 px-2">
-            <div className="w-11 h-11 gradient-primary rounded-xl flex items-center justify-center shadow-lg glow-orange transition-transform hover:scale-105">
-              <Mic2 size={22} className="text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-bold font-display tracking-tight text-white leading-tight">Pontocom</span>
-              <span className="text-[10px] gradient-text font-black uppercase tracking-widest mt-0.5">Audio CRM</span>
+          <div className="p-6 border-b border-sidebar-border">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary via-orange-500 to-red-500 rounded-lg flex items-center justify-center shadow-lg shadow-primary/20">
+                <Package className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h2 className="text-foreground font-bold">Pontocom</h2>
+                <p className="text-xs text-muted-foreground">Admin CRM</p>
+              </div>
             </div>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-2">
+          <nav className="flex-1 p-4 space-y-1">
             {[
-              { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={18} /> },
-              { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={18} />, count: 28 },
-              { id: 'clientes', label: 'Clientes', icon: <Users size={18} />, count: 142 },
-              { id: 'locutores', label: 'Locutores', icon: <Headphones size={18} /> },
-              { id: 'faturamento', label: 'Faturamento', icon: <FileText size={18} />, badge: 'new' },
-              { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={18} /> },
-              { id: 'configuracoes', label: 'Configurações', icon: <Settings size={18} /> },
+              { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+              { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} />, count: 28 },
+              { id: 'clientes', label: 'Clientes', icon: <Users size={20} />, count: 142 },
+              { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} /> },
+              { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, badge: 'NOVO' },
+              { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} /> },
             ].map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`sidebar-item w-full group ${activeTab === item.id ? 'active' : ''}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === item.id
+                  ? 'bg-primary/10 text-primary border border-primary/30'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
+                  }`}
               >
-                <span className={`transition-colors ${activeTab === item.id ? 'text-[#FF9500]' : 'text-[#999999] group-hover:text-[#DDDDDD]'}`}>
-                  {item.icon}
-                </span>
-                <span className="flex-1 text-left text-[13px] font-medium tracking-wide">
+                {/* Clone element to force color inheritance if needed, standardizing size */}
+                <span className="flex-shrink-0">{item.icon}</span>
+                <span className="flex-1 text-left font-medium">
                   {item.label}
                 </span>
                 {item.count && (
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${activeTab === item.id
-                    ? 'bg-[#FF9500]/20 text-[#FF9500]'
-                    : 'bg-white/5 text-[#666666]'
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === item.id
+                    ? 'bg-primary/20 text-primary'
+                    : 'bg-emerald-500/20 text-emerald-400'
                     }`}>
                     {item.count}
                   </span>
                 )}
-                {item.badge === 'new' && (
-                  <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-gradient-primary text-white uppercase tracking-wider">
-                    Novo
+                {item.badge === 'NOVO' && (
+                  <span className="px-2 py-0.5 rounded-full text-xs bg-primary/20 text-primary">
+                    NOVO
                   </span>
                 )}
               </button>
             ))}
           </nav>
 
-          {/* Quick Actions */}
-          <div className="mt-auto space-y-3">
-            <button
-              onClick={() => setShowOrderForm(true)}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
-              <Plus size={16} />
-              <span className="text-xs">Novo Pedido</span>
+          {/* Bottom Menu */}
+          <div className="p-4 border-t border-sidebar-border space-y-1">
+            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground transition-all">
+              <Settings className="w-5 h-5" />
+              <span>Configurações</span>
             </button>
-            <div className="bg-white/5 rounded-xl p-4 border border-white/10 text-center">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center mx-auto mb-2 glow-orange">
-                <Bell size={14} className="text-white" />
+            <div className="p-4 bg-gradient-to-br from-primary/10 to-transparent border-t border-primary/20 mt-4 rounded-lg">
+              <div className="text-center">
+                <p className="text-xs text-muted-foreground mb-2">Suporte Técnico</p>
+                <button className="text-sm text-primary hover:underline font-bold">Abrir Chamado</button>
               </div>
-              <p className="text-[10px] text-[#999999] mb-2">Suporte Técnico</p>
-              <button className="text-[10px] font-bold text-[#FF9500] hover:text-[#FFa520] transition-colors">
-                Abrir Chamado
-              </button>
             </div>
           </div>
         </aside>
 
         {/* MAIN CONTENT */}
-        <main className="flex-1 card-elevated rounded-3xl flex flex-col overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden bg-background">
 
           {/* Header */}
-          <header className="h-20 px-8 border-b divider-dark flex items-center justify-between flex-shrink-0 bg-[#161616]/50">
+          <header className="h-20 bg-card border-b border-border px-8 flex items-center justify-between">
             <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-white font-display tracking-tight text-shadow">
+              <h1 className="text-xl font-bold text-foreground">
                 {activeTab === 'dashboard' && 'Visão Geral'}
                 {activeTab === 'clientes' && 'Clientes'}
                 {activeTab === 'pedidos' && 'Pedidos'}
                 {activeTab === 'locutores' && 'Locutores'}
                 {activeTab === 'faturamento' && 'Faturamento'}
                 {activeTab === 'relatorios' && 'Relatórios'}
-                {activeTab === 'configuracoes' && 'Configurações'}
               </h1>
-              <span className="text-xs text-[#999999] font-medium">Bem-vindo de volta, Júnior 👋</span>
+              <span className="text-xs text-muted-foreground">Bem-vindo de volta, Júnior 👋</span>
             </div>
 
-            {/* Search Bar */}
-            <div className="hidden lg:flex search-dark">
-              <Search size={16} className="text-[#666666]" />
-              <input
-                type="text"
-                placeholder="Pesquisar pedidos, clientes, locutores..."
-                className="bg-transparent border-none outline-none text-sm text-[#DDDDDD] placeholder:text-[#666666] w-full"
-              />
-              <span className="text-[10px] font-bold text-[#666666] border border-white/10 px-1.5 py-0.5 rounded">⌘K</span>
-            </div>
-
-            {/* User Menu */}
+            {/* Search and Icons */}
             <div className="flex items-center gap-4">
-              <button className="relative text-[#999999] hover:text-[#DDDDDD] transition-colors p-2 hover:bg-white/5 rounded-full">
-                <Bell size={20} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF5E3A] rounded-full border border-[#161616] animate-pulse"></span>
+              <div className="relative w-80 hidden lg:block">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar pedidos, clientes..."
+                  className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all"
+                />
+              </div>
+
+              <button className="relative p-2 rounded-lg hover:bg-accent transition-colors">
+                <Bell className="w-5 h-5 text-foreground" />
+                <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
               </button>
-              <div className="flex items-center gap-3 pl-4 border-l divider-dark">
+
+              <div className="flex items-center gap-3 pl-4 border-l border-border">
                 <div className="text-right hidden xl:block">
-                  <span className="block text-sm font-bold text-white leading-none">Admin User</span>
-                  <span className="text-[10px] text-[#666666] font-medium uppercase tracking-wide">Pontocom</span>
+                  <p className="text-sm text-foreground font-medium">Admin User</p>
+                  <p className="text-xs text-muted-foreground">PONTOCOM</p>
                 </div>
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center text-white text-xs font-black shadow-lg glow-orange cursor-pointer hover:scale-105 transition-transform">
-                  AD
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
+                  <span className="text-sm text-white font-bold">AD</span>
                 </div>
               </div>
             </div>
           </header>
 
           {/* Dynamic Content Area */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar bg-[#0F0F0F]">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-background">
             {activeTab === 'dashboard' && (
               <div className="p-8 space-y-8 max-w-[1400px] mx-auto animate-in fade-in duration-500">
                 {loadingDashboard ? (
                   <div className="flex flex-col items-center justify-center h-[60vh]">
-                    <Loader2 size={48} className="text-[#FF9500] animate-spin mb-4" />
-                    <p className="text-[#666666] font-medium">Carregando painel...</p>
+                    <Loader2 size={48} className="text-[#2DD4BF] animate-spin mb-4" />
+                    <p className="text-[#94A3B8] font-medium">Carregando painel...</p>
                   </div>
                 ) : !dashboardData ? (
                   <div className="flex flex-col items-center justify-center h-[60vh]">
                     <AlertCircle size={48} className="text-red-500 mb-4 opacity-50" />
                     <p className="text-[#666666] font-medium">Erro ao carregar dados do painel.</p>
-                    <button onClick={() => setRefreshTrigger(prev => prev + 1)} className="mt-4 text-[#FF9500] hover:underline text-sm">
+                    <button onClick={() => setRefreshTrigger(prev => prev + 1)} className="mt-4 text-[#2DD4BF] hover:underline text-sm">
                       Tentar novamente
                     </button>
                   </div>
@@ -292,13 +287,13 @@ const App = () => {
                               <span className="text-[11px] font-bold text-[#666666] uppercase tracking-wider block mb-2">
                                 {stat.title}
                               </span>
-                              <h3 className="text-3xl font-bold text-white mb-1 text-shadow">
+                              <h3 className="text-3xl font-bold text-foreground mb-1">
                                 {stat.value}
                               </h3>
                               <div className="flex items-center gap-1.5">
-                                <span className={`text-[11px] font-black px-2 py-0.5 rounded ${stat.trend.includes('+')
-                                  ? 'bg-green-500/20 text-green-400'
-                                  : 'bg-red-500/20 text-red-400'
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${stat.trend.includes('+')
+                                  ? 'bg-emerald-500/20 text-emerald-500'
+                                  : 'text-foreground'
                                   }`}>
                                   {stat.trend}
                                 </span>
@@ -321,8 +316,8 @@ const App = () => {
                       <div className="xl:col-span-2 card-dark p-6">
                         <div className="flex items-center justify-between mb-6">
                           <div>
-                            <h3 className="text-lg font-bold text-white mb-1">Pedidos Recentes</h3>
-                            <p className="text-xs text-[#666666]">Últimas atividades de produção</p>
+                            <h3 className="text-lg font-bold text-foreground mb-1">Pedidos Recentes</h3>
+                            <p className="text-xs text-muted-foreground">Últimas atividades de produção</p>
                           </div>
                           <button className="text-xs font-bold gradient-text hover:opacity-80 transition-opacity uppercase tracking-wide flex items-center gap-1">
                             Ver todos
@@ -333,12 +328,12 @@ const App = () => {
                         <div className="space-y-4">
                           {recentOrders.map((order, i) => (
                             <div key={i} className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all cursor-pointer group border border-white/0 hover:border-white/10">
-                              <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-xs font-black shadow-md glow-orange">
+                              <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-xs font-black shadow-md glow-teal">
                                 <Mic2 size={18} />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="text-sm font-bold text-white group-hover:text-[#FF9500] transition-colors truncate">
+                                  <h4 className="text-sm font-bold text-white group-hover:text-[#2DD4BF] transition-colors truncate">
                                     {order.title}
                                   </h4>
                                   <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 text-[#666666] uppercase">
@@ -354,8 +349,8 @@ const App = () => {
                                 <span className={`block ${order.statusColor} mb-2`}>
                                   {order.status}
                                 </span>
-                                <span className="block text-sm font-bold text-white mb-1">{order.value}</span>
-                                <span className="text-[10px] text-[#666666] font-medium">{order.time}</span>
+                                <span className="block text-sm font-bold text-foreground mb-1">{order.value}</span>
+                                <span className="text-[10px] text-muted-foreground font-medium">{order.time}</span>
                               </div>
                             </div>
                           ))}
@@ -378,22 +373,22 @@ const App = () => {
                           {pendingInvoices.map((invoice, i) => (
                             <div key={i} className="relative">
                               {/* Timeline dot */}
-                              <div className={`absolute left-0 top-2 w-3 h-3 rounded-full border-2 border-[#161616] ${invoice.priority === 'high' ? 'bg-[#FF5E3A]' : 'bg-[#FF9500]'
+                              <div className={`absolute left-0 top-2 w-3 h-3 rounded-full border-2 border-[#20293A] ${invoice.priority === 'high' ? 'bg-[#EF4444]' : 'bg-[#2DD4BF]'
                                 } shadow-lg`}></div>
 
                               <div className="pl-6">
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-[10px] font-bold text-[#666666] uppercase tracking-wider flex items-center gap-2">
-                                    {invoice.priority === 'high' && <AlertCircle size={12} className="text-[#FF5E3A]" />}
+                                    {invoice.priority === 'high' && <AlertCircle size={12} className="text-[#EF4444]" />}
                                     {invoice.dueDate}
                                   </span>
                                 </div>
                                 <h4 className="text-sm font-bold text-white mb-2">{invoice.client}</h4>
                                 <div className="flex items-center justify-between mb-2">
                                   <span className="text-xs text-[#999999]">{invoice.orders} pedidos</span>
-                                  <span className="text-sm font-bold text-[#FF9500]">{invoice.total}</span>
+                                  <span className="text-sm font-bold text-[#2DD4BF]">{invoice.total}</span>
                                 </div>
-                                <button className="text-[10px] font-bold gradient-text hover:opacity-80 transition-opacity uppercase tracking-wide">
+                                <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wide">
                                   Faturar agora →
                                 </button>
                               </div>
@@ -434,9 +429,9 @@ const App = () => {
                       {/* Chart Placeholder */}
                       <div className="h-64 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
                         <div className="text-center">
-                          <TrendingUp size={48} className="text-[#FF9500] mx-auto mb-4 opacity-50" />
-                          <p className="text-sm text-[#666666]">Gráfico de performance será implementado</p>
-                          <p className="text-xs text-[#666666] mt-1">Chart.js ou Recharts</p>
+                          <TrendingUp size={48} className="text-primary mx-auto mb-4 opacity-50" />
+                          <p className="text-sm text-muted-foreground">Gráfico de performance será implementado</p>
+                          <p className="text-xs text-muted-foreground mt-1">Chart.js ou Recharts</p>
                         </div>
                       </div>
                     </div>

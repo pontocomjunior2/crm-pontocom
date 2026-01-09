@@ -56,6 +56,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
             const response = await clientAPI.list({ limit: 1000, status: 'ativado' });
             setClients(response.clients || []);
         } catch (error) {
+            console.error('Error loading clients:', error);
             setMessage({ type: 'error', text: 'Erro ao carregar clientes' });
         } finally {
             setLoadingClients(false);
@@ -214,20 +215,20 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-[#161616] rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-white/10">
+            <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-border">
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-white/10">
+                <div className="flex items-center justify-between p-6 border-b border-border">
                     <div>
-                        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                            <ShoppingCart size={28} className="text-[#FF9500]" />
+                        <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
+                            <ShoppingCart size={28} className="text-primary" />
                             {order ? 'Editar Pedido' : 'Novo Pedido'}
                         </h2>
-                        <p className="text-sm text-[#999999] mt-1">Controle Avulso - Produção de Áudio</p>
+                        <p className="text-sm text-muted-foreground mt-1">Controle Avulso - Produção de Áudio</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 hover:bg-white/10 rounded-full transition-colors text-[#999999] hover:text-white"
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors text-muted-foreground hover:text-foreground"
                     >
                         <X size={24} />
                     </button>
@@ -249,7 +250,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
                     {/* Client Selection */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Cliente <span className="text-red-500">*</span>
                         </label>
                         <select
@@ -257,7 +258,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                             value={formData.clientId}
                             onChange={handleChange}
                             disabled={loadingClients}
-                            className={`w-full bg-[#0F0F0F] border ${errors.clientId ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all`}
+                            className={`w-full bg-input-background border ${errors.clientId ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                         >
                             <option value="">Selecione um cliente...</option>
                             {clients.map(client => (
@@ -272,7 +273,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                     {/* Order Details */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                         <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Título do Áudio <span className="text-red-500">*</span>
                             </label>
                             <input
@@ -280,14 +281,14 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 name="title"
                                 value={formData.title}
                                 onChange={handleChange}
-                                className={`w-full bg-[#0F0F0F] border ${errors.title ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all`}
+                                className={`w-full bg-input-background border ${errors.title ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                 placeholder="Ex: Spot Black Friday 30s"
                             />
                             {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Locutor / Voz
                             </label>
                             <select
@@ -295,7 +296,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 value={formData.locutorId}
                                 onChange={handleChange}
                                 disabled={loadingLocutores}
-                                className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all font-medium"
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                             >
                                 <option value="">Selecione um locutor...</option>
                                 {locutores.map(l => (
@@ -310,14 +311,14 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     name="locutor"
                                     value={formData.locutor}
                                     onChange={handleChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white mt-2 focus:outline-none focus:border-[#FF9500]/50 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground mt-2 focus:outline-none focus:border-primary/50 transition-all"
                                     placeholder="Digite o nome do locutor..."
                                 />
                             )}
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Tipo <span className="text-red-500">*</span>
                             </label>
                             <div className="flex gap-4">
@@ -328,9 +329,9 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                         value="OFF"
                                         checked={formData.tipo === 'OFF'}
                                         onChange={handleChange}
-                                        className="w-4 h-4 text-[#FF9500] focus:ring-[#FF9500] focus:ring-2"
+                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
                                     />
-                                    <span className="text-white text-sm">OFF (Locução)</span>
+                                    <span className="text-foreground text-sm">OFF (Locução)</span>
                                 </label>
                                 <label className="flex items-center gap-2 cursor-pointer">
                                     <input
@@ -339,9 +340,9 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                         value="PRODUZIDO"
                                         checked={formData.tipo === 'PRODUZIDO'}
                                         onChange={handleChange}
-                                        className="w-4 h-4 text-[#FF9500] focus:ring-[#FF9500] focus:ring-2"
+                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
                                     />
-                                    <span className="text-white text-sm">PRODUZIDO (Com trilha)</span>
+                                    <span className="text-foreground text-sm">PRODUZIDO (Com trilha)</span>
                                 </label>
                             </div>
                         </div>
@@ -349,11 +350,11 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
                     {/* Urgency Selection */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Nível de Urgência
                         </label>
                         <div className="flex gap-4">
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-white' : 'bg-[#0F0F0F] border-white/10 text-[#666666]'}`}>
+                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-foreground' : 'bg-input-background border-border text-muted-foreground'}`}>
                                 <input
                                     type="radio"
                                     name="urgency"
@@ -364,7 +365,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 />
                                 <span className="text-sm font-bold">Normal</span>
                             </label>
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-[#0F0F0F] border-white/10 text-[#666666]'}`}>
+                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-input-background border-border text-muted-foreground'}`}>
                                 <input
                                     type="radio"
                                     name="urgency"
@@ -376,7 +377,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 <AlertCircle size={16} />
                                 <span className="text-sm font-bold">Alta</span>
                             </label>
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-[#0F0F0F] border-white/10 text-[#666666]'}`}>
+                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-input-background border-border text-muted-foreground'}`}>
                                 <input
                                     type="radio"
                                     name="urgency"
@@ -393,14 +394,14 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
                     {/* Financial Values */}
                     <div className="mb-6">
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <DollarSign size={20} className="text-[#FF9500]" />
+                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                            <DollarSign size={20} className="text-primary" />
                             Valores Financeiros
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Valor do Cachê (R$)
                                 </label>
                                 <input
@@ -408,13 +409,13 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     name="cacheValor"
                                     value={formatCurrency(formData.cacheValor)}
                                     onChange={handleCurrencyChange}
-                                    className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all font-mono"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono"
                                     placeholder="R$ 0,00"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
                                     Valor da Venda (R$) <span className="text-red-500">*</span>
                                 </label>
                                 <input
@@ -422,7 +423,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     name="vendaValor"
                                     value={formatCurrency(formData.vendaValor)}
                                     onChange={handleCurrencyChange}
-                                    className={`w-full bg-[#0F0F0F] border ${errors.vendaValor ? 'border-red-500' : 'border-white/10'} rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all font-mono`}
+                                    className={`w-full bg-input-background border ${errors.vendaValor ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono`}
                                     placeholder="R$ 0,00"
                                 />
                                 {errors.vendaValor && <p className="text-red-400 text-xs mt-1">{errors.vendaValor}</p>}
@@ -430,28 +431,28 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                         </div>
 
                         {/* Automatic Calculations */}
-                        <div className="mt-6 p-6 bg-[#0F0F0F] border border-[#FF9500]/20 rounded-2xl">
+                        <div className="mt-6 p-6 bg-input-background border border-primary/20 rounded-2xl">
                             <div className="flex items-center gap-2 mb-4">
-                                <Calculator size={20} className="text-[#FF9500]" />
-                                <h4 className="text-sm font-bold text-white uppercase tracking-wider">Cálculos Automáticos</h4>
+                                <Calculator size={20} className="text-primary" />
+                                <h4 className="text-sm font-bold text-foreground uppercase tracking-wider">Cálculos Automáticos</h4>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div>
-                                    <p className="text-xs text-[#666666] mb-1">Imposto (10%)</p>
-                                    <p className="text-lg font-bold text-white">{displayCalc.imposto}</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Imposto (10%)</p>
+                                    <p className="text-lg font-bold text-foreground">{displayCalc.imposto}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[#666666] mb-1">Comissão (4%)</p>
-                                    <p className="text-lg font-bold text-white">{displayCalc.comissao}</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Comissão (4%)</p>
+                                    <p className="text-lg font-bold text-foreground">{displayCalc.comissao}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[#666666] mb-1">Margem de Lucro</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Margem de Lucro</p>
                                     <p className="text-lg font-bold text-[#03CC0B]">{displayCalc.margem}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-[#666666] mb-1">Margem %</p>
-                                    <p className="text-lg font-bold text-[#FF9500]">{displayCalc.margemPercentual}</p>
+                                    <p className="text-xs text-muted-foreground mb-1">Margem %</p>
+                                    <p className="text-lg font-bold text-primary">{displayCalc.margemPercentual}</p>
                                 </div>
                             </div>
                         </div>
@@ -459,7 +460,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
                     {/* Comments and Attachments */}
                     <div className="mb-6">
-                        <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">
                             Comentários / Detalhes do Dataset (Ctrl+V para colar imagem)
                         </label>
                         <textarea
@@ -467,7 +468,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                             value={formData.comentarios}
                             onChange={handleChange}
                             rows={4}
-                            className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all resize-none"
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all resize-none"
                             placeholder="Observações sobre o pedido, detalhes de voz de IA, instruções especiais..."
                         />
 
@@ -490,11 +491,11 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                             {attachments.length > 0 && (
                                 <div className="mt-4 space-y-2">
                                     {attachments.map((file, index) => (
-                                        <div key={index} className="flex items-center justify-between p-3 bg-[#0F0F0F] border border-white/10 rounded-xl">
+                                        <div key={index} className="flex items-center justify-between p-3 bg-input-background border border-border rounded-xl">
                                             <div className="flex items-center gap-3">
-                                                <ImageIcon size={18} className="text-[#FF9500]" />
-                                                <span className="text-sm text-white">{file.name}</span>
-                                                <span className="text-xs text-[#666666]">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                <ImageIcon size={18} className="text-primary" />
+                                                <span className="text-sm text-foreground">{file.name}</span>
+                                                <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
                                             </div>
                                             <button
                                                 type="button"
@@ -512,7 +513,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
                     {/* Status Checkboxes */}
                     <div className="mb-6">
-                        <h3 className="text-lg font-bold text-white mb-4">Status do Pedido</h3>
+                        <h3 className="text-lg font-bold text-foreground mb-4">Status do Pedido</h3>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -521,9 +522,9 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     name="entregue"
                                     checked={formData.entregue}
                                     onChange={handleChange}
-                                    className="w-4 h-4 text-[#FF9500] focus:ring-[#FF9500] focus:ring-2 rounded"
+                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
                                 />
-                                <span className="text-white text-sm">Entregue</span>
+                                <span className="text-foreground text-sm">Entregue</span>
                             </label>
 
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -532,9 +533,9 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     name="faturado"
                                     checked={formData.faturado}
                                     onChange={handleChange}
-                                    className="w-4 h-4 text-[#FF9500] focus:ring-[#FF9500] focus:ring-2 rounded"
+                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
                                 />
-                                <span className="text-white text-sm">Faturado</span>
+                                <span className="text-foreground text-sm">Faturado</span>
                             </label>
 
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -543,9 +544,9 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     name="precisaNF"
                                     checked={formData.precisaNF}
                                     onChange={handleChange}
-                                    className="w-4 h-4 text-[#FF9500] focus:ring-[#FF9500] focus:ring-2 rounded"
+                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
                                 />
-                                <span className="text-white text-sm">Precisa NF</span>
+                                <span className="text-foreground text-sm">Precisa NF</span>
                             </label>
 
                             <label className="flex items-center gap-2 cursor-pointer">
@@ -554,9 +555,9 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     name="emiteBoleto"
                                     checked={formData.emiteBoleto}
                                     onChange={handleChange}
-                                    className="w-4 h-4 text-[#FF9500] focus:ring-[#FF9500] focus:ring-2 rounded"
+                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
                                 />
-                                <span className="text-white text-sm">Emite Boleto</span>
+                                <span className="text-foreground text-sm">Emite Boleto</span>
                             </label>
                         </div>
                     </div>
@@ -564,7 +565,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                     {/* Financial Dates */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
-                            <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Data para Faturar
                             </label>
                             <input
@@ -572,12 +573,12 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 name="dataFaturar"
                                 value={formData.dataFaturar}
                                 onChange={handleChange}
-                                className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#DDDDDD] mb-2">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
                                 Vencimento
                             </label>
                             <input
@@ -585,14 +586,14 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 name="vencimento"
                                 value={formData.vencimento}
                                 onChange={handleChange}
-                                className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 focus:ring-2 focus:ring-[#FF9500]/20 transition-all"
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                             />
                         </div>
                     </div>
                 </form>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-white/10 bg-[#0F0F0F]">
+                <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-card">
                     <button
                         type="button"
                         onClick={onClose}

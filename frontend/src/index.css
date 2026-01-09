@@ -1,343 +1,152 @@
-/* CSS imports MUST be at the top */
 @import "tailwindcss";
-@import "@fontsource/outfit/400.css";
-@import "@fontsource/outfit/600.css";
-@import "@fontsource/outfit/700.css";
-@import "@fontsource/inter/300.css";
-@import "@fontsource/inter/400.css";
-@import "@fontsource/inter/500.css";
-@import "@fontsource/inter/600.css";
 
 @theme {
-  /* Pontocom Audio Dark Theme - Brand Colors */
-  --color-bg-main: #0F0F0F;
-  --color-bg-secondary: #0A0A0A;
-  --color-bg-card: #161616;
-  --color-bg-card-hover: #1E1E1E;
-  --color-bg-elevated: #232323;
-
-  /* Orange Gradient - Primary Brand */
-  --color-accent-primary: #FF9500;
-  --color-accent-secondary: #FF5E3A;
-
-  /* Utility Colors */
-  --color-success: #03CC0B;
-  --color-info: #4063E6;
-  --color-warning: #FF9500;
-  --color-danger: #FF5E3A;
-
-  /* Text Colors */
-  --color-text-primary: #FFFFFF;
-  --color-text-secondary: #DDDDDD;
-  --color-text-muted: #999999;
-  --color-text-disabled: #666666;
-
-  /* Fonts */
-  --font-body: "Inter", sans-serif;
-  --font-display: "Outfit", sans-serif;
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius: 0.625rem;
 }
 
-:root {
-  /* Legacy support */
-  --bg-page: #0F0F0F;
-  --bg-card: #161616;
-  --accent-primary: #FF9500;
-  --indicator-color: #FF9500;
-}
+@layer base {
+  :root {
+    --font-size: 16px;
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+    /* Dark theme with Pontocom brand colors - Orange/Coral palette */
+    --background: #0a0a0f;
+    --foreground: #e8e8ea;
 
-body {
-  font-family: var(--font-body);
-  background-color: var(--color-bg-main);
-  color: var(--color-text-secondary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+    --card: #13131a;
+    --card-foreground: #e8e8ea;
 
-/* Gradient Utilities */
-.gradient-primary {
-  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
-}
+    --popover: #1a1a24;
+    --popover-foreground: #e8e8ea;
 
-.gradient-primary-hover {
-  background: linear-gradient(180deg, #FFa520 0%, #FF6E4A 100%);
-}
+    --primary: #ff6b35;
+    --primary-foreground: #ffffff;
 
-.gradient-text {
-  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
+    --secondary: #1e1e2d;
+    --secondary-foreground: #e8e8ea;
 
-/* Glassmorphism Effects */
-.glass-card {
-  background: rgba(22, 22, 22, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
+    --muted: #1e1e2d;
+    --muted-foreground: #9999a8;
 
-.glass-sidebar {
-  background: rgba(22, 22, 22, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
+    --accent: #2a2a3d;
+    --accent-foreground: #ff6b35;
 
-/* Sidebar Navigation */
-.sidebar-item {
-  @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 text-[13px] font-medium relative;
-  color: #999999;
-}
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
 
-.sidebar-item:hover {
-  background: rgba(255, 149, 0, 0.05);
-  color: #DDDDDD;
-}
+    --border: rgba(255, 107, 53, 0.15);
+    --input: rgba(255, 107, 53, 0.1);
+    --input-background: #1a1a24;
 
-.sidebar-item.active {
-  background: rgba(255, 149, 0, 0.1);
-  color: #FF9500;
-  font-weight: 600;
-}
+    --switch-background: #2a2a3d;
 
-.sidebar-item.active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 60%;
-  width: 3px;
-  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
-  border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 10px rgba(255, 149, 0, 0.5);
-}
+    --ring: #ff6b35;
 
-/* Card Styles */
-.card-dark {
-  @apply bg-[#161616] border border-white/5 rounded-2xl shadow-lg transition-all duration-300;
-}
+    --radius: 0.625rem;
 
-.card-dark:hover {
-  @apply bg-[#1E1E1E] border-white/10 shadow-xl;
-  transform: translateY(-2px);
-}
+    --chart-1: #ff6b35;
+    --chart-2: #ffa500;
+    --chart-3: #ff8c42;
+    --chart-4: #ffb84d;
+    --chart-5: #4ecdc4;
 
-.card-elevated {
-  @apply bg-[#1E1E1E] border border-white/10 rounded-2xl shadow-xl;
-}
+    --sidebar: #0d0d12;
+    --sidebar-foreground: #9999a8;
+    --sidebar-primary: #ff6b35;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #1e1e2d;
+    --sidebar-accent-foreground: #e8e8ea;
+    --sidebar-border: rgba(255, 107, 53, 0.1);
+    --sidebar-ring: #ff6b35;
 
-/* Status Badges Base */
-.status-badge {
-  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center justify-center w-fit min-w-[80px];
-}
-
-.status-delivered {
-  @apply bg-blue-500/10 text-blue-400 border border-blue-500/20;
-}
-
-.status-faturado {
-  @apply bg-green-500/10 text-green-400 border border-green-500/20;
-}
-
-.status-cancelled {
-  @apply bg-red-500/10 text-red-400 border border-red-500/20;
-}
-
-.status-pending {
-  @apply bg-orange-500/10 text-orange-400 border border-orange-500/20;
-}
-
-.status-inactive {
-  @apply bg-white/5 text-white/40 border border-white/5;
-}
-
-/* Original Badges mapping (Keep for compatibility if needed) */
-.badge-novo {
-  @extend .status-pending;
-  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
-  color: white;
-}
-
-.badge-producao {
-  @apply px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider;
-  background: #4063E6;
-  color: #FFFFFF;
-}
-
-.badge-entregue {
-  @extend .status-delivered;
-}
-
-.badge-faturado {
-  @extend .status-faturado;
-}
-
-.badge-pendente {
-  @extend .status-pending;
-}
-
-/* Button Styles */
-.btn-primary {
-  @apply px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-200;
-  background: linear-gradient(180deg, #FF9500 0%, #FF5E3A 100%);
-  color: #FFFFFF;
-  box-shadow: 0 4px 16px rgba(255, 149, 0, 0.3);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(180deg, #FFa520 0%, #FF6E4A 100%);
-  box-shadow: 0 6px 20px rgba(255, 149, 0, 0.4);
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  @apply px-6 py-3 rounded-xl text-sm font-bold uppercase tracking-wider transition-all duration-200;
-  background: rgba(255, 255, 255, 0.05);
-  color: #DDDDDD;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-/* Search Input */
-.search-dark {
-  @apply bg-[#161616] border border-white/10 rounded-full px-5 py-3 w-full max-w-md flex items-center gap-3 transition-all;
-  color: #DDDDDD;
-}
-
-.search-dark:focus-within {
-  @apply bg-[#1E1E1E] border-[#FF9500]/30;
-  box-shadow: 0 0 0 4px rgba(255, 149, 0, 0.1);
-}
-
-/* Scrollbar Customization - Dark Theme */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* Custom Scrollbar for content areas */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 149, 0, 0.2);
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 149, 0, 0.3);
-}
-
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
+    --font-weight-medium: 500;
+    --font-weight-normal: 400;
   }
 
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: var(--font-weight-medium);
+    line-height: 1.5;
   }
 }
 
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
+@layer utilities {
+  .bg-gradient-primary {
+    @apply bg-gradient-to-r from-[#ff6b35] to-[#ff8c42];
   }
 
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-[#ff6b35] to-[#ff8c42];
   }
 
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -1000px 0;
+  .glow-primary {
+    box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
   }
 
-  100% {
-    background-position: 1000px 0;
+  /* Glassmorphism utilities */
+  .glass-panel {
+    @apply bg-card/60 backdrop-blur-xl border border-border;
   }
-}
 
-.animate-fade-in {
-  animation: fadeIn 0.4s ease-out forwards;
-}
+  .glass-input {
+    @apply bg-input-background border border-border focus:border-primary/50 text-foreground placeholder:text-muted-foreground transition-all duration-300;
+  }
 
-.animate-slide-in {
-  animation: slideInRight 0.5s ease-out forwards;
-}
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
 
-/* Glow Effects */
-.glow-orange {
-  box-shadow: 0 0 20px rgba(255, 149, 0, 0.3);
-}
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/20 rounded-full;
+  }
 
-.glow-orange-strong {
-  box-shadow: 0 0 30px rgba(255, 149, 0, 0.5);
-}
-
-/* Text Shadows for Depth */
-.text-shadow {
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-/* Divider */
-.divider-dark {
-  border-color: rgba(255, 255, 255, 0.05);
-}
-
-/* Overlay */
-.overlay-dark {
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary/40;
+  }
 }

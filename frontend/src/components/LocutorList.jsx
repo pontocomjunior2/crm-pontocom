@@ -13,7 +13,9 @@ import {
     Music,
     ExternalLink,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Calendar,
+    ArrowUpDown
 } from 'lucide-react';
 import { locutorAPI } from '../services/api';
 import { formatPhone, formatCurrency } from '../utils/formatters';
@@ -68,8 +70,8 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
             {/* Header & Actions */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        <Mic2 className="text-[#FF9500]" size={24} />
+                    <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                        <Mic2 className="text-primary" size={24} />
                         Gerenciamento de Locutores
                     </h2>
                     <p className="text-sm text-[#999999] mt-1">Total de {locutores.length} locutores cadastrados</p>
@@ -94,7 +96,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                             placeholder="Pesquisar por nome ou especialidade..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-full bg-[#0F0F0F] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white focus:outline-none focus:border-[#FF9500]/50 placeholder:text-[#444444] text-sm"
+                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
                         />
                     </form>
 
@@ -102,7 +104,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="bg-[#0F0F0F] border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-[#FF9500]/50"
+                            className="bg-input-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Status</option>
                             <option value="DISPONIVEL">Disponível</option>
@@ -125,12 +127,37 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-white/5 text-[#999999] text-[11px] uppercase tracking-wider font-bold">
-                                <th className="px-6 py-4">Locutor / Contato</th>
-                                <th className="px-6 py-4">Status</th>
-                                <th className="px-6 py-4 text-center">Preço (OFF)</th>
-                                <th className="px-6 py-4 text-center">Preço (PROD)</th>
-                                <th className="px-6 py-4 text-center">Trabalhos</th>
+                            <tr className="bg-card border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
+                                <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center gap-2">
+                                        Locutor / Contato
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                    <div className="flex items-center gap-2">
+                                        Status
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-center cursor-pointer hover:text-white transition-colors group/head">
+                                    <div className="flex items-center justify-center gap-2">
+                                        Preço (OFF)
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-center cursor-pointer hover:text-white transition-colors group/head">
+                                    <div className="flex items-center justify-center gap-2">
+                                        Preço (PROD)
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
+                                <th className="px-6 py-4 text-center cursor-pointer hover:text-white transition-colors group/head">
+                                    <div className="flex items-center justify-center gap-2">
+                                        Trabalhos
+                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                    </div>
+                                </th>
                                 <th className="px-6 py-4 text-right">Ações</th>
                             </tr>
                         </thead>
@@ -157,7 +184,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                     <tr key={locutor.id} className="hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
-                                                <span className="text-white font-medium text-sm group-hover:text-[#FF9500] transition-colors">
+                                                <span className="text-foreground font-medium text-sm group-hover:text-primary transition-colors">
                                                     {locutor.name}
                                                 </span>
                                                 {locutor.realName && (
@@ -203,7 +230,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                                         href={locutor.reelsUrl}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="p-2 hover:bg-white/10 rounded-lg text-[#FF9500] hover:text-white transition-all shadow-sm"
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-primary hover:text-foreground transition-all shadow-sm"
                                                         title="Ouvir Reel/Portfólio"
                                                     >
                                                         <Music size={16} />
@@ -236,13 +263,13 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
             {/* Delete Confirmation Modal */}
             {deleteConfirm && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                    <div className="bg-[#161616] border border-white/10 rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                    <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
                             <AlertCircle size={32} className="text-red-500" />
                         </div>
-                        <h3 className="text-xl font-bold text-white text-center mb-2">Excluir Locutor?</h3>
-                        <p className="text-sm text-[#999999] text-center mb-8">
-                            O locutor <span className="text-white font-bold">{deleteConfirm.name}</span> será removido permanentemente do sistema.
+                        <h3 className="text-xl font-bold text-foreground text-center mb-2">Excluir Locutor?</h3>
+                        <p className="text-sm text-muted-foreground text-center mb-8">
+                            O locutor <span className="text-foreground font-bold">{deleteConfirm.name}</span> será removido permanentemente do sistema.
                         </p>
                         <div className="flex flex-col gap-3">
                             <button
