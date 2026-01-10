@@ -3,57 +3,45 @@
 Este guia fornece os passos definitivos para hospedar o CRM no EasyPanel sob o domínio **https://crm.pontocomaudio.net**.
 
 ## Pré-requisitos
-1.  Servidor com **EasyPanel** instalado.
+1.  **EasyPanel** com funcionalidade "Docker Compose via Git".
 2.  **PostgreSQL externo** acessível.
 3.  Acesso ao repositório Git com a branch `master` atualizada.
 
-## Configuração no EasyPanel (Recomendado)
+## Como Funciona a Arquitetura (Single Entry Point)
+Para simplificar sua vida, configuramos o Frontend para funcionar como um "Proxy Reverso".
+- **Um só Domínio**: Você só precisa configurar `https://crm.pontocomaudio.net`.
+- O Frontend (Porta 80) recebe tudo.
+- Se for uma página, ele exibe o React.
+- Se for uma chamada de API (`/api/...`), ele repassa internamente para o Backend.
 
-Para evitar erros de contexto de build, a forma mais robusta no EasyPanel é criar um projeto do tipo **"Docker Compose"** apontando para o seu repositório Git.
+## Configuração no EasyPanel
 
-### 1. Criar novo Projeto
-- Clique em **"Projects"** -> **"Create Project"**.
-- Escolha o tipo **"Docker Compose"**.
-- Conecte seu repositório GitHub e selecione a branch `master`.
+### 1. Criar Projeto (Docker Compose via Git)
+- Em "Projects", crie um projeto do tipo **"Docker Compose"**.
+- Conecte seu GitHub e selecione a branch `master`.
+- O EasyPanel vai ler o `docker-compose.yml` e subir dois containers (`frontend` e `backend`).
 
 ### 2. Configurar Variáveis de Ambiente
-No dashboard do projeto no EasyPanel, vá em **"Environment"** e adicione:
-- `DATABASE_URL`: A string de conexão do seu banco externo.
-- `JWT_SECRET`: Uma chave secreta forte.
-- `VITE_API_URL`: `https://api-crm.pontocomaudio.net/api` (ajuste se for outro domínio).
-- `VITE_STORAGE_URL`: `https://api-crm.pontocomaudio.net`
+No dashboard do projeto, vá em **"Environment"** e adicione:
+- `DATABASE_URL`: URL do seu banco PostgreSQL (ex: `postgresql://user:pass@host:5432/db`).
+- `JWT_SECRET`: Sua chave secreta.
 
-### 3. Configurar os Domínios (Urls Públicas)
-O EasyPanel cria serviços separados para **frontend** e **backend**. Você precisa configurar o domínio de cada um:
+> [!NOTE]
+> Não é mais necessário configurar `VITE_API_URL`. O sistema já sabe que deve conversar internamente.
 
-#### A. Serviço `backend`
-1.  Clique no serviço **backend**.
-2.  Vá em **Domains**.
-3.  Adicione um domínio (pode usar o provisório do EasyPanel ou um personalizado como `api-crm.pontocomaudio.net`).
-4.  **Importante**: Certifique-se de que ele está apontando para a porta `3001` (Interna).
-5.  Copie a URL completa gerada (ex: `https://backend-xyz.easypanel.host`).
+### 3. Configurar Domínio (Apenas UM!)
+- Vá no serviço **frontend** > **Domains**.
+- Adicione `crm.pontocomaudio.net`.
+- Porta: `80`.
 
-#### B. Serviço `frontend`
-1.  Clique no serviço **frontend**.
-2.  Vá em **Domains**.
-3.  Adicione seu domínio principal (ex: `crm.pontocomaudio.net` ou o provisório).
-4.  Verifique se está apontando para a porta `80` (Interna).
-    - *Se o EasyPanel criou um target estranho como `pontocom_crm-pontocom:80`, tente mudar para `http://frontend:80` ou apenas porta `80` se a opção estiver disponível.*
+**Não precisa adicionar domínio para o backend.** Ele ficará protegido na rede interna, recebendo requisições apenas do frontend.
 
-### 4. Conectar Frontend ao Backend (Environment)
-O Frontend precisa saber onde o Backend está.
-1.  Ainda no serviço **frontend**, vá em **Environment**.
-2.  Adicione/Edite a variável `VITE_API_URL`.
-3.  Valor: A URL do backend que você copiou no passo 3A, adicionando `/api` no final.
-    - Exemplo: `https://backend-xyz.easypanel.host/api`
-4.  Clique em **"Save & Deploy"** para o frontend reconstruir com a nova URL.
+### 4. Executar Migrações
+Abra o console do serviço **backend** e rode:
 ```bash
 npx prisma migrate deploy
 node seedAdmin.js
 ```
 
-## Solução de Erro "Path not found"
-Se você recebeu este erro, é porque o EasyPanel tentou rodar o Compose sem baixar os arquivos do Git primeiro. Usando a opção de projeto **"Docker Compose (Git)"** descrita acima, os arquivos serão baixados automaticamente no lugar certo.
-
 ---
-*Atualizado em 10/01/2026*
+*Atualizado em 10/01/2026 - Arquitetura Unificada*
