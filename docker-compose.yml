@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-crm_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - crm-network
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-crm_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key}
+      PORT: 3001
+    depends_on:
+      - db
+    networks:
+      - crm-network
+    # EasyPanel will handle the domain and proxy
+    labels:
+      - "easypanel.app.name=crm-backend"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    networks:
+      - crm-network
+    labels:
+      - "easypanel.app.name=crm-frontend"
+
+networks:
+  crm-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
