@@ -24,6 +24,7 @@ const dashboardRoutes = require('./routes/dashboard');
 const locutoresRoutes = require('./routes/locutores');
 const importRoutes = require('./routes/import');
 const serviceTypesRoutes = require('./routes/serviceTypes');
+const userRoutes = require('./routes/users');
 
 // Middleware de Autenticação
 const authenticateToken = (req, res, next) => {
@@ -74,14 +75,27 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { id: true, email: true, name: true, role: true }
+    });
+    if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ error: 'Erro no servidor' });
+  }
+});
+
 // --- REGISTER ROUTES ---
-// Note: For now, routes are public. Add authenticateToken middleware when auth is implemented in frontend
-app.use('/api/clients', clientRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/locutores', locutoresRoutes);
-app.use('/api/import', importRoutes);
-app.use('/api/service-types', serviceTypesRoutes);
+app.use('/api/clients', authenticateToken, clientRoutes);
+app.use('/api/orders', authenticateToken, orderRoutes);
+app.use('/api/dashboard', authenticateToken, dashboardRoutes);
+app.use('/api/locutores', authenticateToken, locutoresRoutes);
+app.use('/api/import', authenticateToken, importRoutes);
+app.use('/api/service-types', authenticateToken, serviceTypesRoutes);
+app.use('/api/users', authenticateToken, userRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

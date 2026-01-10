@@ -17,9 +17,11 @@ import {
   Plus,
   ChevronRight,
   Headphones,
-  CheckCircle2,
   AlertCircle,
-  Loader2
+  Loader2,
+  Shield,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 import ClientForm from './components/ClientForm';
 import OrderForm from './components/OrderForm';
@@ -29,10 +31,15 @@ import FaturamentoList from './components/FaturamentoList';
 import LocutorList from './components/LocutorList';
 import LocutorForm from './components/LocutorForm';
 import LocutorHistory from './components/LocutorHistory';
-import { dashboardAPI } from './services/api';
+import UserList from './components/UserList';
+import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/ProfilePage';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { dashboardAPI, STORAGE_URL } from './services/api';
 import { formatCurrency } from './utils/formatters';
 
-const App = () => {
+const CRM = () => {
+  const { user, logout, isAdmin, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showClientForm, setShowClientForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
@@ -48,6 +55,8 @@ const App = () => {
   const [loadingDashboard, setLoadingDashboard] = useState(true);
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchDashboard = async () => {
       setLoadingDashboard(true);
       try {
@@ -61,45 +70,26 @@ const App = () => {
     };
 
     fetchDashboard();
-  }, [refreshTrigger]);
+  }, [refreshTrigger, user]);
 
-  const handleEditClient = (client) => {
-    setSelectedClient(client);
-    setShowClientForm(true);
-  };
+  if (loading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-background">
+        <Loader2 className="text-primary animate-spin" size={48} />
+      </div>
+    );
+  }
 
-  const handleAddNewClient = () => {
-    setSelectedClient(null);
-    setShowClientForm(true);
-  };
+  if (!user) {
+    return <LoginPage />;
+  }
 
-  const handleEditOrder = (order) => {
-    setSelectedOrder(order);
-    setShowOrderForm(true);
-  };
-
-  const handleAddNewOrder = (status = 'PEDIDO') => {
-    setSelectedOrder(null);
-    setInitialOrderStatus(status);
-    setShowOrderForm(true);
-  };
-
-  const handleEditLocutor = (locutor) => {
-    setSelectedLocutor(locutor);
-    setShowLocutorForm(true);
-  };
-
-  const handleAddNewLocutor = () => {
-    setSelectedLocutor(null);
-    setShowLocutorForm(true);
-  };
-
-  // Dashboard Metrics - Derived from real data
+  // Dashboard Metrics
   const stats = dashboardData ? [
     {
       title: 'Receita Total',
       value: formatCurrency(dashboardData.metrics.totalRevenue),
-      trend: '+0%', // Placeholder
+      trend: '+0%',
       sub: 'acumulado total',
       icon: <DollarSign size={20} />,
       color: 'from-amber-400 to-amber-600',
@@ -141,36 +131,31 @@ const App = () => {
   const recentOrders = dashboardData?.recentOrders || [];
   const pendingInvoices = dashboardData?.pendingInvoices || [];
 
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} /> },
+    { id: 'clientes', label: 'Clientes', icon: <Users size={20} /> },
+    { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} /> },
+    { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} /> },
+    { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} /> },
+    { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} /> },
+  ];
+
+  if (isAdmin) {
+    menuItems.push({ id: 'usuarios', label: 'Usuários', icon: <Shield size={20} /> });
+  }
+
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden font-body text-foreground">
-
-      {/* Wrapper - Reduced padding/gap to match reference */}
       <div className="flex w-full h-full">
-
-        {/* SIDEBAR */}
         <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col flex-shrink-0">
-
-          {/* Logo Section */}
           <div className="p-6 border-b border-sidebar-border">
             <div className="flex items-center justify-center">
-              <img
-                src="/logo_flat.png"
-                alt="Pontocom Audio"
-                className="w-40 md:w-48 object-contain"
-              />
+              <img src="/logo_flat.png" alt="Pontocom Audio" className="w-40 md:w-48 object-contain" />
             </div>
           </div>
-
-          {/* Navigation */}
           <nav className="flex-1 p-4 space-y-1">
-            {[
-              { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-              { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} /> },
-              { id: 'clientes', label: 'Clientes', icon: <Users size={20} /> },
-              { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} /> },
-              { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} /> },
-              { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} /> },
-            ].map((item) => (
+            {menuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
@@ -179,242 +164,142 @@ const App = () => {
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
                   }`}
               >
-                {/* Clone element to force color inheritance if needed, standardizing size */}
                 <span className="flex-shrink-0">{item.icon}</span>
-                <span className="flex-1 text-left font-medium">
-                  {item.label}
-                </span>
+                <span className="flex-1 text-left font-medium">{item.label}</span>
               </button>
             ))}
           </nav>
-
-          {/* Bottom Menu Area (Removed Settings/Support) */}
           <div className="p-4 border-t border-sidebar-border">
-            <div className="flex items-center gap-3 px-4 py-2 opacity-50 grayscale">
-              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">v1.1.0</span>
-            </div>
+            <button
+              onClick={logout}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-400 hover:bg-red-500/10 transition-all font-bold"
+            >
+              <LogOut size={20} />
+              <span>SAIR</span>
+            </button>
           </div>
         </aside>
 
-        {/* MAIN CONTENT */}
         <main className="flex-1 flex flex-col overflow-hidden bg-background">
-
-          {/* Header */}
           <header className="h-14 bg-card border-b border-border px-6 flex items-center justify-between">
             <div className="flex flex-col">
               <h1 className="text-lg font-bold text-foreground leading-none">
-                {activeTab === 'dashboard' && 'Visão Geral'}
-                {activeTab === 'clientes' && 'Clientes'}
-                {activeTab === 'pedidos' && 'Pedidos'}
-                {activeTab === 'locutores' && 'Locutores'}
-                {activeTab === 'faturamento' && 'Faturamento'}
-                {activeTab === 'relatorios' && 'Relatórios'}
+                {menuItems.find(i => i.id === activeTab)?.label}
               </h1>
-              <span className="text-[10px] text-muted-foreground">Bem-vindo de volta, Júnior 👋</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">Bem-vindo, {user.name} 👋</span>
             </div>
-
-            {/* Search and Icons */}
             <div className="flex items-center gap-4">
               <div className="relative w-80 hidden lg:block">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Pesquisar pedidos, clientes..."
+                  placeholder="Pesquisar..."
                   className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all"
                 />
               </div>
-
               <button className="relative p-2 rounded-lg hover:bg-accent transition-colors">
                 <Bell className="w-5 h-5 text-foreground" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
               </button>
-
               <div className="flex items-center gap-3 pl-4 border-l border-border">
                 <div className="text-right hidden xl:block">
-                  <p className="text-sm text-foreground font-medium">Admin User</p>
-                  <p className="text-xs text-muted-foreground">PONTOCOM</p>
+                  <p className="text-sm text-foreground font-black tracking-tight">{user.name}</p>
+                  <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">{user.role}</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
-                  <span className="text-sm text-white font-bold">AD</span>
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
+                  <span className="text-sm text-white font-black">{user.name.substring(0, 2).toUpperCase()}</span>
                 </div>
               </div>
             </div>
           </header>
 
-          {/* Dynamic Content Area - Changed to flex-col overflow-hidden to allow children to fill height */}
           <div className="flex-1 flex flex-col p-4 bg-background overflow-hidden relative">
             {activeTab === 'dashboard' && (
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                 <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500">
                   {loadingDashboard ? (
                     <div className="flex flex-col items-center justify-center h-[60vh]">
-                      <Loader2 size={48} className="text-[#2DD4BF] animate-spin mb-4" />
-                      <p className="text-[#94A3B8] font-medium">Carregando painel...</p>
+                      <Loader2 size={48} className="text-primary animate-spin mb-4" />
+                      <p className="text-muted-foreground font-medium">Carregando painel...</p>
                     </div>
                   ) : !dashboardData ? (
                     <div className="flex flex-col items-center justify-center h-[60vh]">
                       <AlertCircle size={48} className="text-red-500 mb-4 opacity-50" />
-                      <p className="text-[#666666] font-medium">Erro ao carregar dados do painel.</p>
-                      <button onClick={() => setRefreshTrigger(prev => prev + 1)} className="mt-4 text-[#2DD4BF] hover:underline text-sm">
-                        Tentar novamente
-                      </button>
+                      <p className="text-muted-foreground font-medium">Erro ao carregar dados do painel.</p>
+                      <button onClick={() => setRefreshTrigger(prev => prev + 1)} className="mt-4 text-primary hover:underline text-sm">Tentar novamente</button>
                     </div>
                   ) : (
                     <>
-                      {/* Stats Grid */}
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-fade-in">
                         {stats.map((stat, i) => (
                           <div key={i} className="card-dark p-6 group cursor-pointer">
                             <div className="flex items-start justify-between mb-4">
                               <div>
-                                <span className="text-[11px] font-bold text-[#666666] uppercase tracking-wider block mb-2">
-                                  {stat.title}
-                                </span>
-                                <h3 className="text-3xl font-bold text-foreground mb-1">
-                                  {stat.value}
-                                </h3>
+                                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">{stat.title}</span>
+                                <h3 className="text-3xl font-bold text-foreground mb-1">{stat.value}</h3>
                                 <div className="flex items-center gap-1.5">
-                                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${stat.trend.includes('+')
-                                    ? 'bg-emerald-500/20 text-emerald-500'
-                                    : 'text-foreground'
-                                    }`}>
-                                    {stat.trend}
-                                  </span>
-                                  <span className="text-[11px] text-[#666666] font-medium">{stat.sub}</span>
+                                  <span className={`text-xs font-bold px-2 py-0.5 rounded ${stat.trend.includes('+') ? 'bg-emerald-500/20 text-emerald-500' : 'text-foreground'}`}>{stat.trend}</span>
+                                  <span className="text-[11px] text-muted-foreground font-medium">{stat.sub}</span>
                                 </div>
                               </div>
-                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgColor} ${stat.textColor} group-hover:scale-110 transition-transform`}>
-                                {stat.icon}
-                              </div>
+                              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgColor} ${stat.textColor} group-hover:scale-110 transition-transform`}>{stat.icon}</div>
                             </div>
                             <div className={`h-1 rounded-full bg-gradient-to-r ${stat.color} opacity-50`}></div>
                           </div>
                         ))}
                       </div>
 
-                      {/* Main Content Grid */}
                       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-                        {/* Recent Orders - 2 columns */}
                         <div className="xl:col-span-2 card-dark p-6">
                           <div className="flex items-center justify-between mb-6">
                             <div>
                               <h3 className="text-lg font-bold text-foreground mb-1">Pedidos Recentes</h3>
                               <p className="text-xs text-muted-foreground">Últimas atividades de produção</p>
                             </div>
-                            <button className="text-xs font-bold gradient-text hover:opacity-80 transition-opacity uppercase tracking-wide flex items-center gap-1">
-                              Ver todos
-                              <ChevronRight size={14} />
-                            </button>
                           </div>
-
                           <div className="space-y-4">
                             {recentOrders.map((order, i) => (
                               <div key={i} className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all cursor-pointer group border border-white/0 hover:border-white/10">
-                                <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-xs font-black shadow-md glow-teal">
-                                  <Mic2 size={18} />
-                                </div>
+                                <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-xs font-black shadow-md glow-teal"><Mic2 size={18} /></div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <h4 className="text-sm font-bold text-white group-hover:text-[#2DD4BF] transition-colors truncate">
-                                      {order.title}
-                                    </h4>
-                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 text-[#666666] uppercase">
-                                      {order.type}
-                                    </span>
+                                    <h4 className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{order.title}</h4>
+                                    <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 text-muted-foreground uppercase">{order.type}</span>
                                   </div>
-                                  <p className="text-xs text-[#666666] mb-1">
-                                    {order.client} • {order.locutor}
-                                  </p>
-                                  <p className="text-[10px] text-[#999999]">{order.id}</p>
+                                  <p className="text-xs text-muted-foreground mb-1">{order.client} • {order.locutor}</p>
                                 </div>
                                 <div className="text-right">
-                                  <span className={`block ${order.statusColor} mb-2`}>
-                                    {order.status}
-                                  </span>
+                                  <span className={`block ${order.statusColor} mb-2 text-[10px] font-black uppercase`}>{order.status}</span>
                                   <span className="block text-sm font-bold text-foreground mb-1">{order.value}</span>
-                                  <span className="text-[10px] text-muted-foreground font-medium">{order.time}</span>
                                 </div>
                               </div>
                             ))}
                           </div>
-
-                          <button className="w-full mt-6 py-3 btn-secondary flex items-center justify-center gap-2">
-                            <FileSpreadsheet size={16} />
-                            <span className="text-xs">Ver Todos os Pedidos</span>
-                          </button>
                         </div>
 
-                        {/* Pending Invoices - 1 column */}
                         <div className="card-dark p-6">
                           <div className="mb-6">
-                            <h3 className="text-lg font-bold text-white mb-1">Pendentes de Faturamento</h3>
-                            <p className="text-xs text-[#666666]">Pedidos prontos para faturar</p>
+                            <h3 className="text-lg font-bold text-white mb-1">Pendentes</h3>
+                            <p className="text-xs text-muted-foreground">Faturamento pendente</p>
                           </div>
-
                           <div className="space-y-4 mb-6">
                             {pendingInvoices.map((invoice, i) => (
-                              <div key={i} className="relative">
-                                {/* Timeline dot */}
-                                <div className={`absolute left-0 top-2 w-3 h-3 rounded-full border-2 border-[#20293A] ${invoice.priority === 'high' ? 'bg-[#EF4444]' : 'bg-[#2DD4BF]'
-                                  } shadow-lg`}></div>
-
-                                <div className="pl-6">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-[10px] font-bold text-[#666666] uppercase tracking-wider flex items-center gap-2">
-                                      {invoice.priority === 'high' && <AlertCircle size={12} className="text-[#EF4444]" />}
-                                      {invoice.dueDate}
-                                    </span>
-                                  </div>
-                                  <h4 className="text-sm font-bold text-white mb-2">{invoice.client}</h4>
-                                  <div className="flex items-center justify-between mb-2">
-                                    <span className="text-xs text-[#999999]">{invoice.orders} pedidos</span>
-                                    <span className="text-sm font-bold text-[#2DD4BF]">{invoice.total}</span>
-                                  </div>
-                                  <button className="text-[10px] font-bold text-primary hover:underline uppercase tracking-wide">
-                                    Faturar agora →
-                                  </button>
+                              <div key={i} className="relative pl-6 border-l border-white/5">
+                                <div className={`absolute -left-[6.5px] top-1.5 w-3 h-3 rounded-full border-2 border-background ${invoice.priority === 'high' ? 'bg-red-500' : 'bg-primary'}`}></div>
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">{invoice.dueDate}</span>
+                                <h4 className="text-sm font-bold text-white mb-1 truncate">{invoice.client}</h4>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-muted-foreground">{invoice.orders} pedidos</span>
+                                  <span className="text-sm font-bold text-primary">{invoice.total}</span>
                                 </div>
                               </div>
                             ))}
                           </div>
-
-                          <div className="border-t divider-dark pt-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs text-[#666666] font-medium">Total Pendente</span>
-                              <span className="text-lg font-bold text-white">R$ 8.350,00</span>
-                            </div>
-                            <button className="w-full btn-primary mt-3 flex items-center justify-center gap-2">
-                              <CheckCircle2 size={16} />
-                              <span className="text-xs">Processar Todos</span>
+                          <div className="border-t border-white/5 pt-4">
+                            <button onClick={() => setActiveTab('faturamento')} className="w-full btn-primary py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold">
+                              <DollarSign size={16} />
+                              IR PARA FATURAMENTO
                             </button>
-                          </div>
-                        </div>
-
-                      </div>
-
-                      {/* Performance Chart Placeholder */}
-                      <div className="card-dark p-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <div>
-                            <h3 className="text-lg font-bold text-white mb-1">Performance Mensal</h3>
-                            <p className="text-xs text-[#666666]">Comparativo de receita e custos</p>
-                          </div>
-                          <div className="flex gap-2">
-                            {['30D', '90D', '1A'].map((period) => (
-                              <button key={period} className="px-3 py-1.5 text-xs font-bold rounded-lg bg-white/5 text-[#666666] hover:bg-white/10 hover:text-[#DDDDDD] transition-all">
-                                {period}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Chart Placeholder */}
-                        <div className="h-64 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center">
-                          <div className="text-center">
-                            <TrendingUp size={48} className="text-primary mx-auto mb-4 opacity-50" />
-                            <p className="text-sm text-muted-foreground">Gráfico de performance será implementado</p>
-                            <p className="text-xs text-muted-foreground mt-1">Chart.js ou Recharts</p>
                           </div>
                         </div>
                       </div>
@@ -426,116 +311,62 @@ const App = () => {
 
             {activeTab === 'clientes' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-                <ClientList
-                  key={refreshTrigger}
-                  onEditClient={handleEditClient}
-                  onAddNewClient={handleAddNewClient}
-                />
+                <ClientList key={refreshTrigger} onEditClient={(c) => { setSelectedClient(c); setShowClientForm(true); }} onAddNewClient={() => { setSelectedClient(null); setShowClientForm(true); }} />
               </div>
             )}
 
             {activeTab === 'pedidos' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-                <OrderList
-                  key={refreshTrigger}
-                  onEditOrder={handleEditOrder}
-                  onAddNewOrder={handleAddNewOrder}
-                  onNavigate={setActiveTab}
-                />
+                <OrderList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(s); setShowOrderForm(true); }} onNavigate={setActiveTab} />
               </div>
             )}
 
             {activeTab === 'locutores' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-                {viewingLocutorHistory ? (
-                  <LocutorHistory
-                    locutor={viewingLocutorHistory}
-                    onBack={() => setViewingLocutorHistory(null)}
-                  />
-                ) : (
-                  <LocutorList
-                    key={refreshTrigger}
-                    onEditLocutor={handleEditLocutor}
-                    onAddNewLocutor={handleAddNewLocutor}
-                    onViewHistory={setViewingLocutorHistory}
-                  />
-                )}
+                {viewingLocutorHistory ? <LocutorHistory locutor={viewingLocutorHistory} onBack={() => setViewingLocutorHistory(null)} /> : <LocutorList key={refreshTrigger} onEditLocutor={(l) => { setSelectedLocutor(l); setShowLocutorForm(true); }} onAddNewLocutor={() => { setSelectedLocutor(null); setShowLocutorForm(true); }} onViewHistory={setViewingLocutorHistory} />}
               </div>
             )}
 
             {activeTab === 'faturamento' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-                <FaturamentoList
-                  key={refreshTrigger}
-                  onEditOrder={handleEditOrder}
-                  onAddNewOrder={handleAddNewOrder}
-                />
+                <FaturamentoList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(s); setShowOrderForm(true); }} />
               </div>
             )}
 
-            {activeTab !== 'dashboard' && activeTab !== 'clientes' && activeTab !== 'pedidos' && activeTab !== 'locutores' && activeTab !== 'faturamento' && (
-              <div className="p-20 text-center animate-in fade-in duration-500">
-                <div className="w-20 h-20 bg-white/5 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                  <Package size={40} className="text-[#444444]" />
-                </div>
+            {activeTab === 'usuarios' && isAdmin && (
+              <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
+                <UserList />
+              </div>
+            )}
+
+            {activeTab === 'perfil' && (
+              <div className="flex-1 overflow-y-auto h-full w-full custom-scrollbar">
+                <ProfilePage />
+              </div>
+            )}
+
+            {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil'].includes(activeTab) && (
+              <div className="p-20 text-center">
+                <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
                 <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>
-                <p className="text-[#666666] max-w-xs mx-auto">
-                  Esta página está sendo preparada para receber as funcionalidades do CRM Pontocom Audio.
-                </p>
               </div>
             )}
           </div>
-
         </main>
       </div>
 
-      {/* Form Modals */}
-      {showClientForm && (
-        <ClientForm
-          client={selectedClient}
-          onClose={() => {
-            setShowClientForm(false);
-            setSelectedClient(null);
-          }}
-          onSuccess={() => {
-            setShowClientForm(false);
-            setSelectedClient(null);
-            setRefreshTrigger(prev => prev + 1);
-          }}
-        />
-      )}
-
-      {showOrderForm && (
-        <OrderForm
-          order={selectedOrder}
-          initialStatus={initialOrderStatus}
-          onClose={() => {
-            setShowOrderForm(false);
-            setSelectedOrder(null);
-          }}
-          onSuccess={() => {
-            setShowOrderForm(false);
-            setSelectedOrder(null);
-            setRefreshTrigger(prev => prev + 1);
-          }}
-        />
-      )}
-
-      {showLocutorForm && (
-        <LocutorForm
-          locutor={selectedLocutor}
-          onClose={() => {
-            setShowLocutorForm(false);
-            setSelectedLocutor(null);
-          }}
-          onSave={() => {
-            setShowLocutorForm(false);
-            setSelectedLocutor(null);
-            setRefreshTrigger(prev => prev + 1);
-          }}
-        />
-      )}
+      {showClientForm && <ClientForm client={selectedClient} onClose={() => { setShowClientForm(false); setSelectedClient(null); }} onSuccess={() => { setShowClientForm(false); setSelectedClient(null); setRefreshTrigger(prev => prev + 1); }} />}
+      {showOrderForm && <OrderForm order={selectedOrder} initialStatus={initialOrderStatus} onClose={() => { setShowOrderForm(false); setSelectedOrder(null); }} onSuccess={() => { setShowOrderForm(false); setSelectedOrder(null); setRefreshTrigger(prev => prev + 1); }} />}
+      {showLocutorForm && <LocutorForm locutor={selectedLocutor} onClose={() => { setShowLocutorForm(false); setSelectedLocutor(null); }} onSave={() => { setShowLocutorForm(false); setSelectedLocutor(null); setRefreshTrigger(prev => prev + 1); }} />}
     </div>
+  );
+};
+
+const App = () => {
+  return (
+    <AuthProvider>
+      <CRM />
+    </AuthProvider>
   );
 };
 

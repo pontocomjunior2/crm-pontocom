@@ -5,10 +5,12 @@ export const STORAGE_URL = 'http://localhost:3001';
 
 // Helper function for fetch requests
 const fetchAPI = async (endpoint, options = {}) => {
+    const token = localStorage.getItem('pontocom_token');
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         ...options,
         headers: {
             'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
             ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
             ...options.headers,
         },
@@ -128,8 +130,12 @@ export const orderAPI = {
         if (customName) formData.append('customName', customName);
         formData.append('file', file);
 
+        const token = localStorage.getItem('pontocom_token');
         const response = await fetch(`${API_BASE_URL}/orders/${id}/upload-os`, {
             method: 'POST',
+            headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
             body: formData,
         });
 
@@ -189,24 +195,15 @@ export const locutorAPI = {
     },
 };
 
-// CNPJ Lookup - Using BrasilAPI (primary) with ReceitaWS fallback
+// CNPJ Lookup
 export const lookupCNPJ = async (cnpj) => {
     const cleanCNPJ = cnpj.replace(/\D/g, '');
+    if (cleanCNPJ.length !== 14) throw new Error('CNPJ deve ter 14 dígitos');
 
-    if (cleanCNPJ.length !== 14) {
-        throw new Error('CNPJ deve ter 14 dígitos');
-    }
-
-    // Try BrasilAPI first (more reliable and CORS-friendly)
     try {
         const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCNPJ}`);
-
-        if (!response.ok) {
-            throw new Error('CNPJ não encontrado na BrasilAPI');
-        }
-
+        if (!response.ok) throw new Error('CNPJ não encontrado');
         const data = await response.json();
-
         return {
             razaoSocial: data.razao_social || data.nome_fantasia || '',
             nomeFantasia: data.nome_fantasia || data.razao_social || '',
@@ -215,7 +212,7 @@ export const lookupCNPJ = async (cnpj) => {
             emailPrincipal: data.email || '',
             telefonePrincipal: data.ddd_telefone_1 || data.telefone || '',
             cep: data.cep?.replace(/\D/g, '') || '',
-            endereco: data.logradouro || data.descricao_tipo_de_logradouro + ' ' + data.logradouro || '',
+            endereco: data.logradouro || '',
             numero: data.numero || '',
             complemento: data.complemento || '',
             bairro: data.bairro || '',
@@ -223,67 +220,21 @@ export const lookupCNPJ = async (cnpj) => {
             estado: data.uf || '',
             dataCriacao: data.data_inicio_atividade || '',
         };
-    } catch (brasilApiError) {
-        console.warn('BrasilAPI failed, trying ReceitaWS...', brasilApiError.message);
-
-        // Fallback to ReceitaWS
-        try {
-            const response = await fetch(`https://www.receitaws.com.br/v1/cnpj/${cleanCNPJ}`);
-
-            if (!response.ok) {
-                throw new Error('CNPJ não encontrado');
-            }
-
-            const data = await response.json();
-
-            if (data.status === 'ERROR') {
-                throw new Error(data.message || 'Erro ao buscar CNPJ');
-            }
-
-            return {
-                razaoSocial: data.nome || '',
-                nomeFantasia: data.fantasia || '',
-                cnpj: data.cnpj || '',
-                inscricaoEstadual: data.inscricao_estadual || '',
-                emailPrincipal: data.email || '',
-                telefonePrincipal: data.telefone || '',
-                cep: data.cep?.replace(/\D/g, '') || '',
-                endereco: data.logradouro || '',
-                numero: data.numero || '',
-                complemento: data.complemento || '',
-                bairro: data.bairro || '',
-                cidade: data.municipio || '',
-                estado: data.uf || '',
-                dataCriacao: data.abertura || '',
-            };
-        } catch (receitaError) {
-            console.error('Both APIs failed:', receitaError.message);
-            throw new Error('Não foi possível consultar o CNPJ. Verifique sua conexão com a internet ou preencha manualmente.');
-        }
+    } catch (error) {
+        throw new Error('Não foi possível consultar o CNPJ.');
     }
 };
 
-// CEP Lookup using ViaCEP (free API)
+// CEP Lookup
 export const lookupCEP = async (cep) => {
     const cleanCEP = cep.replace(/\D/g, '');
-
-    if (cleanCEP.length !== 8) {
-        throw new Error('CEP inválido');
-    }
+    if (cleanCEP.length !== 8) throw new Error('CEP inválido');
 
     try {
         const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
-
-        if (!response.ok) {
-            throw new Error('CEP não encontrado');
-        }
-
+        if (!response.ok) throw new Error('CEP não encontrado');
         const data = await response.json();
-
-        if (data.erro) {
-            throw new Error('CEP não encontrado');
-        }
-
+        if (data.erro) throw new Error('CEP não encontrado');
         return {
             cep: data.cep?.replace(/\D/g, '') || '',
             endereco: data.logradouro || '',
@@ -302,14 +253,12 @@ export const serviceTypeAPI = {
     list: async () => {
         return fetchAPI('/service-types');
     },
-
     create: async (name) => {
         return fetchAPI('/service-types', {
             method: 'POST',
             body: JSON.stringify({ name }),
         });
     },
-
     init: async () => {
         return fetchAPI('/service-types/init', {
             method: 'POST',
@@ -322,4 +271,41 @@ export const importAPI = {
         method: 'POST',
         body: JSON.stringify({ xmlData }),
     }),
+};
+
+// Auth API
+export const authAPI = {
+    login: async (email, password) => {
+        return fetchAPI('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password }),
+        });
+    },
+    me: async () => {
+        return fetchAPI('/auth/me');
+    }
+};
+
+// User Management API
+export const userAPI = {
+    list: async () => {
+        return fetchAPI('/users');
+    },
+    create: async (data) => {
+        return fetchAPI('/users', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+    update: async (id, data) => {
+        return fetchAPI(`/users/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+    delete: async (id) => {
+        return fetchAPI(`/users/${id}`, {
+            method: 'DELETE',
+        });
+    }
 };
