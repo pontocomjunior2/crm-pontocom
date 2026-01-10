@@ -1,7 +1,7 @@
 // API service layer for frontend
 
-export const API_BASE_URL = 'http://localhost:3001/api';
-export const STORAGE_URL = 'http://localhost:3001';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+export const STORAGE_URL = import.meta.env.VITE_STORAGE_URL || 'http://localhost:3001';
 
 // Helper function for fetch requests
 const fetchAPI = async (endpoint, options = {}) => {

@@ -1,10 +1,9 @@
-version: '3.8'
-
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     environment:
-      # DATABASE_URL will be provided via .env or EasyPanel env vars
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key}
       PORT: 3001
@@ -14,7 +13,12 @@ services:
       - "easypanel.app.name=crm-backend"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      VITE_API_URL: https://api-crm.pontocomaudio.net/api
+      VITE_STORAGE_URL: https://api-crm.pontocomaudio.net
     depends_on:
       - backend
     networks:
