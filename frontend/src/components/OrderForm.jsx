@@ -2,13 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2 } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
-import { clientAPI, orderAPI, locutorAPI, STORAGE_URL } from '../services/api';
+import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL } from '../services/api';
 
-const OrderForm = ({ order = null, onClose, onSuccess }) => {
+const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess }) => {
     const [clients, setClients] = useState([]);
     const [locutores, setLocutores] = useState([]);
     const [loadingClients, setLoadingClients] = useState(true);
     const [loadingLocutores, setLoadingLocutores] = useState(true);
+    const [serviceTypes, setServiceTypes] = useState([]);
+    const [loadingServiceTypes, setLoadingServiceTypes] = useState(true);
+    const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+    const [serviceSearch, setServiceSearch] = useState('');
 
     const [formData, setFormData] = useState({
         clientId: order?.clientId || '',
@@ -20,10 +24,10 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         cacheValor: order?.cacheValor ? Number(order.cacheValor) : 0,
         vendaValor: order?.vendaValor ? Number(order.vendaValor) : 0,
         comentarios: order?.comentarios || '',
-        status: order?.status || 'PEDIDO',
+        status: order?.status || (order ? 'PEDIDO' : initialStatus),
         urgency: order?.urgency || 'NORMAL',
         faturado: order?.faturado || false,
-        entregue: order?.entregue || false,
+        entregue: order?.entregue || (order ? false : (initialStatus === 'VENDA')),
         precisaNF: undefined, // Removed
         dispensaNF: order?.dispensaNF || false,
         emiteBoleto: order?.emiteBoleto || false,
@@ -34,6 +38,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         pendenciaMotivo: order?.pendenciaMotivo || '',
         numeroOS: order?.numeroOS || '',
         arquivoOS: order?.arquivoOS || '',
+        serviceType: order?.serviceType || '',
     });
 
     const [osFile, setOsFile] = useState(null);
@@ -80,7 +85,15 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
     useEffect(() => {
         loadClients();
         loadLocutores();
+        loadServiceTypes();
     }, []);
+
+    // Sync serviceSearch with serviceType
+    useEffect(() => {
+        if (formData.serviceType) {
+            setServiceSearch(formData.serviceType);
+        }
+    }, [formData.serviceType]);
 
     // Recalculate margins when values change
     useEffect(() => {
@@ -108,6 +121,44 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
             console.error('Error loading locutores:', error);
         } finally {
             setLoadingLocutores(false);
+        }
+    };
+
+    const loadServiceTypes = async () => {
+        try {
+            const data = await serviceTypeAPI.list();
+            setServiceTypes(data || []);
+        } catch (error) {
+            console.error('Error loading service types:', error);
+        } finally {
+            setLoadingServiceTypes(false);
+        }
+    };
+
+    const handleAddServiceType = async () => {
+        if (!serviceSearch.trim()) return;
+
+        const normalized = serviceSearch.trim().toUpperCase();
+        const existing = serviceTypes.find(t => t.name === normalized);
+
+        if (existing) {
+            setFormData(prev => ({ ...prev, serviceType: normalized }));
+            setShowServiceDropdown(false);
+            setMessage({ type: 'info', text: 'Esse serviço já existe na lista.' });
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const newType = await serviceTypeAPI.create(normalized);
+            setServiceTypes(prev => [...prev, newType].sort((a, b) => a.name.localeCompare(b.name)));
+            setFormData(prev => ({ ...prev, serviceType: normalized }));
+            setShowServiceDropdown(false);
+            setMessage({ type: 'success', text: 'Novo serviço adicionado com sucesso!' });
+        } catch (error) {
+            setMessage({ type: 'error', text: error.message });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -196,7 +247,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
             newErrors.title = 'Título é obrigatório';
         }
 
-        if (!formData.tipo) {
+        if (formData.status === 'PEDIDO' && !formData.tipo) {
             newErrors.tipo = 'Selecione o tipo';
         }
 
@@ -221,6 +272,26 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
             } catch (error) {
                 console.error('Error removing OS:', error);
                 setMessage({ type: 'error', text: 'Falha ao remover documento.' });
+            }
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!order?.id) return;
+
+        if (window.confirm('Tem certeza que deseja excluir permanentemente este lançamento? Esta ação não pode ser desfeita.')) {
+            setLoading(true);
+            try {
+                await orderAPI.delete(order.id);
+                setMessage({ type: 'success', text: 'Lançamento excluído com sucesso!' });
+                setTimeout(() => {
+                    if (onSuccess) onSuccess();
+                    if (onClose) onClose();
+                }, 1000);
+            } catch (error) {
+                console.error('Error deleting order:', error);
+                setMessage({ type: 'error', text: 'Falha ao excluir lançamento: ' + error.message });
+                setLoading(false);
             }
         }
     };
@@ -289,16 +360,28 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                     onClick={() => setShowClientDropdown(false)}
                 />
             )}
+            {showServiceDropdown && (
+                <div
+                    className="fixed inset-0 z-40 bg-transparent"
+                    onClick={() => setShowServiceDropdown(false)}
+                />
+            )}
             <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-border">
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-border">
                     <div>
                         <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
-                            <ShoppingCart size={28} className="text-primary" />
-                            {order ? 'Editar Pedido' : 'Novo Pedido'}
+                            {initialStatus === 'VENDA' ? (
+                                <DollarSign size={28} className="text-primary" />
+                            ) : (
+                                <ShoppingCart size={28} className="text-primary" />
+                            )}
+                            {order ? 'Editar Registro' : (initialStatus === 'VENDA' ? 'Novo Lançamento Financeiro' : 'Novo Pedido')}
                         </h2>
-                        <p className="text-sm text-muted-foreground mt-1">Controle Avulso - Produção de Áudio</p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            {initialStatus === 'VENDA' ? 'Gestão direta de faturamento e serviços' : 'Controle Avulso - Produção de Áudio'}
+                        </p>
                     </div>
                     <button
                         onClick={onClose}
@@ -388,11 +471,39 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                         {errors.clientId && <p className="text-red-400 text-xs mt-1">{errors.clientId}</p>}
                     </div>
 
+                    {/* Order Number (numeroVenda) - Only for Sales/Finance */}
+                    {formData.status === 'VENDA' && (
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                Número do Pedido / Venda
+                            </label>
+                            <div className="relative">
+                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                    <Calculator size={18} />
+                                </div>
+                                <input
+                                    type="text"
+                                    name="numeroVenda"
+                                    value={formData.numeroVenda || ''}
+                                    onChange={(e) => {
+                                        const val = e.target.value.replace(/\D/g, '');
+                                        setFormData(prev => ({ ...prev, numeroVenda: val }));
+                                    }}
+                                    className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-mono"
+                                    placeholder="Deixe em branco para gerar automático..."
+                                />
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1 italic">
+                                * Se deixado em branco, o sistema gerará o próximo número da sequência automaticamente.
+                            </p>
+                        </div>
+                    )}
+
                     {/* Order Details */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div className="md:col-span-2">
+                        <div className={initialStatus === 'VENDA' ? "md:col-span-2" : "md:col-span-2"}>
                             <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Título do Áudio <span className="text-red-500">*</span>
+                                {initialStatus === 'VENDA' ? 'Título' : 'Título do Áudio'} <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -400,134 +511,205 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 value={formData.title}
                                 onChange={handleChange}
                                 className={`w-full bg-input-background border ${errors.title ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                                placeholder="Ex: Spot Black Friday 30s"
+                                placeholder={initialStatus === 'VENDA' ? "Ex: Mensalidade Janeiro" : "Ex: Spot Black Friday 30s"}
                             />
                             {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
                         </div>
 
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Nome do Arquivo
-                            </label>
-                            <div className="relative">
-                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <Paperclip size={18} />
+                        {initialStatus === 'VENDA' ? (
+                            <div className="md:col-span-2 relative">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                    Tipo de Serviço / Categoria
+                                </label>
+                                <div className="flex gap-2">
+                                    <div className="relative flex-1">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            <Search size={16} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={serviceSearch}
+                                            onChange={(e) => {
+                                                setServiceSearch(e.target.value);
+                                                setShowServiceDropdown(true);
+                                            }}
+                                            onFocus={() => setShowServiceDropdown(true)}
+                                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all text-sm"
+                                            placeholder="Busque ou digite novo serviço..."
+                                        />
+
+                                        {showServiceDropdown && (
+                                            <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                                                {serviceTypes
+                                                    .filter(t => t.name.toLowerCase().includes(serviceSearch.toLowerCase()))
+                                                    .map(type => (
+                                                        <button
+                                                            key={type.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setFormData(prev => ({ ...prev, serviceType: type.name }));
+                                                                setServiceSearch(type.name);
+                                                                setShowServiceDropdown(false);
+                                                            }}
+                                                            className="w-full text-left px-4 py-3 text-sm hover:bg-white/5 transition-colors border-b border-border last:border-0"
+                                                        >
+                                                            {type.name}
+                                                        </button>
+                                                    ))}
+                                                {serviceSearch.trim() && !serviceTypes.find(t => t.name.toUpperCase() === serviceSearch.trim().toUpperCase()) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleAddServiceType}
+                                                        className="w-full text-left px-4 py-3 text-sm text-primary font-bold hover:bg-primary/5 transition-colors"
+                                                    >
+                                                        + Adicionar "{serviceSearch.toUpperCase()}"
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    {serviceSearch.trim() && !serviceTypes.find(t => t.name.toUpperCase() === serviceSearch.trim().toUpperCase()) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleAddServiceType}
+                                            className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl hover:bg-primary/20 transition-all font-bold text-xs"
+                                        >
+                                            CADASTRAR
+                                        </button>
+                                    )}
                                 </div>
-                                <input
-                                    type="text"
-                                    name="fileName"
-                                    value={formData.fileName}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono text-sm"
-                                    placeholder="Ex: spot_natal_v1.mp3"
-                                />
                             </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Locutor / Voz
-                            </label>
-                            <select
-                                name="locutorId"
-                                value={formData.locutorId}
-                                onChange={handleChange}
-                                disabled={loadingLocutores}
-                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                            >
-                                <option value="">Selecione um locutor...</option>
-                                {locutores.map(l => (
-                                    <option key={l.id} value={l.id}>{l.name}</option>
-                                ))}
-                                <option value="OUTRO">-- Outro (Livre) --</option>
-                            </select>
-
-                            {formData.locutorId === 'OUTRO' && (
-                                <input
-                                    type="text"
-                                    name="locutor"
-                                    value={formData.locutor}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground mt-2 focus:outline-none focus:border-primary/50 transition-all"
-                                    placeholder="Digite o nome do locutor..."
-                                />
-                            )}
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Tipo <span className="text-red-500">*</span>
-                            </label>
-                            <div className="flex gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="radio"
-                                        name="tipo"
-                                        value="OFF"
-                                        checked={formData.tipo === 'OFF'}
-                                        onChange={handleChange}
-                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
-                                    />
-                                    <span className="text-foreground text-sm">OFF (Locução)</span>
+                        ) : (
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                    Nome do Arquivo
                                 </label>
-                                <label className="flex items-center gap-2 cursor-pointer">
+                                <div className="relative">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                        <Paperclip size={18} />
+                                    </div>
                                     <input
-                                        type="radio"
-                                        name="tipo"
-                                        value="PRODUZIDO"
-                                        checked={formData.tipo === 'PRODUZIDO'}
+                                        type="text"
+                                        name="fileName"
+                                        value={formData.fileName}
                                         onChange={handleChange}
-                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
+                                        className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono text-sm"
+                                        placeholder="Ex: spot_natal_v1.mp3"
                                     />
-                                    <span className="text-foreground text-sm">PRODUZIDO (Com trilha)</span>
-                                </label>
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {initialStatus !== 'VENDA' && (
+                            <>
+                                <div>
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                        Locutor / Voz
+                                    </label>
+                                    <select
+                                        name="locutorId"
+                                        value={formData.locutorId}
+                                        onChange={handleChange}
+                                        disabled={loadingLocutores}
+                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
+                                    >
+                                        <option value="">Selecione um locutor...</option>
+                                        {locutores.map(l => (
+                                            <option key={l.id} value={l.id}>{l.name}</option>
+                                        ))}
+                                        <option value="OUTRO">-- Outro (Livre) --</option>
+                                    </select>
+
+                                    {formData.locutorId === 'OUTRO' && (
+                                        <input
+                                            type="text"
+                                            name="locutor"
+                                            value={formData.locutor}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground mt-2 focus:outline-none focus:border-primary/50 transition-all"
+                                            placeholder="Digite o nome do locutor..."
+                                        />
+                                    )}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                        Tipo <span className="text-red-500">*</span>
+                                    </label>
+                                    <div className="flex gap-4">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="tipo"
+                                                value="OFF"
+                                                checked={formData.tipo === 'OFF'}
+                                                onChange={handleChange}
+                                                className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
+                                            />
+                                            <span className="text-foreground text-sm">OFF (Locução)</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="tipo"
+                                                value="PRODUZIDO"
+                                                checked={formData.tipo === 'PRODUZIDO'}
+                                                onChange={handleChange}
+                                                className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
+                                            />
+                                            <span className="text-foreground text-sm">PRODUZIDO (Com trilha)</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
 
                     {/* Urgency Selection */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-muted-foreground mb-2">
-                            Nível de Urgência
-                        </label>
-                        <div className="flex gap-4">
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-foreground' : 'bg-input-background border-border text-muted-foreground'}`}>
-                                <input
-                                    type="radio"
-                                    name="urgency"
-                                    value="NORMAL"
-                                    checked={formData.urgency === 'NORMAL'}
-                                    onChange={handleChange}
-                                    className="hidden"
-                                />
-                                <span className="text-sm font-bold">Normal</span>
+                    {initialStatus !== 'VENDA' && (
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                Nível de Urgência
                             </label>
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-input-background border-border text-muted-foreground'}`}>
-                                <input
-                                    type="radio"
-                                    name="urgency"
-                                    value="ALTA"
-                                    checked={formData.urgency === 'ALTA'}
-                                    onChange={handleChange}
-                                    className="hidden"
-                                />
-                                <AlertCircle size={16} />
-                                <span className="text-sm font-bold">Alta</span>
-                            </label>
-                            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-input-background border-border text-muted-foreground'}`}>
-                                <input
-                                    type="radio"
-                                    name="urgency"
-                                    value="URGENTE"
-                                    checked={formData.urgency === 'URGENTE'}
-                                    onChange={handleChange}
-                                    className="hidden"
-                                />
-                                <AlertCircle size={16} />
-                                <span className="text-sm font-bold">URGENTE!</span>
-                            </label>
+                            <div className="flex gap-4">
+                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-foreground' : 'bg-input-background border-border text-muted-foreground'}`}>
+                                    <input
+                                        type="radio"
+                                        name="urgency"
+                                        value="NORMAL"
+                                        checked={formData.urgency === 'NORMAL'}
+                                        onChange={handleChange}
+                                        className="hidden"
+                                    />
+                                    <span className="text-sm font-bold">Normal</span>
+                                </label>
+                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-input-background border-border text-muted-foreground'}`}>
+                                    <input
+                                        type="radio"
+                                        name="urgency"
+                                        value="ALTA"
+                                        checked={formData.urgency === 'ALTA'}
+                                        onChange={handleChange}
+                                        className="hidden"
+                                    />
+                                    <AlertCircle size={16} />
+                                    <span className="text-sm font-bold">Alta</span>
+                                </label>
+                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-input-background border-border text-muted-foreground'}`}>
+                                    <input
+                                        type="radio"
+                                        name="urgency"
+                                        value="URGENTE"
+                                        checked={formData.urgency === 'URGENTE'}
+                                        onChange={handleChange}
+                                        className="hidden"
+                                    />
+                                    <AlertCircle size={16} />
+                                    <span className="text-sm font-bold">URGENTE!</span>
+                                </label>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Financial Values */}
                     <div className="mb-6">
@@ -552,12 +734,16 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                     <input
                                         type="text"
                                         name="cacheValor"
-                                        value={locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 ? "CALCULADO MENSAL" : formatCurrency(formData.cacheValor)}
+                                        value={formatCurrency(formData.cacheValor)}
                                         onChange={handleCurrencyChange}
-                                        disabled={locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0}
-                                        className={`w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono ${locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 ? 'opacity-50 cursor-not-allowed bg-card text-primary' : ''}`}
+                                        className={`w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono ${locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 ? 'text-primary/70' : ''}`}
                                         placeholder="R$ 0,00"
                                     />
+                                    {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">Incluso no Mensal</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -955,33 +1141,48 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                 </form>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-card">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="btn-secondary px-6"
-                        disabled={loading}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className="btn-primary px-8 flex items-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" />
-                                Salvando...
-                            </>
-                        ) : (
-                            <>
-                                <CheckCircle2 size={18} />
-                                {order ? 'Atualizar' : 'Criar Pedido'}
-                            </>
+                <div className="flex items-center justify-between p-6 border-t border-border bg-card">
+                    <div>
+                        {order && (
+                            <button
+                                type="button"
+                                onClick={handleDelete}
+                                disabled={loading}
+                                className="px-4 py-2 text-red-500 hover:bg-red-500/10 rounded-xl transition-all font-bold flex items-center gap-2"
+                            >
+                                <Trash2 size={18} />
+                                <span className="hidden sm:inline">Excluir Lançamento</span>
+                            </button>
                         )}
-                    </button>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="btn-secondary px-6"
+                            disabled={loading}
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            onClick={handleSubmit}
+                            disabled={loading}
+                            className="btn-primary px-8 flex items-center gap-2"
+                        >
+                            {loading ? (
+                                <>
+                                    <Loader2 size={18} className="animate-spin" />
+                                    Processando...
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 size={18} />
+                                    {order ? 'Atualizar' : 'Criar Pedido'}
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

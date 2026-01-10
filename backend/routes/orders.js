@@ -199,9 +199,9 @@ router.get('/', async (req, res) => {
         // Dynamic cache calculation for monthly fixed-fee locutores
         const locutorMonthCounts = {}; // { locutorId_month: count }
 
-        // First pass: Count orders per month for each fixed-fee locutor
+        // First pass: Count orders per month for each fixed-fee locutor (only those WITHOUT manual cache)
         ordersRaw.forEach(order => {
-            if (order.locutorId && order.locutorObj?.valorFixoMensal > 0) {
+            if (order.locutorId && order.locutorObj?.valorFixoMensal > 0 && Number(order.cacheValor) === 0) {
                 const month = new Date(order.date).toISOString().substring(0, 7); // YYYY-MM
                 const key = `${order.locutorId}_${month}`;
                 locutorMonthCounts[key] = (locutorMonthCounts[key] || 0) + 1;
@@ -213,10 +213,15 @@ router.get('/', async (req, res) => {
             let dynamicCacheValor = Number(order.cacheValor);
 
             if (order.locutorId && order.locutorObj?.valorFixoMensal > 0) {
-                const month = new Date(order.date).toISOString().substring(0, 7);
-                const key = `${order.locutorId}_${month}`;
-                const count = locutorMonthCounts[key] || 1;
-                dynamicCacheValor = Number(order.locutorObj.valorFixoMensal) / count;
+                // If there's a manual cache value, use it directly (don't divide fixed fee)
+                if (Number(order.cacheValor) > 0) {
+                    dynamicCacheValor = Number(order.cacheValor);
+                } else {
+                    const month = new Date(order.date).toISOString().substring(0, 7);
+                    const key = `${order.locutorId}_${month}`;
+                    const count = locutorMonthCounts[key] || 1;
+                    dynamicCacheValor = Number(order.locutorObj.valorFixoMensal) / count;
+                }
             }
 
             return {
@@ -290,7 +295,8 @@ router.post('/', async (req, res) => {
             pendenciaFinanceiro = false,
             pendenciaMotivo = null,
             numeroOS = null,
-            arquivoOS = null
+            arquivoOS = null,
+            serviceType = null
         } = req.body;
 
         // Validate required fields
@@ -302,8 +308,8 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Title is required' });
         }
 
-        if (!tipo || !['OFF', 'PRODUZIDO'].includes(tipo)) {
-            return res.status(400).json({ error: 'Type must be OFF or PRODUZIDO' });
+        if (status === 'PEDIDO' && (!tipo || !['OFF', 'PRODUZIDO'].includes(tipo))) {
+            return res.status(400).json({ error: 'Type must be OFF or PRODUZIDO for orders' });
         }
 
         // Verify client exists
@@ -313,6 +319,32 @@ router.post('/', async (req, res) => {
 
         if (!client) {
             return res.status(404).json({ error: 'Client not found' });
+        }
+
+        let finalNumeroVenda = numeroVenda ? parseInt(numeroVenda) : null;
+
+        // If a manual number is provided, check for uniqueness
+        if (finalNumeroVenda) {
+            const existingNum = await prisma.order.findUnique({
+                where: { numeroVenda: finalNumeroVenda }
+            });
+            if (existingNum) {
+                return res.status(400).json({
+                    error: 'Manual number already exists',
+                    message: `O número de pedido ${finalNumeroVenda} já está em uso.`
+                });
+            }
+        }
+
+        // Auto-generate numeroVenda for direct sales if not provided
+        if (status === 'VENDA' && !finalNumeroVenda) {
+            const lastSale = await prisma.order.findFirst({
+                where: { numeroVenda: { not: null } },
+                orderBy: { numeroVenda: 'desc' }
+            });
+
+            const lastId = lastSale?.numeroVenda || 42531;
+            finalNumeroVenda = lastId + 1;
         }
 
         const order = await prisma.order.create({
@@ -328,13 +360,14 @@ router.post('/', async (req, res) => {
                 vendaValor: parseFloat(vendaValor) || 0,
                 comentarios,
                 status,
-                numeroVenda: numeroVenda || null,
+                numeroVenda: finalNumeroVenda || null,
                 faturado,
                 entregue,
                 dispensaNF,
                 emiteBoleto,
                 dataFaturar: dataFaturar ? new Date(dataFaturar) : null,
                 vencimento: vencimento ? new Date(vencimento) : null,
+                serviceType,
                 pago,
                 statusEnvio,
                 pendenciaFinanceiro,
@@ -408,6 +441,23 @@ router.put('/:id', async (req, res) => {
             }
         }
 
+        // If numeroVenda is being changed or set, check for uniqueness
+        if (numeroVenda !== undefined && numeroVenda !== null && numeroVenda !== existing.numeroVenda) {
+            const cleanNumber = parseInt(numeroVenda);
+            if (!isNaN(cleanNumber)) {
+                const existingNum = await prisma.order.findUnique({
+                    where: { numeroVenda: cleanNumber }
+                });
+
+                if (existingNum && existingNum.id !== id) {
+                    return res.status(400).json({
+                        error: 'Manual number already exists',
+                        message: `O número de pedido ${cleanNumber} já está em uso.`
+                    });
+                }
+            }
+        }
+
         const order = await prisma.order.update({
             where: { id },
             data: {
@@ -422,7 +472,7 @@ router.put('/:id', async (req, res) => {
                 vendaValor: vendaValor !== undefined ? parseFloat(vendaValor) : undefined,
                 comentarios,
                 status,
-                numeroVenda,
+                numeroVenda: numeroVenda !== undefined ? (numeroVenda ? parseInt(numeroVenda) : null) : undefined,
                 faturado,
                 entregue,
                 dispensaNF,
@@ -566,6 +616,25 @@ router.post('/:id/clone', async (req, res) => {
     } catch (error) {
         console.error('Error cloning order:', error);
         res.status(500).json({ error: 'Failed to clone order', message: error.message });
+    }
+});
+
+// POST /api/orders/bulk-delete - delete multiple orders
+router.post('/bulk-delete', async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids)) {
+            return res.status(400).json({ error: 'IDs array is required' });
+        }
+
+        await prisma.order.deleteMany({
+            where: { id: { in: ids } }
+        });
+
+        res.json({ success: true, message: `${ids.length} orders deleted` });
+    } catch (error) {
+        console.error('Error bulk deleting orders:', error);
+        res.status(500).json({ error: 'Failed to delete orders' });
     }
 });
 

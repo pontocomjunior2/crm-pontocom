@@ -96,6 +96,13 @@ export const orderAPI = {
         });
     },
 
+    bulkDelete: async (ids) => {
+        return fetchAPI('/orders/bulk-delete', {
+            method: 'POST',
+            body: JSON.stringify({ ids }),
+        });
+    },
+
     convert: async (id) => {
         const response = await fetchAPI(`/orders/${id}/convert`, {
             method: 'PATCH',
@@ -288,6 +295,26 @@ export const lookupCEP = async (cep) => {
     } catch (error) {
         throw new Error(error.message || 'Erro ao consultar CEP');
     }
+};
+
+// Service Type API calls
+export const serviceTypeAPI = {
+    list: async () => {
+        return fetchAPI('/service-types');
+    },
+
+    create: async (name) => {
+        return fetchAPI('/service-types', {
+            method: 'POST',
+            body: JSON.stringify({ name }),
+        });
+    },
+
+    init: async () => {
+        return fetchAPI('/service-types/init', {
+            method: 'POST',
+        });
+    },
 };
 
 export const importAPI = {

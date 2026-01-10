@@ -23,6 +23,7 @@ const orderRoutes = require('./routes/orders');
 const dashboardRoutes = require('./routes/dashboard');
 const locutoresRoutes = require('./routes/locutores');
 const importRoutes = require('./routes/import');
+const serviceTypesRoutes = require('./routes/serviceTypes');
 
 // Middleware de Autenticação
 const authenticateToken = (req, res, next) => {
@@ -80,6 +81,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/locutores', locutoresRoutes);
 app.use('/api/import', importRoutes);
+app.use('/api/service-types', serviceTypesRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -416,9 +416,15 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                             {order.numeroOS ? `OS: ${order.numeroOS}` : 'VER OS'}
                                                         </a>
                                                     )}
-                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${order.tipo === 'PRODUZIDO' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
-                                                        {order.tipo}
-                                                    </span>
+                                                    {order.serviceType ? (
+                                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-primary text-primary-foreground uppercase tracking-wider">
+                                                            {order.serviceType}
+                                                        </span>
+                                                    ) : (
+                                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${order.tipo === 'PRODUZIDO' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                                            {order.tipo}
+                                                        </span>
+                                                    )}
                                                     <span className="text-[10px] text-[#999999] flex items-center gap-1">
                                                         <Mic2 size={10} />
                                                         {order.locutor}
@@ -439,7 +445,11 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                     )}
                                                     <span className={`text-[10px] ${order.locutorObj?.valorFixoMensal > 0 ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
                                                         Cachê: {formatCurrency(Number(order.dynamicCacheValor || order.cacheValor))}
-                                                        {order.locutorObj?.valorFixoMensal > 0 && <span className="ml-1 opacity-60">(Fixo)</span>}
+                                                        {order.locutorObj?.valorFixoMensal > 0 && (
+                                                            <span className="ml-1 opacity-60">
+                                                                {Number(order.cacheValor) > 0 ? '(Extra)' : '(Fixo)'}
+                                                            </span>
+                                                        )}
                                                     </span>
                                                 </div>
                                             </div>

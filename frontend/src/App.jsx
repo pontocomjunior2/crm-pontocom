@@ -42,6 +42,7 @@ const App = () => {
   const [selectedLocutor, setSelectedLocutor] = useState(null);
   const [viewingLocutorHistory, setViewingLocutorHistory] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [initialOrderStatus, setInitialOrderStatus] = useState('PEDIDO');
 
   const [dashboardData, setDashboardData] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(true);
@@ -77,8 +78,9 @@ const App = () => {
     setShowOrderForm(true);
   };
 
-  const handleAddNewOrder = () => {
+  const handleAddNewOrder = (status = 'PEDIDO') => {
     setSelectedOrder(null);
+    setInitialOrderStatus(status);
     setShowOrderForm(true);
   };
 
@@ -466,6 +468,7 @@ const App = () => {
                 <FaturamentoList
                   key={refreshTrigger}
                   onEditOrder={handleEditOrder}
+                  onAddNewOrder={handleAddNewOrder}
                 />
               </div>
             )}
@@ -505,6 +508,7 @@ const App = () => {
       {showOrderForm && (
         <OrderForm
           order={selectedOrder}
+          initialStatus={initialOrderStatus}
           onClose={() => {
             setShowOrderForm(false);
             setSelectedOrder(null);
