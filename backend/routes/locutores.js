@@ -25,6 +25,15 @@ router.get('/', async (req, res) => {
             include: {
                 _count: {
                     select: { orders: true }
+                },
+                orders: {
+                    select: {
+                        id: true,
+                        title: true,
+                        date: true,
+                        status: true
+                    },
+                    orderBy: { date: 'desc' }
                 }
             }
         });
@@ -43,6 +52,15 @@ router.get('/:id', async (req, res) => {
             include: {
                 _count: {
                     select: { orders: true }
+                },
+                orders: {
+                    select: {
+                        id: true,
+                        title: true,
+                        date: true,
+                        status: true
+                    },
+                    orderBy: { date: 'desc' }
                 }
             }
         });
