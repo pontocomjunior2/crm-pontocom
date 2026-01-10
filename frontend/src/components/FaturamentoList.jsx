@@ -54,9 +54,8 @@ const FaturamentoList = ({ onEditOrder }) => {
         if (selected.length === 0) return;
 
         const textList = selected.map(o => {
-            const date = new Date(o.date).toLocaleDateString('pt-BR');
             const id = o.numeroVenda || 'N/A';
-            return `${id} - ${o.title.toUpperCase()} - ${date} (${formatCurrency(o.vendaValor)})`;
+            return `${id} - ${o.title.toUpperCase()} (${formatCurrency(o.vendaValor)})`;
         }).join('\n');
 
         navigator.clipboard.writeText(textList)
