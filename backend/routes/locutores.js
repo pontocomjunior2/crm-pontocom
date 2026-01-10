@@ -52,20 +52,85 @@ router.get('/:id', async (req, res) => {
             include: {
                 _count: {
                     select: { orders: true }
-                },
-                orders: {
-                    select: {
-                        id: true,
-                        title: true,
-                        date: true,
-                        status: true
-                    },
-                    orderBy: { date: 'desc' }
                 }
             }
         });
         if (!locutor) return res.status(404).json({ error: 'Locutor não encontrado' });
         res.json(locutor);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Get locutor history (paginated)
+router.get('/:id/history', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            page = 1,
+            limit = 10,
+            search = '',
+            status = '',
+            dateFrom = '',
+            dateTo = ''
+        } = req.query;
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const take = parseInt(limit);
+
+        const where = {
+            locutorId: id
+        };
+
+        if (status) {
+            where.status = status;
+        }
+
+        if (dateFrom || dateTo) {
+            where.date = {};
+            if (dateFrom) where.date.gte = new Date(dateFrom);
+            if (dateTo) where.date.lte = new Date(dateTo);
+        }
+
+        if (search) {
+            where.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { arquivoOS: { contains: search, mode: 'insensitive' } },
+                { fileName: { contains: search, mode: 'insensitive' } },
+                { numeroOS: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+
+        const [orders, total] = await Promise.all([
+            prisma.order.findMany({
+                where,
+                skip,
+                take,
+                orderBy: { date: 'desc' },
+                select: {
+                    id: true,
+                    title: true,
+                    date: true,
+                    status: true,
+                    tipo: true,
+                    numeroOS: true,
+                    arquivoOS: true,
+                    fileName: true,
+                    cacheValor: true
+                }
+            }),
+            prisma.order.count({ where })
+        ]);
+
+        res.json({
+            orders,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

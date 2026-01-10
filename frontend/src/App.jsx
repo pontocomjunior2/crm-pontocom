@@ -28,6 +28,7 @@ import OrderList from './components/OrderList';
 import FaturamentoList from './components/FaturamentoList';
 import LocutorList from './components/LocutorList';
 import LocutorForm from './components/LocutorForm';
+import LocutorHistory from './components/LocutorHistory';
 import { dashboardAPI } from './services/api';
 import { formatCurrency } from './utils/formatters';
 
@@ -39,6 +40,7 @@ const App = () => {
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedLocutor, setSelectedLocutor] = useState(null);
+  const [viewingLocutorHistory, setViewingLocutorHistory] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const [dashboardData, setDashboardData] = useState(null);
@@ -443,11 +445,19 @@ const App = () => {
 
             {activeTab === 'locutores' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-                <LocutorList
-                  key={refreshTrigger}
-                  onEditLocutor={handleEditLocutor}
-                  onAddNewLocutor={handleAddNewLocutor}
-                />
+                {viewingLocutorHistory ? (
+                  <LocutorHistory
+                    locutor={viewingLocutorHistory}
+                    onBack={() => setViewingLocutorHistory(null)}
+                  />
+                ) : (
+                  <LocutorList
+                    key={refreshTrigger}
+                    onEditLocutor={handleEditLocutor}
+                    onAddNewLocutor={handleAddNewLocutor}
+                    onViewHistory={setViewingLocutorHistory}
+                  />
+                )}
               </div>
             )}
 

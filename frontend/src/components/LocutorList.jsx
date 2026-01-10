@@ -17,12 +17,14 @@ import {
     AlertCircle,
     CheckCircle2,
     Calendar,
-    ArrowUpDown
+    ArrowUpDown,
+    History,
+    FileClock
 } from 'lucide-react';
 import { locutorAPI } from '../services/api';
 import { formatPhone, formatCurrency } from '../utils/formatters';
 
-const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
+const LocutorList = ({ onEditLocutor, onAddNewLocutor, onViewHistory }) => {
     const [locutores, setLocutores] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -263,6 +265,13 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                                         </a>
                                                     )}
                                                     <button
+                                                        onClick={() => onViewHistory(locutor)}
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-primary hover:text-white transition-all shadow-sm"
+                                                        title="Ver Histórico Completo"
+                                                    >
+                                                        <FileClock size={16} />
+                                                    </button>
+                                                    <button
                                                         onClick={() => onEditLocutor(locutor)}
                                                         className="p-2 hover:bg-white/10 rounded-lg text-[#999999] hover:text-white transition-all shadow-sm"
                                                         title="Editar"
@@ -286,8 +295,15 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                                         <div className="flex items-center justify-between border-b border-white/5 pb-2">
                                                             <h4 className="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2">
                                                                 <Music size={12} />
-                                                                Histórico de Gravações ({locutor.orders?.length || 0})
+                                                                Histórico Recente ({locutor.orders?.length || 0})
                                                             </h4>
+                                                            <button
+                                                                onClick={() => onViewHistory(locutor)}
+                                                                className="text-[10px] font-bold text-white/50 hover:text-primary transition-colors uppercase tracking-widest flex items-center gap-1"
+                                                            >
+                                                                Ver Histórico Completo
+                                                                <ExternalLink size={10} />
+                                                            </button>
                                                         </div>
                                                         {locutor.orders && locutor.orders.length > 0 ? (
                                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">

@@ -175,6 +175,11 @@ export const locutorAPI = {
             method: 'DELETE',
         });
     },
+
+    getHistory: async (id, params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return fetchAPI(`/locutores/${id}/history${queryString ? `?${queryString}` : ''}`);
+    },
 };
 
 // CNPJ Lookup - Using BrasilAPI (primary) with ReceitaWS fallback
