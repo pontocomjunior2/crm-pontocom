@@ -187,136 +187,137 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                     </td>
                                 </tr>
                             ) : (
-                                <React.Fragment key={locutor.id}>
-                                    <tr
-                                        className={`hover:bg-white/[0.02] transition-colors group cursor-pointer ${expandedLocutor === locutor.id ? 'bg-white/[0.03]' : ''}`}
-                                        onClick={() => setExpandedLocutor(expandedLocutor === locutor.id ? null : locutor.id)}
-                                    >
-                                        <td className="px-6 py-2">
-                                            <div className="flex items-center gap-3">
-                                                <div className="text-muted-foreground group-hover:text-primary transition-colors">
-                                                    {expandedLocutor === locutor.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-foreground font-semibold text-[13px] group-hover:text-primary transition-colors">
-                                                        {locutor.name}
-                                                    </span>
-                                                    {locutor.realName && (
-                                                        <span className="text-[10px] text-[#666666] font-mono leading-none mt-0.5">
-                                                            ({locutor.realName})
+                                locutores.map((locutor) => (
+                                    <React.Fragment key={locutor.id}>
+                                        <tr
+                                            className={`hover:bg-white/[0.02] transition-colors group cursor-pointer ${expandedLocutor === locutor.id ? 'bg-white/[0.03]' : ''}`}
+                                            onClick={() => setExpandedLocutor(expandedLocutor === locutor.id ? null : locutor.id)}
+                                        >
+                                            <td className="px-6 py-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="text-muted-foreground group-hover:text-primary transition-colors">
+                                                        {expandedLocutor === locutor.id ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-foreground font-semibold text-[13px] group-hover:text-primary transition-colors">
+                                                            {locutor.name}
                                                         </span>
-                                                    )}
-                                                    {locutor.valorFixoMensal > 0 && (
-                                                        <div className="flex items-center gap-1.5 mt-1.5">
-                                                            <span className="px-1.5 py-0.5 rounded-md bg-primary/20 text-primary text-[9px] font-black uppercase tracking-wider">
-                                                                Mensal
+                                                        {locutor.realName && (
+                                                            <span className="text-[10px] text-[#666666] font-mono leading-none mt-0.5">
+                                                                ({locutor.realName})
                                                             </span>
-                                                            <span className="text-[10px] font-bold text-primary/80">
-                                                                {formatCurrency(Number(locutor.valorFixoMensal))}
+                                                        )}
+                                                        {locutor.valorFixoMensal > 0 && (
+                                                            <div className="flex items-center gap-1.5 mt-1.5">
+                                                                <span className="px-1.5 py-0.5 rounded-md bg-primary/20 text-primary text-[9px] font-black uppercase tracking-wider">
+                                                                    Mensal
+                                                                </span>
+                                                                <span className="text-[10px] font-bold text-primary/80">
+                                                                    {formatCurrency(Number(locutor.valorFixoMensal))}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <Phone size={10} className="text-[#666666]" />
+                                                            <span className="text-[10px] text-[#666666]">
+                                                                {formatPhone(locutor.phone) || 'Sem telefone'}
                                                             </span>
                                                         </div>
-                                                    )}
-                                                    <div className="flex items-center gap-2 mt-1">
-                                                        <Phone size={10} className="text-[#666666]" />
-                                                        <span className="text-[10px] text-[#666666]">
-                                                            {formatPhone(locutor.phone) || 'Sem telefone'}
-                                                        </span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-2">
-                                            <span className={`status-badge ${locutor.status === 'DISPONIVEL' ? 'status-delivered' :
-                                                locutor.status === 'FERIAS' ? 'status-faturado' : 'status-cancelled'
-                                                }`}>
-                                                {locutor.status === 'DISPONIVEL' ? 'Disponível' :
-                                                    locutor.status === 'FERIAS' ? 'Em Férias' : 'Indisponível'}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2 text-center">
-                                            <span className="text-white text-xs font-bold">
-                                                {formatCurrency(Number(locutor.priceOff))}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2 text-center">
-                                            <span className="text-white text-xs font-bold">
-                                                {formatCurrency(Number(locutor.priceProduzido))}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-2 text-center">
-                                            <span className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${expandedLocutor === locutor.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-white'}`}>
-                                                {locutor._count?.orders || 0}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                                            <div className="flex items-center justify-end gap-2">
-                                                {locutor.reelsUrl && (
-                                                    <a
-                                                        href={locutor.reelsUrl}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-2 hover:bg-white/10 rounded-lg text-primary hover:text-foreground transition-all shadow-sm"
-                                                        title="Ouvir Reel/Portfólio"
+                                            </td>
+                                            <td className="px-6 py-2">
+                                                <span className={`status-badge ${locutor.status === 'DISPONIVEL' ? 'status-delivered' :
+                                                    locutor.status === 'FERIAS' ? 'status-faturado' : 'status-cancelled'
+                                                    }`}>
+                                                    {locutor.status === 'DISPONIVEL' ? 'Disponível' :
+                                                        locutor.status === 'FERIAS' ? 'Em Férias' : 'Indisponível'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-2 text-center">
+                                                <span className="text-white text-xs font-bold">
+                                                    {formatCurrency(Number(locutor.priceOff))}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-2 text-center">
+                                                <span className="text-white text-xs font-bold">
+                                                    {formatCurrency(Number(locutor.priceProduzido))}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-2 text-center">
+                                                <span className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all ${expandedLocutor === locutor.id ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-white'}`}>
+                                                    {locutor._count?.orders || 0}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-2 text-right" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {locutor.reelsUrl && (
+                                                        <a
+                                                            href={locutor.reelsUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-2 hover:bg-white/10 rounded-lg text-primary hover:text-foreground transition-all shadow-sm"
+                                                            title="Ouvir Reel/Portfólio"
+                                                        >
+                                                            <Music size={16} />
+                                                        </a>
+                                                    )}
+                                                    <button
+                                                        onClick={() => onEditLocutor(locutor)}
+                                                        className="p-2 hover:bg-white/10 rounded-lg text-[#999999] hover:text-white transition-all shadow-sm"
+                                                        title="Editar"
                                                     >
-                                                        <Music size={16} />
-                                                    </a>
-                                                )}
-                                                <button
-                                                    onClick={() => onEditLocutor(locutor)}
-                                                    className="p-2 hover:bg-white/10 rounded-lg text-[#999999] hover:text-white transition-all shadow-sm"
-                                                    title="Editar"
-                                                >
-                                                    <Edit size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setDeleteConfirm(locutor)}
-                                                    className="p-2 hover:bg-red-500/20 rounded-lg text-[#999999] hover:text-red-400 transition-all shadow-sm"
-                                                    title="Excluir"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    {expandedLocutor === locutor.id && (
-                                        <tr className="bg-white/[0.015] animate-in slide-in-from-top-2 duration-200">
-                                            <td colSpan="6" className="px-8 py-4">
-                                                <div className="flex flex-col gap-3">
-                                                    <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                                                        <h4 className="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2">
-                                                            <Music size={12} />
-                                                            Histórico de Gravações ({locutor.orders?.length || 0})
-                                                        </h4>
-                                                    </div>
-                                                    {locutor.orders && locutor.orders.length > 0 ? (
-                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                                                            {locutor.orders.map((order) => (
-                                                                <div key={order.id} className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all group/item">
-                                                                    <div className="flex flex-col min-w-0">
-                                                                        <span className="text-[12px] text-white font-medium truncate group-hover/item:text-primary transition-colors">
-                                                                            {order.title}
-                                                                        </span>
-                                                                        <span className="text-[9px] text-[#666666]">
-                                                                            {new Date(order.date).toLocaleDateString('pt-BR')}
-                                                                        </span>
-                                                                    </div>
-                                                                    <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${order.status === 'VENDA' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/20 text-primary'}`}>
-                                                                        {order.status}
-                                                                    </span>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    ) : (
-                                                        <div className="py-4 text-center">
-                                                            <p className="text-[11px] text-[#666666] italic">Nenhum áudio encontrado para este locutor.</p>
-                                                        </div>
-                                                    )}
+                                                        <Edit size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setDeleteConfirm(locutor)}
+                                                        className="p-2 hover:bg-red-500/20 rounded-lg text-[#999999] hover:text-red-400 transition-all shadow-sm"
+                                                        title="Excluir"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
-                                    )}
-                                </React.Fragment>
-                            )}
+                                        {expandedLocutor === locutor.id && (
+                                            <tr className="bg-white/[0.015] animate-in slide-in-from-top-2 duration-200">
+                                                <td colSpan="6" className="px-8 py-4">
+                                                    <div className="flex flex-col gap-3">
+                                                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                                                            <h4 className="text-[11px] font-bold text-primary uppercase tracking-widest flex items-center gap-2">
+                                                                <Music size={12} />
+                                                                Histórico de Gravações ({locutor.orders?.length || 0})
+                                                            </h4>
+                                                        </div>
+                                                        {locutor.orders && locutor.orders.length > 0 ? (
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                                                                {locutor.orders.map((order) => (
+                                                                    <div key={order.id} className="flex items-center justify-between p-2.5 rounded-xl bg-white/5 border border-white/5 hover:border-primary/20 transition-all group/item">
+                                                                        <div className="flex flex-col min-w-0">
+                                                                            <span className="text-[12px] text-white font-medium truncate group-hover/item:text-primary transition-colors">
+                                                                                {order.title}
+                                                                            </span>
+                                                                            <span className="text-[9px] text-[#666666]">
+                                                                                {new Date(order.date).toLocaleDateString('pt-BR')}
+                                                                            </span>
+                                                                        </div>
+                                                                        <span className={`text-[9px] font-black px-1.5 py-0.5 rounded uppercase ${order.status === 'VENDA' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-primary/20 text-primary'}`}>
+                                                                            {order.status}
+                                                                        </span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="py-4 text-center">
+                                                                <p className="text-[11px] text-[#666666] italic">Nenhum áudio encontrado para este locutor.</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                )))}
                         </tbody>
                     </table>
                 </div>
