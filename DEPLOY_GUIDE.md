@@ -23,12 +23,30 @@ No dashboard do projeto no EasyPanel, vá em **"Environment"** e adicione:
 - `VITE_API_URL`: `https://api-crm.pontocomaudio.net/api` (ajuste se for outro domínio).
 - `VITE_STORAGE_URL`: `https://api-crm.pontocomaudio.net`
 
-### 3. Ajuste de Domínios
-- Vá no serviço **frontend** -> **Domains** e adicione `crm.pontocomaudio.net`.
-- No serviço **backend**, se precisar de acesso direto, adicione `api-crm.pontocomaudio.net`.
+### 3. Configurar os Domínios (Urls Públicas)
+O EasyPanel cria serviços separados para **frontend** e **backend**. Você precisa configurar o domínio de cada um:
 
-### 4. Executar Migrações e Admin Seed
-Abra o console do serviço **backend** e rode:
+#### A. Serviço `backend`
+1.  Clique no serviço **backend**.
+2.  Vá em **Domains**.
+3.  Adicione um domínio (pode usar o provisório do EasyPanel ou um personalizado como `api-crm.pontocomaudio.net`).
+4.  **Importante**: Certifique-se de que ele está apontando para a porta `3001` (Interna).
+5.  Copie a URL completa gerada (ex: `https://backend-xyz.easypanel.host`).
+
+#### B. Serviço `frontend`
+1.  Clique no serviço **frontend**.
+2.  Vá em **Domains**.
+3.  Adicione seu domínio principal (ex: `crm.pontocomaudio.net` ou o provisório).
+4.  Verifique se está apontando para a porta `80` (Interna).
+    - *Se o EasyPanel criou um target estranho como `pontocom_crm-pontocom:80`, tente mudar para `http://frontend:80` ou apenas porta `80` se a opção estiver disponível.*
+
+### 4. Conectar Frontend ao Backend (Environment)
+O Frontend precisa saber onde o Backend está.
+1.  Ainda no serviço **frontend**, vá em **Environment**.
+2.  Adicione/Edite a variável `VITE_API_URL`.
+3.  Valor: A URL do backend que você copiou no passo 3A, adicionando `/api` no final.
+    - Exemplo: `https://backend-xyz.easypanel.host/api`
+4.  Clique em **"Save & Deploy"** para o frontend reconstruir com a nova URL.
 ```bash
 npx prisma migrate deploy
 node seedAdmin.js
