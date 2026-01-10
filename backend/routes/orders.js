@@ -110,7 +110,10 @@ router.get('/', async (req, res) => {
         }
 
         if (numeroVenda) {
-            where.numeroVenda = { contains: numeroVenda, mode: 'insensitive' };
+            const numVenda = parseInt(numeroVenda);
+            if (!isNaN(numVenda)) {
+                where.numeroVenda = numVenda;
+            }
         }
 
         if (title) {
@@ -123,9 +126,15 @@ router.get('/', async (req, res) => {
                 { title: { contains: search, mode: 'insensitive' } },
                 { locutor: { contains: search, mode: 'insensitive' } },
                 { comentarios: { contains: search, mode: 'insensitive' } },
-                { numeroVenda: { contains: search, mode: 'insensitive' } },
                 { client: { name: { contains: search, mode: 'insensitive' } } }
             ];
+
+            // If search is a number, also search by numeroVenda or sequentialId
+            const searchNum = parseInt(search);
+            if (!isNaN(searchNum)) {
+                where.OR.push({ numeroVenda: searchNum });
+                where.OR.push({ sequentialId: searchNum });
+            }
         }
 
         // Faturado filter (explicit)
