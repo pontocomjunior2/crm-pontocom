@@ -15,7 +15,9 @@ import {
     CheckSquare,
     Square,
     ArrowUpDown,
-    TrendingUp
+    TrendingUp,
+    MessageSquare,
+    X
 } from 'lucide-react';
 import { orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -26,6 +28,7 @@ const FaturamentoList = ({ onEditOrder }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // all, faturado, pendente
     const [selectedOrders, setSelectedOrders] = useState([]);
+    const [observationModal, setObservationModal] = useState(null);
     const [sortConfig, setSortConfig] = useState({
         key: 'date',
         order: 'desc'
@@ -319,6 +322,19 @@ const FaturamentoList = ({ onEditOrder }) => {
                                                     {order.title}
                                                 </span>
                                                 <div className="flex items-center gap-2 mt-1">
+                                                    {order.comentarios && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setObservationModal({ title: order.title, text: order.comentarios });
+                                                            }}
+                                                            className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-cyan-500/20 text-cyan-400 uppercase tracking-wider flex items-center gap-1 hover:bg-cyan-500/30 transition-all cursor-pointer"
+                                                            title="Clique para ver observação completa"
+                                                        >
+                                                            <MessageSquare size={10} />
+                                                            OBS
+                                                        </button>
+                                                    )}
                                                     <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground uppercase">
                                                         {order.tipo || 'OFF'}
                                                     </span>
@@ -426,7 +442,49 @@ const FaturamentoList = ({ onEditOrder }) => {
                     </div>
                 </div>
             </div>
-        </div >
+
+            {/* Observation Modal */}
+            {observationModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-card border border-border rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 bg-cyan-500/10 rounded-full flex items-center justify-center">
+                                <MessageSquare size={24} className="text-cyan-400" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-xl font-bold text-foreground">Observações do Pedido</h3>
+                                <p className="text-sm text-muted-foreground mt-0.5">{observationModal.title}</p>
+                            </div>
+                            <button
+                                onClick={() => setObservationModal(null)}
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="bg-input-background border border-border rounded-xl p-4 mb-6 max-h-[400px] overflow-y-auto custom-scrollbar">
+                            <p className="text-foreground whitespace-pre-wrap leading-relaxed select-all">
+                                {observationModal.text}
+                            </p>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                <Copy size={12} />
+                                Selecione o texto e pressione Ctrl+C para copiar
+                            </p>
+                            <button
+                                onClick={() => setObservationModal(null)}
+                                className="btn-secondary px-6"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 };
 
