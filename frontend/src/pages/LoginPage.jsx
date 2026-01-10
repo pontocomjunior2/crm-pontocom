@@ -31,13 +31,13 @@ const LoginPage = () => {
             </div>
 
             <div className="w-full max-w-md p-8 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                {/* Logo / Header */}
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-primary/60 shadow-2xl shadow-primary/20 mb-6 group transition-transform hover:scale-110 duration-500">
-                        <LogIn className="text-white shrink-0" size={40} />
-                    </div>
-                    <h1 className="text-4xl font-black text-white tracking-tighter mb-2">PONTOCOM</h1>
-                    <p className="text-muted-foreground font-medium uppercase tracking-[0.2em] text-[10px]">Acesso ao Sistema CRM</p>
+                {/* Logo Section */}
+                <div className="flex justify-center mb-10">
+                    <img
+                        src="/logo_flat.png"
+                        alt="Pontocom Audio"
+                        className="w-48 md:w-64 object-contain drop-shadow-2xl animate-pulse duration-[3000ms]"
+                    />
                 </div>
 
                 {/* Login Card */}
