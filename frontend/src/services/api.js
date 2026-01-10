@@ -1,15 +1,17 @@
 // API service layer for frontend
 
-const API_BASE_URL = 'http://localhost:3001/api';
+export const API_BASE_URL = 'http://localhost:3001/api';
+export const STORAGE_URL = 'http://localhost:3001';
 
 // Helper function for fetch requests
 const fetchAPI = async (endpoint, options = {}) => {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        ...options,
         headers: {
             'Content-Type': 'application/json',
+            ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
             ...options.headers,
         },
-        ...options,
     });
 
     if (!response.ok) {
@@ -111,6 +113,34 @@ export const orderAPI = {
     clone: async (id) => {
         return fetchAPI(`/orders/${id}/clone`, {
             method: 'POST',
+        });
+    },
+
+    uploadOS: async (id, file, customName = null) => {
+        const formData = new FormData();
+        if (customName) formData.append('customName', customName);
+        formData.append('file', file);
+
+        const response = await fetch(`${API_BASE_URL}/orders/${id}/upload-os`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: 'Request failed' }));
+            throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        }
+
+        return response.json();
+    },
+
+    checkFileExists: async (filename) => {
+        return fetchAPI(`/orders/check-file/${encodeURIComponent(filename)}`);
+    },
+
+    removeOS: async (id) => {
+        return fetchAPI(`/orders/${id}/remove-os`, {
+            method: 'DELETE',
         });
     },
 };

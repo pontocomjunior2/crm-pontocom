@@ -1,7 +1,65 @@
 const express = require('express');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const prisma = require('../db');
 
 const router = express.Router();
+
+// Configure multer for OS/PP file uploads
+// Helper to sanitize filename
+const sanitizeFilename = (filename) => {
+    return filename
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // Remove accents
+        .replace(/[^a-zA-Z0-9.-]/g, "_") // Replace non-ascii with _
+        .replace(/\s+/g, "_"); // Replace spaces with _
+};
+
+// Configure multer for OS/PP file uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = 'uploads/os';
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        // If customName is provided in req.body, use it (sanitized)
+        const nameToUse = req.body.customName || file.originalname;
+        const sanitized = sanitizeFilename(nameToUse);
+
+        // Ensure extension is correct
+        const ext = path.extname(sanitized) === path.extname(file.originalname)
+            ? ""
+            : path.extname(file.originalname);
+
+        cb(null, sanitized + ext);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf' || file.mimetype.startsWith('image/')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Somente arquivos PDF ou Imagens são permitidos'), false);
+        }
+    }
+});
+
+// GET /api/orders/check-file/:filename - Check if file exists
+router.get('/check-file/:filename', (req, res) => {
+    const filename = sanitizeFilename(req.params.filename);
+    const filePath = path.join(__dirname, '../uploads/os', filename);
+
+    if (fs.existsSync(filePath)) {
+        return res.json({ exists: true, message: 'Arquivo já existe' });
+    }
+    res.json({ exists: false });
+});
 
 // GET /api/orders - List all orders with filters
 router.get('/', async (req, res) => {
@@ -191,7 +249,11 @@ router.post('/', async (req, res) => {
             dataFaturar,
             vencimento,
             pago = false,
-            statusEnvio = 'PENDENTE'
+            statusEnvio = 'PENDENTE',
+            pendenciaFinanceiro = false,
+            pendenciaMotivo = null,
+            numeroOS = null,
+            arquivoOS = null
         } = req.body;
 
         // Validate required fields
@@ -237,7 +299,11 @@ router.post('/', async (req, res) => {
                 dataFaturar: dataFaturar ? new Date(dataFaturar) : null,
                 vencimento: vencimento ? new Date(vencimento) : null,
                 pago,
-                statusEnvio
+                statusEnvio,
+                pendenciaFinanceiro,
+                pendenciaMotivo,
+                numeroOS,
+                arquivoOS
             },
             include: {
                 client: {
@@ -282,7 +348,11 @@ router.put('/:id', async (req, res) => {
             dataFaturar,
             vencimento,
             pago,
-            statusEnvio
+            statusEnvio,
+            pendenciaFinanceiro,
+            pendenciaMotivo,
+            numeroOS,
+            arquivoOS
         } = req.body;
 
         // Check if order exists
@@ -323,7 +393,11 @@ router.put('/:id', async (req, res) => {
                 dataFaturar: dataFaturar ? new Date(dataFaturar) : undefined,
                 vencimento: vencimento ? new Date(vencimento) : undefined,
                 pago,
-                statusEnvio
+                statusEnvio,
+                pendenciaFinanceiro,
+                pendenciaMotivo,
+                numeroOS,
+                arquivoOS
             },
             include: {
                 client: {
@@ -474,6 +548,68 @@ router.delete('/:id', async (req, res) => {
     } catch (error) {
         console.error('Error deleting order:', error);
         res.status(500).json({ error: 'Failed to delete order', message: error.message });
+    }
+});
+
+// POST /api/orders/:id/upload-os - Upload OS/PP file
+router.post('/:id/upload-os', upload.single('file'), async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!req.file) {
+            return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+        }
+
+        const arquivoOS = `/uploads/os/${req.file.filename}`;
+
+        const order = await prisma.order.update({
+            where: { id },
+            data: {
+                arquivoOS,
+                pendenciaFinanceiro: false // Clear pendency when file is uploaded
+            }
+        });
+
+        res.json({ message: 'Arquivo enviado com sucesso', arquivoOS, order });
+    } catch (error) {
+        console.error('Error uploading OS file:', error);
+        res.status(500).json({ error: 'Falha ao enviar arquivo' });
+    }
+});
+
+// DELETE /api/orders/:id/remove-os - Remove OS/PP file association and delete file
+router.delete('/:id/remove-os', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const order = await prisma.order.findUnique({
+            where: { id },
+            select: { arquivoOS: true }
+        });
+
+        if (!order) {
+            return res.status(404).json({ error: 'Pedido não encontrado' });
+        }
+
+        if (order.arquivoOS) {
+            const filePath = path.join(__dirname, '..', order.arquivoOS);
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+            }
+        }
+
+        await prisma.order.update({
+            where: { id },
+            data: {
+                arquivoOS: null,
+                numeroOS: ''
+            }
+        });
+
+        res.json({ message: 'Arquivo removido com sucesso' });
+    } catch (error) {
+        console.error('Error removing OS file:', error);
+        res.status(500).json({ error: 'Falha ao remover arquivo' });
     }
 });
 

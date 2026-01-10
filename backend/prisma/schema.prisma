@@ -76,6 +76,11 @@ model Order {
   pago             Boolean  @default(false)
   statusEnvio      String   @default("PENDENTE") // PENDENTE, ENVIADO
 
+  pendenciaFinanceiro Boolean @default(false)
+  pendenciaMotivo     String? @db.Text
+  numeroOS            String?
+  arquivoOS           String?
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 

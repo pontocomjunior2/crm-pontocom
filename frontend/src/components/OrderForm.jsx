@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown } from 'lucide-react';
+import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2 } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
-import { clientAPI, orderAPI, locutorAPI } from '../services/api';
+import { clientAPI, orderAPI, locutorAPI, STORAGE_URL } from '../services/api';
 
 const OrderForm = ({ order = null, onClose, onSuccess }) => {
     const [clients, setClients] = useState([]);
@@ -30,7 +30,15 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         dataFaturar: order?.dataFaturar ? new Date(order.dataFaturar).toISOString().split('T')[0] : '',
         vencimento: order?.vencimento ? new Date(order.vencimento).toISOString().split('T')[0] : '',
         pago: order?.pago || false,
+        pendenciaFinanceiro: order?.pendenciaFinanceiro || false,
+        pendenciaMotivo: order?.pendenciaMotivo || '',
+        numeroOS: order?.numeroOS || '',
+        arquivoOS: order?.arquivoOS || '',
     });
+
+    const [osFile, setOsFile] = useState(null);
+    const [fileConflict, setFileConflict] = useState(null); // { exists: true, name: '', newName: '' }
+    const [customFilename, setCustomFilename] = useState('');
 
     const [showClientDropdown, setShowClientDropdown] = useState(false);
     const [clientSearch, setClientSearch] = useState('');
@@ -200,6 +208,23 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         return Object.keys(newErrors).length === 0;
     };
 
+    const handleRemoveOS = async () => {
+        if (!order?.id) return;
+
+        if (confirm('Tem certeza que deseja remover este anexo?')) {
+            try {
+                await orderAPI.removeOS(order.id);
+                setFormData(prev => ({ ...prev, arquivoOS: null, numeroOS: '' }));
+                setOsFile(null);
+                setCustomFilename('');
+                setMessage({ type: 'success', text: 'Documento removido com sucesso!' });
+            } catch (error) {
+                console.error('Error removing OS:', error);
+                setMessage({ type: 'error', text: 'Falha ao remover documento.' });
+            }
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -222,12 +247,24 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
             // Note: File upload would need to be handled separately with FormData
             // For now, we'll just save the order data
+            let savedOrder = null;
             if (order) {
-                await orderAPI.update(order.id, dataToSend);
+                savedOrder = await orderAPI.update(order.id, dataToSend);
                 setMessage({ type: 'success', text: 'Pedido atualizado com sucesso!' });
             } else {
-                await orderAPI.create(dataToSend);
+                savedOrder = await orderAPI.create(dataToSend);
                 setMessage({ type: 'success', text: 'Pedido cadastrado com sucesso!' });
+            }
+
+            // Handle OS/PP file upload if selected
+            if (osFile && savedOrder && (savedOrder.id || order?.id)) {
+                try {
+                    await orderAPI.uploadOS(savedOrder.id || order.id, osFile, customFilename || null);
+                    setOsFile(null);
+                    setCustomFilename('');
+                } catch (uploadError) {
+                    console.error('Failed to upload OS file:', uploadError);
+                }
             }
 
             setTimeout(() => {
@@ -701,6 +738,190 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 </button>
                             )}
                         </div>
+                    </div>
+
+                    {/* Billing Pendency */}
+                    <div className="mb-6 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
+                        <label className="flex items-center gap-3 cursor-pointer group">
+                            <input
+                                type="checkbox"
+                                name="pendenciaFinanceiro"
+                                checked={formData.pendenciaFinanceiro}
+                                onChange={handleChange}
+                                className="w-5 h-5 text-orange-500 focus:ring-orange-500 focus:ring-2 rounded-lg bg-input-background border-border"
+                            />
+                            <div className="flex flex-col">
+                                <span className="text-orange-400 font-bold text-sm flex items-center gap-2">
+                                    <AlertCircle size={16} />
+                                    Pendência para Financeiro
+                                </span>
+                                <span className="text-[11px] text-muted-foreground">Marque se faltam informações (OS, aprovação, etc.) para faturar</span>
+                            </div>
+                        </label>
+
+                        {formData.pendenciaFinanceiro && (
+                            <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                                <textarea
+                                    name="pendenciaMotivo"
+                                    value={formData.pendenciaMotivo}
+                                    onChange={handleChange}
+                                    placeholder="Descreva o que falta para o faturamento (ex: Aguardando número de OS, Aprovação pendente...)"
+                                    className="w-full bg-input-background border border-border rounded-xl p-4 text-foreground text-sm focus:border-orange-500 outline-none transition-all min-h-[100px]"
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* OS/PP Registration */}
+                    <div className="mb-6 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
+                        <div className="flex items-center gap-2 mb-4">
+                            <FileText size={18} className="text-blue-400" />
+                            <h3 className="text-sm font-bold text-foreground">Registro de OS / PP</h3>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1.5 ml-1">
+                                    Número da OS / PP
+                                </label>
+                                <input
+                                    type="text"
+                                    name="numeroOS"
+                                    value={formData.numeroOS}
+                                    onChange={handleChange}
+                                    placeholder="Ex: 12345/2026"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-medium text-muted-foreground mb-1.5 ml-1">
+                                    Documento PDF (OS / PP)
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <label className="flex-1">
+                                        <div className={`cursor-pointer w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed transition-all ${osFile ? 'bg-blue-500/10 border-blue-500/50' : 'bg-input-background border-border hover:border-blue-500/30'}`}>
+                                            <Paperclip size={16} className={osFile ? 'text-blue-400' : 'text-muted-foreground'} />
+                                            <span className={`text-xs truncate ${osFile ? 'text-blue-400 font-medium' : 'text-muted-foreground'}`}>
+                                                {osFile ? osFile.name : formData.arquivoOS ? 'Documento anexado' : 'Selecionar PDF'}
+                                            </span>
+                                        </div>
+                                        <input
+                                            type="file"
+                                            accept=".pdf,image/*"
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (file) {
+                                                    setOsFile(file);
+                                                    setCustomFilename('');
+                                                    setFileConflict(null);
+                                                    try {
+                                                        const check = await orderAPI.checkFileExists(file.name);
+                                                        if (check.exists) {
+                                                            setFileConflict({ exists: true, name: file.name });
+                                                            setCustomFilename(file.name);
+                                                        }
+                                                    } catch (err) {
+                                                        console.error('Error checking file existence:', err);
+                                                    }
+                                                }
+                                                // Reset input so same file can be selected again
+                                                e.target.value = '';
+                                            }}
+                                            className="hidden"
+                                        />
+                                    </label>
+
+                                    {/* Action Buttons */}
+                                    <div className="flex items-center gap-2">
+                                        {osFile && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setOsFile(null);
+                                                    setCustomFilename('');
+                                                    setFileConflict(null);
+                                                }}
+                                                className="p-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all shrink-0"
+                                                title="Cancelar seleção"
+                                            >
+                                                <X size={18} />
+                                            </button>
+                                        )}
+
+                                        {(formData.arquivoOS || osFile) && (
+                                            <>
+                                                {formData.arquivoOS && (
+                                                    <a
+                                                        href={`${STORAGE_URL}${formData.arquivoOS}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500/20 transition-all shrink-0"
+                                                        title="Visualizar PDF atual"
+                                                    >
+                                                        <ArrowUpRight size={18} />
+                                                    </a>
+                                                )}
+
+                                                {order?.id && formData.arquivoOS && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleRemoveOS}
+                                                        className="p-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all shrink-0"
+                                                        title="Remover anexo"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {fileConflict && (
+                            <div className="mt-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 animate-in fade-in slide-in-from-top-2">
+                                <p className="text-sm font-bold text-orange-400 flex items-center gap-2 mb-3">
+                                    <AlertCircle size={16} />
+                                    Atenção: Já existe um arquivo com este nome!
+                                </p>
+                                <div className="space-y-4">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs text-muted-foreground ml-1">Para renomear, altere o campo abaixo:</label>
+                                        <input
+                                            type="text"
+                                            value={customFilename}
+                                            onChange={(e) => setCustomFilename(e.target.value)}
+                                            className="w-full bg-input-background border border-orange-500/30 rounded-lg px-3 py-2 text-sm text-foreground focus:border-orange-500 outline-none transition-all"
+                                            placeholder="Novo nome do arquivo"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setFileConflict(null);
+                                                // Keep customFilename as is (user choice)
+                                            }}
+                                            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-all"
+                                        >
+                                            USAR ESTE NOME
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setFileConflict(null);
+                                                setCustomFilename(''); // Will use original name and overwrite
+                                            }}
+                                            className="px-4 py-2 border border-orange-500/30 text-orange-400 rounded-lg text-xs font-bold hover:bg-orange-500/10 transition-all"
+                                        >
+                                            SOBRESCREVER ORIGINAL
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Financial Dates */}

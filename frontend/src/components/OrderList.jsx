@@ -23,9 +23,10 @@ import {
     ArrowUpDown,
     Copy,
     MessageSquare,
-    X
+    X,
+    FileText
 } from 'lucide-react';
-import { orderAPI } from '../services/api';
+import { orderAPI, STORAGE_URL } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 
 const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
@@ -50,6 +51,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleting, setDeleting] = useState(false);
     const [observationModal, setObservationModal] = useState(null);
+    const [pendencyModal, setPendencyModal] = useState(null);
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
@@ -383,6 +385,37 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                             OBS
                                                         </button>
                                                     )}
+                                                    {order.pendenciaFinanceiro && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setPendencyModal({
+                                                                    title: order.title,
+                                                                    text: order.pendenciaMotivo || 'Nenhuma descrição detalhada fornecida.',
+                                                                    osFile: order.arquivoOS,
+                                                                    osNumber: order.numeroOS
+                                                                });
+                                                            }}
+                                                            className="text-[9px] font-black px-1.5 py-0.5 rounded bg-orange-500 text-white uppercase tracking-wider flex items-center gap-1 hover:bg-orange-600 transition-all cursor-pointer shadow-[0_0_8px_rgba(249,115,22,0.4)]"
+                                                            title="Clique para ver detalhes da pendência"
+                                                        >
+                                                            <AlertCircle size={10} />
+                                                            PENDÊNCIA FIN.
+                                                        </button>
+                                                    )}
+                                                    {order.arquivoOS && (
+                                                        <a
+                                                            href={`${STORAGE_URL}${order.arquivoOS}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 uppercase tracking-wider flex items-center gap-1 hover:bg-blue-500/30 transition-all"
+                                                            title={`OS N° ${order.numeroOS || 'Ver PDF'}`}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                        >
+                                                            <FileText size={10} />
+                                                            {order.numeroOS ? `OS: ${order.numeroOS}` : 'VER OS'}
+                                                        </a>
+                                                    )}
                                                     <span className={`text-[9px] font-black px-1.5 py-0.5 rounded ${order.tipo === 'PRODUZIDO' ? 'bg-purple-500/20 text-purple-400' : 'bg-blue-500/20 text-blue-400'}`}>
                                                         {order.tipo}
                                                     </span>
@@ -581,6 +614,67 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                             </p>
                             <button
                                 onClick={() => setObservationModal(null)}
+                                className="btn-secondary px-6"
+                            >
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Pendency Modal */}
+            {pendencyModal && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-card border border-border rounded-3xl p-8 max-w-2xl w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-12 h-12 bg-orange-500/10 rounded-full flex items-center justify-center">
+                                <AlertCircle size={24} className="text-orange-500" />
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-xl font-bold text-foreground">Detalhes da Pendência</h3>
+                                <p className="text-sm text-muted-foreground mt-0.5">{pendencyModal.title}</p>
+                            </div>
+                            <button
+                                onClick={() => setPendencyModal(null)}
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-muted-foreground hover:text-foreground"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="bg-orange-500/5 border border-orange-500/10 rounded-xl p-4 mb-6 max-h-[400px] overflow-y-auto custom-scrollbar">
+                            <p className="text-foreground whitespace-pre-wrap leading-relaxed select-all">
+                                {pendencyModal.text}
+                            </p>
+                        </div>
+
+                        {pendencyModal.osFile && (
+                            <div className="bg-blue-500/5 border border-blue-500/10 rounded-xl p-4 mb-6 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                                        <FileText className="text-blue-400" size={20} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-foreground">Documento OS/PP Anexado</p>
+                                        <p className="text-xs text-muted-foreground">Número: {pendencyModal.osNumber || 'Não informado'}</p>
+                                    </div>
+                                </div>
+                                <a
+                                    href={`${STORAGE_URL}${pendencyModal.osFile}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-all text-xs font-bold"
+                                >
+                                    <ArrowUpRight size={14} />
+                                    VISUALIZAR PDF
+                                </a>
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-end">
+                            <button
+                                onClick={() => setPendencyModal(null)}
                                 className="btn-secondary px-6"
                             >
                                 Fechar
