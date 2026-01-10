@@ -161,10 +161,10 @@ const App = () => {
           <nav className="flex-1 p-4 space-y-1">
             {[
               { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-              { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} />, count: 28 },
-              { id: 'clientes', label: 'Clientes', icon: <Users size={20} />, count: 142 },
+              { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} /> },
+              { id: 'clientes', label: 'Clientes', icon: <Users size={20} /> },
               { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} /> },
-              { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, badge: 'NOVO' },
+              { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} /> },
               { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} /> },
             ].map((item) => (
               <button
@@ -180,34 +180,14 @@ const App = () => {
                 <span className="flex-1 text-left font-medium">
                   {item.label}
                 </span>
-                {item.count && (
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === item.id
-                    ? 'bg-primary/20 text-primary'
-                    : 'bg-emerald-500/20 text-emerald-400'
-                    }`}>
-                    {item.count}
-                  </span>
-                )}
-                {item.badge === 'NOVO' && (
-                  <span className="px-2 py-0.5 rounded-full text-xs bg-primary/20 text-primary">
-                    NOVO
-                  </span>
-                )}
               </button>
             ))}
           </nav>
 
-          {/* Bottom Menu */}
-          <div className="p-4 border-t border-sidebar-border space-y-1">
-            <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground transition-all">
-              <Settings className="w-5 h-5" />
-              <span>Configurações</span>
-            </button>
-            <div className="p-4 bg-gradient-to-br from-primary/10 to-transparent border-t border-primary/20 mt-4 rounded-lg">
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground mb-2">Suporte Técnico</p>
-                <button className="text-sm text-primary hover:underline font-bold">Abrir Chamado</button>
-              </div>
+          {/* Bottom Menu Area (Removed Settings/Support) */}
+          <div className="p-4 border-t border-sidebar-border">
+            <div className="flex items-center gap-3 px-4 py-2 opacity-50 grayscale">
+              <span className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">v1.1.0</span>
             </div>
           </div>
         </aside>
