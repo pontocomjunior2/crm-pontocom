@@ -68,7 +68,11 @@ router.get('/', async (req, res) => {
             page = 1,
             limit = 10,
             clientId = '',
+            clientName = '',
+            numeroVenda = '',
+            title = '',
             status = '',
+            faturado = '',
             tipo = '',
             dateFrom = '',
             dateTo = '',
@@ -98,13 +102,37 @@ router.get('/', async (req, res) => {
             if (dateTo) where.date.lte = new Date(dateTo);
         }
 
-        // Search filter
+        // Specific filters
+        if (clientName) {
+            where.client = {
+                name: { contains: clientName, mode: 'insensitive' }
+            };
+        }
+
+        if (numeroVenda) {
+            where.numeroVenda = { contains: numeroVenda, mode: 'insensitive' };
+        }
+
+        if (title) {
+            where.title = { contains: title, mode: 'insensitive' };
+        }
+
+        // Search filter (global)
         if (search) {
             where.OR = [
                 { title: { contains: search, mode: 'insensitive' } },
                 { locutor: { contains: search, mode: 'insensitive' } },
-                { comentarios: { contains: search, mode: 'insensitive' } }
+                { comentarios: { contains: search, mode: 'insensitive' } },
+                { numeroVenda: { contains: search, mode: 'insensitive' } },
+                { client: { name: { contains: search, mode: 'insensitive' } } }
             ];
+        }
+
+        // Faturado filter (explicit)
+        if (faturado === 'true') {
+            where.faturado = true;
+        } else if (faturado === 'false') {
+            where.faturado = false;
         }
 
         // Status filters

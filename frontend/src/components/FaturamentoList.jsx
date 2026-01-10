@@ -27,6 +27,12 @@ const FaturamentoList = ({ onEditOrder }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // all, faturado, pendente
+    const [clientFilter, setClientFilter] = useState('');
+    const [titleFilter, setTitleFilter] = useState('');
+    const [idFilter, setIdFilter] = useState('');
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [showFilters, setShowFilters] = useState(false);
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [observationModal, setObservationModal] = useState(null);
     const [pendencyModal, setPendencyModal] = useState(null);
@@ -93,7 +99,14 @@ const FaturamentoList = ({ onEditOrder }) => {
                 status: 'VENDA',
                 limit: 100,
                 sortBy: sortConfig.key,
-                sortOrder: sortConfig.order
+                sortOrder: sortConfig.order,
+                search: searchTerm,
+                clientName: clientFilter,
+                title: titleFilter,
+                numeroVenda: idFilter,
+                dateFrom,
+                dateTo,
+                faturado: statusFilter === 'all' ? '' : (statusFilter === 'faturado' ? 'true' : 'false')
             });
             setOrders(response.orders || []);
         } catch (error) {
@@ -104,22 +117,13 @@ const FaturamentoList = ({ onEditOrder }) => {
     };
 
     useEffect(() => {
-        fetchOrders();
-    }, [sortConfig]);
+        const timer = setTimeout(() => {
+            fetchOrders();
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchTerm, statusFilter, clientFilter, titleFilter, idFilter, dateFrom, dateTo, sortConfig]);
 
-    const filteredOrders = orders.filter(order => {
-        const matchesSearch =
-            order.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.client?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            order.numeroVenda?.toLowerCase().includes(searchTerm.toLowerCase());
-
-        const matchesStatus =
-            statusFilter === 'all' ? true :
-                statusFilter === 'faturado' ? order.faturado :
-                    !order.faturado;
-
-        return matchesSearch && matchesStatus;
-    });
+    const filteredOrders = orders;
 
     const handleSort = (key) => {
         setSortConfig(prev => ({
@@ -151,41 +155,123 @@ const FaturamentoList = ({ onEditOrder }) => {
     return (
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header & Actions */}
-            <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center mb-4 flex-shrink-0">
-                <div className="bg-input-background border border-border rounded-xl flex items-center px-3 py-2 flex-1 max-w-md focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all shadow-sm">
-                    <Search size={16} className="text-muted-foreground mr-3" />
-                    <input
-                        type="text"
-                        placeholder="Buscar por cliente, título ou nota..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="bg-transparent border-none outline-none text-xs text-foreground placeholder:text-muted-foreground w-full"
-                    />
+            {/* Filters Bar */}
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6 flex-shrink-0">
+                <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-2xl">
+                    <div className="bg-input-background border border-border rounded-xl flex items-center px-3 py-2 flex-1 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all shadow-sm group">
+                        <Search size={16} className="text-muted-foreground mr-3 group-focus-within:text-primary transition-colors" />
+                        <input
+                            type="text"
+                            placeholder="Pesquisa rápida..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-transparent border-none outline-none text-xs text-foreground placeholder:text-muted-foreground w-full"
+                        />
+                    </div>
+
+                    <button
+                        onClick={() => setShowFilters(!showFilters)}
+                        className={`p-2.5 rounded-xl border transition-all flex items-center gap-2 ${showFilters ? 'bg-primary/10 border-primary text-primary shadow-lg shadow-primary/10' : 'bg-input-background border-border text-muted-foreground hover:border-border-hover hover:text-foreground'}`}
+                        title="Filtros Avançados"
+                    >
+                        <Filter size={16} />
+                        <span className="text-xs font-bold hidden sm:inline">Filtros</span>
+                    </button>
+
+                    {(clientFilter || idFilter || titleFilter || dateFrom || dateTo) && (
+                        <button
+                            onClick={() => {
+                                setClientFilter('');
+                                setIdFilter('');
+                                setTitleFilter('');
+                                setDateFrom('');
+                                setDateTo('');
+                                setSearchTerm('');
+                            }}
+                            className="p-2.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl hover:bg-red-500/20 transition-all"
+                            title="Limpar todos os filtros"
+                        >
+                            <X size={16} />
+                        </button>
+                    )}
                 </div>
 
-                <div className="flex gap-2">
-                    <div className="flex bg-input-background rounded-xl p-1 border border-border shadow-sm">
-                        <button
-                            onClick={() => setStatusFilter('all')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'all' ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                        >
-                            Todos
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('pendente')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'pendente' ? 'bg-orange-500/20 text-orange-400' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                        >
-                            Pendentes
-                        </button>
-                        <button
-                            onClick={() => setStatusFilter('faturado')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'faturado' ? 'bg-green-500/20 text-green-400' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
-                        >
-                            Faturados
-                        </button>
-                    </div>
+                <div className="flex bg-input-background rounded-xl p-1 border border-border shadow-sm">
+                    <button
+                        onClick={() => setStatusFilter('all')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'all' ? 'bg-primary text-primary-foreground shadow-md shadow-primary/20' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                    >
+                        Todos
+                    </button>
+                    <button
+                        onClick={() => setStatusFilter('pendente')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'pendente' ? 'bg-orange-500/20 text-orange-400' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                    >
+                        Pendentes
+                    </button>
+                    <button
+                        onClick={() => setStatusFilter('faturado')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${statusFilter === 'faturado' ? 'bg-green-500/20 text-green-400' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}
+                    >
+                        Faturados
+                    </button>
                 </div>
             </div>
+
+            {/* Advanced Filters Panel */}
+            {showFilters && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6 p-5 rounded-2xl bg-card border border-border animate-in fade-in slide-in-from-top-4 duration-300 shadow-xl overflow-hidden relative flex-shrink-0">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-primary opacity-50"></div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">Cliente</label>
+                        <input
+                            type="text"
+                            value={clientFilter}
+                            onChange={(e) => setClientFilter(e.target.value)}
+                            placeholder="Filtrar por nome"
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 transition-all"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">ID da Venda</label>
+                        <input
+                            type="text"
+                            value={idFilter}
+                            onChange={(e) => setIdFilter(e.target.value)}
+                            placeholder="Número da venda"
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 transition-all"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">Título do Pedido</label>
+                        <input
+                            type="text"
+                            value={titleFilter}
+                            onChange={(e) => setTitleFilter(e.target.value)}
+                            placeholder="Palavras-chave"
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 transition-all"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">Data Início</label>
+                        <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 transition-all"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">Data Fim</label>
+                        <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-sm outline-none focus:border-primary/50 transition-all"
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Table Content */}
             <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-0">
