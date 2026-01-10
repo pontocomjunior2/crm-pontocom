@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Clientes>
+  <cliente>
+    <Nome>Cliente Importado Teste 2</Nome>
+    <CNPJ>99.888.777/0001-66</CNPJ>
+    <Status>ativado</Status>
+    <Emailprincipal>teste@importado.com</Emailprincipal>
+  </cliente>
+</Clientes>

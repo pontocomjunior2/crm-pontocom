@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Users,
     Search,
@@ -18,9 +18,10 @@ import {
     AlertCircle,
     TrendingUp,
     Calendar,
-    ArrowUpDown
+    ArrowUpDown,
+    FileUp
 } from 'lucide-react';
-import { clientAPI } from '../services/api';
+import { clientAPI, importAPI } from '../services/api';
 import { formatCNPJ, formatPhone, formatCurrency } from '../utils/formatters';
 
 const ClientList = ({ onEditClient, onAddNewClient }) => {
@@ -28,19 +29,29 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ativado');
+    const [nameFilter, setNameFilter] = useState('');
+    const [cityFilter, setCityFilter] = useState('');
+    const [cnpjFilter, setCnpjFilter] = useState('');
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
         total: 0,
         totalPages: 0
     });
+    const [sortConfig, setSortConfig] = useState({
+        key: 'name',
+        order: 'asc'
+    });
 
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [importing, setImporting] = useState(false);
+    const [importMessage, setImportMessage] = useState(null);
+    const fileInputRef = useRef(null);
 
     useEffect(() => {
         fetchClients();
-    }, [pagination.page, pagination.limit, statusFilter]);
+    }, [pagination.page, pagination.limit, statusFilter, sortConfig]);
 
     const fetchClients = async () => {
         setLoading(true);
@@ -49,7 +60,12 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                 page: pagination.page,
                 limit: pagination.limit,
                 search,
-                status: statusFilter
+                name: nameFilter,
+                cidade: cityFilter,
+                cnpj_cpf: cnpjFilter,
+                status: statusFilter,
+                sortBy: sortConfig.key,
+                sortOrder: sortConfig.order
             });
             setClients(response.clients || []);
             setPagination(prev => ({
@@ -87,6 +103,62 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
         }
     };
 
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            order: prev.key === key && prev.order === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
+    const handleClearFilters = () => {
+        setSearch('');
+        setNameFilter('');
+        setCityFilter('');
+        setCnpjFilter('');
+        setStatusFilter('ativado');
+        setPagination(prev => ({ ...prev, page: 1 }));
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setImporting(true);
+        setImportMessage(null);
+
+        try {
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const xmlData = event.target.result;
+                    const response = await importAPI.clients(xmlData);
+                    setImportMessage({ type: 'success', text: response.message });
+                    fetchClients();
+
+                    // Clear message after 5s
+                    setTimeout(() => setImportMessage(null), 5000);
+                } catch (error) {
+                    console.error('Import process error:', error);
+                    setImportMessage({ type: 'error', text: error.response?.data?.error || 'Erro ao processar arquivo' });
+                } finally {
+                    setImporting(false);
+                }
+            };
+            reader.readAsText(file);
+        } catch (error) {
+            console.error('File read error:', error);
+            setImportMessage({ type: 'error', text: 'Erro ao ler arquivo' });
+            setImporting(false);
+        }
+
+        // Reset input
+        e.target.value = '';
+    };
+
     return (
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Header & Actions */}
@@ -99,46 +171,119 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                     <p className="text-sm text-muted-foreground mt-1">Total de {pagination.total} clientes cadastrados</p>
                 </div>
 
-                <button
-                    onClick={onAddNewClient}
-                    className="btn-primary flex items-center gap-2 px-6"
-                >
-                    <Plus size={18} />
-                    <span>Novo Cliente</span>
-                </button>
+                <div className="flex items-center gap-3">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept=".xml"
+                        className="hidden"
+                    />
+                    <button
+                        onClick={handleImportClick}
+                        disabled={importing}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 text-foreground rounded-xl border border-white/10 transition-all font-medium disabled:opacity-50"
+                    >
+                        {importing ? (
+                            <Loader2 size={20} className="animate-spin text-primary" />
+                        ) : (
+                            <FileUp size={20} className="text-primary" />
+                        )}
+                        <span>Importar XML</span>
+                    </button>
+                    <button
+                        onClick={onAddNewClient}
+                        className="flex items-center gap-2 bg-gradient-to-r from-primary to-primary-light hover:from-primary-light hover:to-primary text-white px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-primary/20 font-bold"
+                    >
+                        <Plus size={20} />
+                        <span>Novo Cliente</span>
+                    </button>
+                </div>
             </div>
+
+            {/* Import Feedback */}
+            {importMessage && (
+                <div className={`mb-6 p-4 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${importMessage.type === 'success'
+                    ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                    : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                    }`}>
+                    {importMessage.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                    <span className="text-sm font-medium">{importMessage.text}</span>
+                    <button onClick={() => setImportMessage(null)} className="ml-auto text-xs opacity-50 hover:opacity-100">Fechar</button>
+                </div>
+            )}
 
             {/* Filters & Search */}
             <div className="card-glass-dark p-4 rounded-2xl mb-6 border border-white/5 bg-card">
-                <div className="flex flex-col lg:flex-row gap-4">
-                    <form onSubmit={handleSearchSubmit} className="flex-1 relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Pesquisar por nome, CNPJ ou email..."
-                            value={search}
-                            onChange={handleSearchChange}
-                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
-                        />
-                    </form>
-
-                    <div className="flex gap-2">
+                <div className="flex flex-col gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Nome do Cliente"
+                                value={nameFilter}
+                                onChange={(e) => setNameFilter(e.target.value)}
+                                className="w-full bg-input-background border border-border rounded-xl pl-10 pr-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
+                            />
+                        </div>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="Cidade"
+                                value={cityFilter}
+                                onChange={(e) => setCityFilter(e.target.value)}
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
+                            />
+                        </div>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder="CNPJ / CPF"
+                                value={cnpjFilter}
+                                onChange={(e) => setCnpjFilter(e.target.value)}
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
+                            />
+                        </div>
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="bg-input-background border border-border rounded-xl px-4 py-3 text-foreground text-sm focus:outline-none focus:border-primary/50"
+                            className="bg-input-background border border-border rounded-xl px-4 py-2 text-foreground text-sm focus:outline-none focus:border-primary/50"
                         >
                             <option value="ativado">Ativados</option>
                             <option value="inativo">Inativos</option>
                             <option value="">Todos os Status</option>
                         </select>
+                    </div>
 
-                        <button
-                            onClick={fetchClients}
-                            className="btn-secondary px-6 text-sm"
-                        >
-                            Aplicar Filtros
-                        </button>
+                    <div className="flex justify-between items-center border-t border-white/5 pt-4">
+                        <div className="relative flex-1 max-w-sm">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                            <input
+                                type="text"
+                                placeholder="Busca global (email, razão social...)"
+                                value={search}
+                                onChange={handleSearchChange}
+                                className="w-full bg-input-background border border-border rounded-lg pl-9 pr-4 py-1.5 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-xs"
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={handleClearFilters}
+                                className="px-4 py-2 text-xs text-muted-foreground hover:text-white transition-colors"
+                            >
+                                Limpar Filtros
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setPagination(prev => ({ ...prev, page: 1 }));
+                                    fetchClients();
+                                }}
+                                className="btn-primary-small px-6 text-xs"
+                            >
+                                Pesquisar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -149,35 +294,50 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-card border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider font-bold">
-                                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head">
+                                <th
+                                    className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('name')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Cliente
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'name' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head">
+                                <th
+                                    className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('emailPrincipal')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Contato
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'emailPrincipal' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head">
+                                <th
+                                    className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('cidade')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Localização
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'cidade' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th
+                                    className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors group/head"
+                                    onClick={() => handleSort('totalVendas')}
+                                >
                                     <div className="flex items-center gap-1">
                                         <TrendingUp size={14} className="text-primary" />
                                         <span>Vendas</span>
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'totalVendas' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head">
+                                <th
+                                    className="px-6 py-4 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('status')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Status
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'status' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
                                 <th className="px-6 py-4 text-right">Ações</th>
@@ -195,12 +355,18 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                             ) : clients.length === 0 ? (
                                 <tr>
                                     <td colSpan="6" className="px-6 py-20 text-center">
-                                        <div className="flex flex-col items-center gap-3 text-[#666666]">
+                                        <div className="flex flex-col items-center gap-3 text-muted-foreground">
                                             <Users size={48} className="opacity-20" />
                                             <p className="text-lg">Nenhum cliente encontrado</p>
-                                            <button onClick={onAddNewClient} className="text-primary hover:underline text-sm font-medium">
-                                                Clique aqui para cadastrar o primeiro
-                                            </button>
+                                            <p className="text-sm opacity-60">Tente ajustar seus filtros de pesquisa para encontrar o que procura.</p>
+                                            {(search || nameFilter || cityFilter || cnpjFilter) && (
+                                                <button
+                                                    onClick={handleClearFilters}
+                                                    className="mt-2 text-primary hover:underline text-sm font-medium"
+                                                >
+                                                    Limpar todos os filtros
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -322,39 +488,41 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                         </button>
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Delete Confirmation Modal */}
-            {deleteConfirm && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-                    <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <AlertCircle size={32} className="text-red-500" />
-                        </div>
-                        <h3 className="text-xl font-bold text-foreground text-center mb-2">Desativar Cliente?</h3>
-                        <p className="text-sm text-muted-foreground text-center mb-8">
-                            O cliente <span className="text-foreground font-bold">{deleteConfirm.name}</span> será marcado como inativo e não aparecerá nas buscas padrão.
-                        </p>
-                        <div className="flex flex-col gap-3">
-                            <button
-                                onClick={() => handleDelete(deleteConfirm.id)}
-                                disabled={deleting}
-                                className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
-                            >
-                                {deleting ? <Loader2 size={18} className="animate-spin" /> : 'Confirmar Desativação'}
-                            </button>
-                            <button
-                                onClick={() => setDeleteConfirm(null)}
-                                disabled={deleting}
-                                className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-all"
-                            >
-                                Cancelar
-                            </button>
+            {
+                deleteConfirm && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                        <div className="bg-card border border-border rounded-3xl p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertCircle size={32} className="text-red-500" />
+                            </div>
+                            <h3 className="text-xl font-bold text-foreground text-center mb-2">Desativar Cliente?</h3>
+                            <p className="text-sm text-muted-foreground text-center mb-8">
+                                O cliente <span className="text-foreground font-bold">{deleteConfirm.name}</span> será marcado como inativo e não aparecerá nas buscas padrão.
+                            </p>
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={() => handleDelete(deleteConfirm.id)}
+                                    disabled={deleting}
+                                    className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
+                                >
+                                    {deleting ? <Loader2 size={18} className="animate-spin" /> : 'Confirmar Desativação'}
+                                </button>
+                                <button
+                                    onClick={() => setDeleteConfirm(null)}
+                                    disabled={deleting}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 };
 

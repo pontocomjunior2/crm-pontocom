@@ -1,12 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../db');
 
 // Get all locutores
 router.get('/', async (req, res) => {
     try {
-        const { search, status } = req.query;
+        const { search, status, sortBy = 'name', sortOrder = 'asc' } = req.query;
         const where = {};
 
         if (search) {
@@ -22,7 +21,7 @@ router.get('/', async (req, res) => {
 
         const locutores = await prisma.locutor.findMany({
             where,
-            orderBy: { name: 'asc' },
+            orderBy: { [sortBy]: sortOrder },
             include: {
                 _count: {
                     select: { orders: true }

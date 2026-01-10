@@ -13,7 +13,9 @@ import {
     Download,
     Copy,
     CheckSquare,
-    Square
+    Square,
+    ArrowUpDown,
+    TrendingUp
 } from 'lucide-react';
 import { orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -24,6 +26,10 @@ const FaturamentoList = ({ onEditOrder }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // all, faturado, pendente
     const [selectedOrders, setSelectedOrders] = useState([]);
+    const [sortConfig, setSortConfig] = useState({
+        key: 'date',
+        order: 'desc'
+    });
 
     const handleSelectOrder = (id) => {
         setSelectedOrders(prev => {
@@ -80,7 +86,12 @@ const FaturamentoList = ({ onEditOrder }) => {
     const fetchOrders = async () => {
         setLoading(true);
         try {
-            const response = await orderAPI.list({ status: 'VENDA', limit: 100 });
+            const response = await orderAPI.list({
+                status: 'VENDA',
+                limit: 100,
+                sortBy: sortConfig.key,
+                sortOrder: sortConfig.order
+            });
             setOrders(response.orders || []);
         } catch (error) {
             console.error('Error fetching billing orders:', error);
@@ -91,7 +102,7 @@ const FaturamentoList = ({ onEditOrder }) => {
 
     useEffect(() => {
         fetchOrders();
-    }, []);
+    }, [sortConfig]);
 
     const filteredOrders = orders.filter(order => {
         const matchesSearch =
@@ -106,6 +117,13 @@ const FaturamentoList = ({ onEditOrder }) => {
 
         return matchesSearch && matchesStatus;
     });
+
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            order: prev.key === key && prev.order === 'asc' ? 'desc' : 'asc'
+        }));
+    };
 
     const handleToggleFaturado = async (order) => {
         try {
@@ -181,11 +199,51 @@ const FaturamentoList = ({ onEditOrder }) => {
                                         )}
                                     </div>
                                 </th>
-                                <th className="px-4 py-2.5">ID / Status</th>
-                                <th className="px-4 py-2.5">Data Venda</th>
-                                <th className="px-4 py-2.5">Cliente</th>
-                                <th className="px-4 py-2.5">Título / Detalhes</th>
-                                <th className="px-4 py-2.5 text-right">Valor Venda</th>
+                                <th
+                                    className="px-4 py-2.5 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('sequentialId')}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        ID / Status
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'sequentialId' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-4 py-2.5 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('date')}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        Data Venda
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'date' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-4 py-2.5 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('client')}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        Cliente
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'client' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-4 py-2.5 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('title')}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        Título / Detalhes
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'title' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-4 py-2.5 text-right cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('vendaValor')}
+                                >
+                                    <div className="flex items-center justify-end gap-2">
+                                        Valor Venda
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'vendaValor' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
                                 <th className="px-4 py-2.5 text-center">Faturamento</th>
                                 <th className="px-6 py-2.5 text-right">Ações</th>
                             </tr>

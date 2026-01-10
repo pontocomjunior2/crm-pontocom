@@ -1,8 +1,7 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../db');
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 // GET /api/orders - List all orders with filters
 router.get('/', async (req, res) => {
@@ -15,7 +14,9 @@ router.get('/', async (req, res) => {
             tipo = '',
             dateFrom = '',
             dateTo = '',
-            search = ''
+            search = '',
+            sortBy = 'date',
+            sortOrder = 'desc'
         } = req.query;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -63,12 +64,26 @@ router.get('/', async (req, res) => {
             }
         }
 
+        // Define sorting
+        let orderBy = {};
+        if (sortBy === 'client') {
+            orderBy = { client: { name: sortOrder } };
+        } else if (sortBy === 'date') {
+            orderBy = { date: sortOrder };
+        } else if (sortBy === 'sequentialId') {
+            orderBy = { sequentialId: sortOrder };
+        } else if (sortBy === 'vendaValor') {
+            orderBy = { vendaValor: sortOrder };
+        } else {
+            orderBy[sortBy] = sortOrder;
+        }
+
         const [orders, total] = await Promise.all([
             prisma.order.findMany({
                 where,
                 skip,
                 take: parseInt(limit),
-                orderBy: { date: 'desc' },
+                orderBy,
                 include: {
                     client: {
                         select: {

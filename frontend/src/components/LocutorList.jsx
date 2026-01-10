@@ -27,17 +27,23 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
     const [statusFilter, setStatusFilter] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleting, setDeleting] = useState(false);
+    const [sortConfig, setSortConfig] = useState({
+        key: 'name',
+        order: 'asc'
+    });
 
     useEffect(() => {
         fetchLocutores();
-    }, [statusFilter]);
+    }, [statusFilter, sortConfig]);
 
     const fetchLocutores = async () => {
         setLoading(true);
         try {
             const data = await locutorAPI.list({
                 search,
-                status: statusFilter
+                status: statusFilter,
+                sortBy: sortConfig.key,
+                sortOrder: sortConfig.order
             });
             setLocutores(data);
         } catch (error) {
@@ -50,6 +56,13 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
     const handleSearchSubmit = (e) => {
         e.preventDefault();
         fetchLocutores();
+    };
+
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            order: prev.key === key && prev.order === 'asc' ? 'desc' : 'asc'
+        }));
     };
 
     const handleDelete = async (id) => {
@@ -128,8 +141,24 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                     <table className="w-full text-left border-collapse">
                         <thead className="sticky top-0 z-10 bg-card border-b border-border text-[10px] uppercase text-muted-foreground font-bold tracking-wider">
                             <tr>
-                                <th className="px-6 py-2.5">Locutor / Contato</th>
-                                <th className="px-6 py-2.5">Status</th>
+                                <th
+                                    className="px-6 py-2.5 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('name')}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        Locutor / Contato
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'name' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-6 py-2.5 cursor-pointer hover:text-white transition-colors group/head"
+                                    onClick={() => handleSort('status')}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        Status
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'status' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
                                 <th className="px-4 py-2.5 text-center">Preço (OFF)</th>
                                 <th className="px-4 py-2.5 text-center">Preço (PROD)</th>
                                 <th className="px-4 py-2.5 text-center">Trabalhos</th>

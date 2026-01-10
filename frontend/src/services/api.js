@@ -45,6 +45,10 @@ export const clientAPI = {
         });
     },
 
+    getSelection: async () => {
+        return fetchAPI('/clients/selection');
+    },
+
     update: async (id, data) => {
         return fetchAPI(`/clients/${id}`, {
             method: 'PUT',
@@ -249,4 +253,11 @@ export const lookupCEP = async (cep) => {
     } catch (error) {
         throw new Error(error.message || 'Erro ao consultar CEP');
     }
+};
+
+export const importAPI = {
+    clients: (xmlData) => fetchAPI('/import/clients', {
+        method: 'POST',
+        body: JSON.stringify({ xmlData }),
+    }),
 };

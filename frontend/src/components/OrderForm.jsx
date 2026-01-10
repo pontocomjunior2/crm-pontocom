@@ -82,8 +82,8 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
     const loadClients = async () => {
         try {
-            const response = await clientAPI.list({ limit: 1000, status: 'ativado' });
-            setClients(response.clients || []);
+            const data = await clientAPI.getSelection();
+            setClients(data || []);
         } catch (error) {
             console.error('Error loading clients:', error);
             setMessage({ type: 'error', text: 'Erro ao carregar clientes' });
@@ -731,8 +731,8 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                         )}
                     </button>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 };
 

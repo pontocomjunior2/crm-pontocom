@@ -1,25 +1,79 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../db');
+const { clientSelectionCache } = require('../utils/cache');
 
 const router = express.Router();
-const prisma = new PrismaClient();
+
+// GET /api/clients/selection - Optimized route for dropdowns
+router.get('/selection', async (req, res) => {
+    try {
+        const cached = clientSelectionCache.get('all_active');
+        if (cached) {
+            return res.json(cached);
+        }
+
+        const clients = await prisma.client.findMany({
+            where: { status: 'ativado' },
+            select: {
+                id: true,
+                name: true,
+                razaoSocial: true
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        clientSelectionCache.set('all_active', clients);
+        res.json(clients);
+    } catch (error) {
+        console.error('Error fetching client selection:', error);
+        res.status(500).json({ error: 'Failed' });
+    }
+});
 
 // GET /api/clients - List all clients with pagination and search
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 10, search = '', status = '' } = req.query;
+        const {
+            page = 1,
+            limit = 10,
+            search = '',
+            status = '',
+            name = '',
+            cidade = '',
+            cnpj_cpf = '',
+            sortBy = 'createdAt',
+            sortOrder = 'desc'
+        } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const where = {};
 
-        // Search filter
+        // Specific granular filters
+        const andFilters = [];
+
+        if (name) {
+            andFilters.push({ name: { contains: name, mode: 'insensitive' } });
+        }
+        if (cidade) {
+            andFilters.push({ cidade: { contains: cidade, mode: 'insensitive' } });
+        }
+        if (cnpj_cpf) {
+            andFilters.push({ cnpj_cpf: { contains: cnpj_cpf.replace(/\D/g, '') } });
+        }
+
+        // Global search filter (fallback/combined)
         if (search) {
-            where.OR = [
+            const searchOR = [
                 { name: { contains: search, mode: 'insensitive' } },
                 { razaoSocial: { contains: search, mode: 'insensitive' } },
                 { cnpj_cpf: { contains: search.replace(/\D/g, '') } },
                 { emailPrincipal: { contains: search, mode: 'insensitive' } },
             ];
+            andFilters.push({ OR: searchOR });
+        }
+
+        if (andFilters.length > 0) {
+            where.AND = andFilters;
         }
 
         // Status filter
@@ -27,12 +81,24 @@ router.get('/', async (req, res) => {
             where.status = status;
         }
 
+        // Define sorting
+        const orderBy = {};
+        if (sortBy === 'name') {
+            orderBy.name = sortOrder;
+        } else if (sortBy === 'createdAt') {
+            orderBy.createdAt = sortOrder;
+        } else if (sortBy === 'totalVendas') {
+            orderBy.totalVendas = sortOrder;
+        } else {
+            orderBy[sortBy] = sortOrder;
+        }
+
         const [clients, total] = await Promise.all([
             prisma.client.findMany({
                 where,
                 skip,
                 take: parseInt(limit),
-                orderBy: { createdAt: 'desc' },
+                orderBy,
                 include: {
                     _count: {
                         select: { orders: true }
@@ -151,6 +217,7 @@ router.post('/', async (req, res) => {
             }
         });
 
+        clientSelectionCache.clear();
         res.status(201).json(client);
     } catch (error) {
         console.error('Error creating client:', error);
@@ -226,6 +293,7 @@ router.put('/:id', async (req, res) => {
             }
         });
 
+        clientSelectionCache.clear();
         res.json(client);
     } catch (error) {
         console.error('Error updating client:', error);
@@ -249,6 +317,7 @@ router.delete('/:id', async (req, res) => {
             data: { status: 'inativo' }
         });
 
+        clientSelectionCache.clear();
         res.json({ message: 'Client deleted successfully' });
     } catch (error) {
         console.error('Error deleting client:', error);

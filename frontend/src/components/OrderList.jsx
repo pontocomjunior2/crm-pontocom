@@ -39,6 +39,10 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         total: 0,
         totalPages: 0
     });
+    const [sortConfig, setSortConfig] = useState({
+        key: 'date',
+        order: 'desc'
+    });
 
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleting, setDeleting] = useState(false);
@@ -50,6 +54,8 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                 page: pagination.page,
                 limit: pagination.limit,
                 search,
+                sortBy: sortConfig.key,
+                sortOrder: sortConfig.order,
                 ...filters
             });
             setOrders(response.orders || []);
@@ -63,7 +69,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         } finally {
             setLoading(false);
         }
-    }, [pagination.page, pagination.limit, search, filters]);
+    }, [pagination.page, pagination.limit, search, filters, sortConfig]);
 
     useEffect(() => {
         fetchOrders();
@@ -73,6 +79,13 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         e.preventDefault();
         setPagination(prev => ({ ...prev, page: 1 }));
         fetchOrders();
+    };
+
+    const handleSort = (key) => {
+        setSortConfig(prev => ({
+            key,
+            order: prev.key === key && prev.order === 'asc' ? 'desc' : 'asc'
+        }));
     };
 
     const handleDelete = async (id) => {
@@ -224,39 +237,54 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-card border-b border-border text-muted-foreground text-[10px] uppercase tracking-wider font-bold">
-                                <th className="pl-6 py-2.5 w-[80px] cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th
+                                    className="pl-6 py-2.5 w-[80px] cursor-pointer hover:text-foreground transition-colors group/head"
+                                    onClick={() => handleSort('status')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Status
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'status' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-4 py-2.5 w-[120px] cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th
+                                    className="px-4 py-2.5 w-[120px] cursor-pointer hover:text-foreground transition-colors group/head"
+                                    onClick={() => handleSort('date')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Data
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'date' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-4 py-2.5 w-[200px] cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th
+                                    className="px-4 py-2.5 w-[200px] cursor-pointer hover:text-foreground transition-colors group/head"
+                                    onClick={() => handleSort('client')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Cliente
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'client' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-4 py-2.5 cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th
+                                    className="px-4 py-2.5 cursor-pointer hover:text-foreground transition-colors group/head"
+                                    onClick={() => handleSort('title')}
+                                >
                                     <div className="flex items-center gap-2">
                                         Título / Locutor
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'title' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
-                                <th className="px-4 py-2.5 text-right w-[140px] cursor-pointer hover:text-foreground transition-colors group/head">
+                                <th
+                                    className="px-4 py-2.5 text-right w-[140px] cursor-pointer hover:text-foreground transition-colors group/head"
+                                    onClick={() => handleSort('vendaValor')}
+                                >
                                     <div className="flex items-center justify-end gap-2">
                                         Valores
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'vendaValor' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
                                 <th className="px-4 py-2.5 text-right w-[140px] hidden lg:table-cell cursor-pointer hover:text-foreground transition-colors group/head">
                                     <div className="flex items-center justify-end gap-2">
                                         Margem
-                                        <ArrowUpDown size={12} className="opacity-0 group-hover/head:opacity-50" />
                                     </div>
                                 </th>
                                 <th className="px-6 py-2.5 w-[120px] text-right">Ações</th>

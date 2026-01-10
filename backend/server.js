@@ -7,11 +7,11 @@ const { PrismaClient } = require('@prisma/client');
 require('dotenv').config();
 
 const app = express();
-const prisma = new PrismaClient();
+const prisma = require('./db');
 const JWT_SECRET = process.env.JWT_SECRET || 'pontocom-secret-key-2026';
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 const PORT = process.env.PORT || 3000;
 
@@ -20,6 +20,7 @@ const clientRoutes = require('./routes/clients');
 const orderRoutes = require('./routes/orders');
 const dashboardRoutes = require('./routes/dashboard');
 const locutoresRoutes = require('./routes/locutores');
+const importRoutes = require('./routes/import');
 
 // Middleware de Autenticação
 const authenticateToken = (req, res, next) => {
@@ -76,6 +77,7 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/locutores', locutoresRoutes);
+app.use('/api/import', importRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
