@@ -72,13 +72,15 @@ router.get('/', async (req, res) => {
             orderBy = { date: sortOrder };
         } else if (sortBy === 'sequentialId') {
             orderBy = { sequentialId: sortOrder };
+        } else if (sortBy === 'numeroVenda') {
+            orderBy = { numeroVenda: sortOrder };
         } else if (sortBy === 'vendaValor') {
             orderBy = { vendaValor: sortOrder };
         } else {
             orderBy[sortBy] = sortOrder;
         }
 
-        const [orders, total] = await Promise.all([
+        const [ordersRaw, total] = await Promise.all([
             prisma.order.findMany({
                 where,
                 skip,
@@ -92,11 +94,41 @@ router.get('/', async (req, res) => {
                             razaoSocial: true,
                             cnpj_cpf: true
                         }
-                    }
+                    },
+                    locutorObj: true
                 }
             }),
             prisma.order.count({ where })
         ]);
+
+        // Dynamic cache calculation for monthly fixed-fee locutores
+        const locutorMonthCounts = {}; // { locutorId_month: count }
+
+        // First pass: Count orders per month for each fixed-fee locutor
+        ordersRaw.forEach(order => {
+            if (order.locutorId && order.locutorObj?.valorFixoMensal > 0) {
+                const month = new Date(order.date).toISOString().substring(0, 7); // YYYY-MM
+                const key = `${order.locutorId}_${month}`;
+                locutorMonthCounts[key] = (locutorMonthCounts[key] || 0) + 1;
+            }
+        });
+
+        // Second pass: Calculate dynamic cache valor
+        const orders = ordersRaw.map(order => {
+            let dynamicCacheValor = Number(order.cacheValor);
+
+            if (order.locutorId && order.locutorObj?.valorFixoMensal > 0) {
+                const month = new Date(order.date).toISOString().substring(0, 7);
+                const key = `${order.locutorId}_${month}`;
+                const count = locutorMonthCounts[key] || 1;
+                dynamicCacheValor = Number(order.locutorObj.valorFixoMensal) / count;
+            }
+
+            return {
+                ...order,
+                dynamicCacheValor: parseFloat(dynamicCacheValor.toFixed(2))
+            };
+        });
 
         res.json({
             orders,
@@ -328,7 +360,7 @@ router.patch('/:id/convert', async (req, res) => {
                 orderBy: { numeroVenda: 'desc' }
             });
 
-            const lastId = lastSale?.numeroVenda || 42531; // Start before 42532
+            const lastId = lastSale?.numeroVenda || 42531; // Start at 42531 so first is 42532
             nextVendaId = lastId + 1;
         }
 

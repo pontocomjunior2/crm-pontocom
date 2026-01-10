@@ -196,6 +196,16 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor }) => {
                                                         ({locutor.realName})
                                                     </span>
                                                 )}
+                                                {locutor.valorFixoMensal > 0 && (
+                                                    <div className="flex items-center gap-1.5 mt-1.5">
+                                                        <span className="px-1.5 py-0.5 rounded-md bg-primary/20 text-primary text-[9px] font-black uppercase tracking-wider">
+                                                            Mensal
+                                                        </span>
+                                                        <span className="text-[10px] font-bold text-primary/80">
+                                                            {formatCurrency(Number(locutor.valorFixoMensal))}
+                                                        </span>
+                                                    </div>
+                                                )}
                                                 <div className="flex items-center gap-2 mt-1">
                                                     <Phone size={10} className="text-[#666666]" />
                                                     <span className="text-[10px] text-[#666666]">

@@ -95,6 +95,7 @@ model Locutor {
   reelsUrl        String?
   priceOff        Decimal  @db.Decimal(10, 2) @default(0)
   priceProduzido  Decimal  @db.Decimal(10, 2) @default(0)
+  valorFixoMensal Decimal? @db.Decimal(10, 2)
   chavePix        String?
   tipoChavePix    String?
   banco           String?

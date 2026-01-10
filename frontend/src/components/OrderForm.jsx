@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search } from 'lucide-react';
+import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
 import { clientAPI, orderAPI, locutorAPI } from '../services/api';
@@ -111,7 +111,7 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
         } else if (name === 'locutorId') {
             const selectedLocutor = locutores.find(l => l.id === value);
             if (selectedLocutor) {
-                const cache = formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido;
+                const cache = selectedLocutor.valorFixoMensal > 0 ? 0 : (formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
                 setFormData(prev => ({
                     ...prev,
                     locutorId: value,
@@ -123,9 +123,10 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
             }
         } else if (name === 'tipo') {
             const currentLocutor = locutores.find(l => l.id === formData.locutorId);
-            const newCache = currentLocutor
+            const isMonthly = currentLocutor?.valorFixoMensal > 0;
+            const newCache = isMonthly ? 0 : (currentLocutor
                 ? (value === 'OFF' ? currentLocutor.priceOff : currentLocutor.priceProduzido)
-                : formData.cacheValor;
+                : formData.cacheValor);
 
             setFormData(prev => ({
                 ...prev,
@@ -500,17 +501,27 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Valor do Cachê (R$)
-                                </label>
-                                <input
-                                    type="text"
-                                    name="cacheValor"
-                                    value={formatCurrency(formData.cacheValor)}
-                                    onChange={handleCurrencyChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono"
-                                    placeholder="R$ 0,00"
-                                />
+                                <div className="flex items-center justify-between mb-2">
+                                    <label className="block text-sm font-medium text-muted-foreground">
+                                        Valor do Cachê (R$)
+                                    </label>
+                                    {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && (
+                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-primary text-primary-foreground uppercase tracking-widest animate-pulse">
+                                            Fixo Mensal
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        name="cacheValor"
+                                        value={locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 ? "CALCULADO MENSAL" : formatCurrency(formData.cacheValor)}
+                                        onChange={handleCurrencyChange}
+                                        disabled={locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0}
+                                        className={`w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono ${locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 ? 'opacity-50 cursor-not-allowed bg-card text-primary' : ''}`}
+                                        placeholder="R$ 0,00"
+                                    />
+                                </div>
                             </div>
 
                             <div>
@@ -547,11 +558,16 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">Margem de Lucro</p>
-                                    <p className="text-lg font-bold text-[#03CC0B]">{displayCalc.margem}</p>
+                                    <div className={`flex items-center gap-1 text-lg font-bold ${Number(calculations.margem) < 0 ? 'text-red-500' : 'text-[#03CC0B]'}`}>
+                                        {Number(calculations.margem) < 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
+                                        {displayCalc.margem}
+                                    </div>
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">Margem %</p>
-                                    <p className="text-lg font-bold text-primary">{displayCalc.margemPercentual}</p>
+                                    <p className={`text-lg font-bold ${Number(calculations.margemPercentual) < 0 ? 'text-red-500' : 'text-primary'}`}>
+                                        {displayCalc.margemPercentual}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -669,6 +685,21 @@ const OrderForm = ({ order = null, onClose, onSuccess }) => {
                                 />
                                 <span className="text-green-400 font-bold text-sm">Já está PAGO</span>
                             </label>
+
+                            {order && formData.status === 'PEDIDO' && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (window.confirm('Deseja transformar este Pedido em Venda agora?')) {
+                                            setFormData(prev => ({ ...prev, status: 'VENDA', entregue: true }));
+                                        }
+                                    }}
+                                    className="flex items-center justify-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-all font-bold text-[10px] uppercase tracking-widest"
+                                >
+                                    <CheckCircle2 size={14} />
+                                    Transformar em Venda
+                                </button>
+                            )}
                         </div>
                     </div>
 

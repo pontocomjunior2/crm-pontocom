@@ -26,6 +26,7 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
         reelsUrl: '',
         priceOff: 0,
         priceProduzido: 0,
+        valorFixoMensal: 0,
         chavePix: '',
         tipoChavePix: 'CPF',
         banco: '',
@@ -43,6 +44,7 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                 reelsUrl: locutor.reelsUrl || '',
                 priceOff: locutor.priceOff ? Number(locutor.priceOff) : 0,
                 priceProduzido: locutor.priceProduzido ? Number(locutor.priceProduzido) : 0,
+                valorFixoMensal: locutor.valorFixoMensal ? Number(locutor.valorFixoMensal) : 0,
                 chavePix: locutor.chavePix || '',
                 tipoChavePix: locutor.tipoChavePix || 'CPF',
                 banco: locutor.banco || '',
@@ -244,6 +246,22 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                                             onChange={handleCurrencyChange}
                                             placeholder="R$ 0,00"
                                             className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-mono"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2 col-span-2">
+                                    <label className="text-xs font-medium text-muted-foreground ml-1 flex items-center gap-1">
+                                        Valor Fixo Mensal
+                                        <Info size={12} className="opacity-40" title="Se preenchido, o cachê por áudio será calculado automaticamente diluindo este valor" />
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            name="valorFixoMensal"
+                                            value={formatCurrency(formData.valorFixoMensal)}
+                                            onChange={handleCurrencyChange}
+                                            placeholder="R$ 0,00"
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-mono text-primary font-bold"
                                         />
                                     </div>
                                 </div>

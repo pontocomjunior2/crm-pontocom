@@ -21,6 +21,18 @@ router.get('/', async (req, res) => {
             }
         });
 
+        // 1.1 Calculate total fixed fees for locutores who have orders
+        const locutoresWithOrders = await prisma.locutor.findMany({
+            where: {
+                valorFixoMensal: { gt: 0 },
+                orders: { some: {} } // Has at least one order
+            },
+            select: { valorFixoMensal: true }
+        });
+
+        const totalFixedFees = locutoresWithOrders.reduce((sum, loc) => sum + Number(loc.valorFixoMensal), 0);
+        const adjustedTotalCache = Number(revenueSums._sum.cacheValor || 0) + totalFixedFees;
+
         // 2. Recent Orders (Last 5)
         const recentOrders = await prisma.order.findMany({
             take: 5,
@@ -70,7 +82,7 @@ router.get('/', async (req, res) => {
             metrics: {
                 totalRevenue: Number(revenueSums._sum.vendaValor || 0),
                 activeOrders: activeOrdersCount,
-                totalCache: Number(revenueSums._sum.cacheValor || 0),
+                totalCache: adjustedTotalCache,
                 activeClients: totalClientsCount,
                 totalOrders: totalOrdersCount
             },

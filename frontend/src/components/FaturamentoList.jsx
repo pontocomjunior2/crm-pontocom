@@ -55,7 +55,7 @@ const FaturamentoList = ({ onEditOrder }) => {
 
         const textList = selected.map(o => {
             const date = new Date(o.date).toLocaleDateString('pt-BR');
-            const id = o.sequentialId || 'N/A';
+            const id = o.numeroVenda || 'N/A';
             return `${id} - ${o.title.toUpperCase()} - ${date} (${formatCurrency(o.vendaValor)})`;
         }).join('\n');
 
@@ -201,11 +201,11 @@ const FaturamentoList = ({ onEditOrder }) => {
                                 </th>
                                 <th
                                     className="px-4 py-2.5 cursor-pointer hover:text-white transition-colors group/head"
-                                    onClick={() => handleSort('sequentialId')}
+                                    onClick={() => handleSort('numeroVenda')}
                                 >
                                     <div className="flex items-center gap-2">
                                         ID / Status
-                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'sequentialId' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'numeroVenda' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
                                 <th
@@ -287,9 +287,9 @@ const FaturamentoList = ({ onEditOrder }) => {
                                                     }`} title={order.faturado ? 'Faturado' : 'Pendente de Faturamento'}>
                                                     <DollarSign size={16} />
                                                 </div>
-                                                {order.sequentialId && (
+                                                {order.numeroVenda && (
                                                     <span className="font-mono text-xs text-muted-foreground">
-                                                        #{order.sequentialId}
+                                                        #{order.numeroVenda}
                                                     </span>
                                                 )}
                                             </div>
@@ -337,11 +337,16 @@ const FaturamentoList = ({ onEditOrder }) => {
                                                 <span className="text-sm font-bold text-foreground block">
                                                     {formatCurrency(Number(order.vendaValor))}
                                                 </span>
-                                                {order.pago && (
-                                                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-green-500 text-white uppercase tracking-wider mt-1">
-                                                        PAGO
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    {order.pago && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-green-500 text-white uppercase tracking-wider">
+                                                            PAGO
+                                                        </span>
+                                                    )}
+                                                    <span className={`text-[10px] font-medium ${order.locutorObj?.valorFixoMensal > 0 ? 'text-primary' : 'text-muted-foreground/60'}`}>
+                                                        {formatCurrency(Number(order.dynamicCacheValor || order.cacheValor))}
                                                     </span>
-                                                )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-4 text-center">
@@ -422,7 +427,7 @@ const FaturamentoList = ({ onEditOrder }) => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

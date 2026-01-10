@@ -13,6 +13,7 @@ import {
     Calendar,
     DollarSign,
     TrendingUp,
+    TrendingDown,
     Clock,
     CheckCircle2,
     AlertCircle,
@@ -323,11 +324,13 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                         )}
 
                                         <td className="pl-6 py-2 w-[50px] align-top">
-                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border mt-1 ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-500 border-green-500/20' :
-                                                order.entregue ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border mt-1 ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                                order.entregue ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' :
                                                     'bg-white/5 text-white/20 border-white/10'
                                                 }`} title={getStatusLabel(order)}>
-                                                <CheckCircle2 size={18} />
+                                                {order.status === 'VENDA' ? <TrendingUp size={16} /> :
+                                                    order.entregue ? <CheckCircle2 size={16} /> :
+                                                        <Clock size={16} />}
                                             </div>
                                         </td>
                                         <td className="px-4 py-2 align-top">
@@ -385,27 +388,34 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                             PAGO
                                                         </span>
                                                     )}
-                                                    <span className="text-[10px] text-muted-foreground">
-                                                        Cachê: {formatCurrency(Number(order.cacheValor))}
+                                                    <span className={`text-[10px] ${order.locutorObj?.valorFixoMensal > 0 ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                                                        Cachê: {formatCurrency(Number(order.dynamicCacheValor || order.cacheValor))}
+                                                        {order.locutorObj?.valorFixoMensal > 0 && <span className="ml-1 opacity-60">(Fixo)</span>}
                                                     </span>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-4 py-2 text-right hidden lg:table-cell align-top">
                                             <div className="flex flex-col items-end mt-1">
-                                                <div className="flex items-center gap-1 text-green-400 font-bold text-xs">
-                                                    <TrendingUp size={12} />
-                                                    {formatCurrency(Number(order.vendaValor) - Number(order.cacheValor) - (Number(order.vendaValor) * 0.1) - ((Number(order.vendaValor) - Number(order.cacheValor)) * 0.04))}
-                                                </div>
+                                                {(() => {
+                                                    const margin = Number(order.vendaValor) - Number(order.dynamicCacheValor || order.cacheValor) - (Number(order.vendaValor) * 0.1) - ((Number(order.vendaValor) - Number(order.dynamicCacheValor || order.cacheValor)) * 0.04);
+                                                    const isNegative = margin < 0;
+                                                    return (
+                                                        <div className={`flex items-center gap-1 font-bold text-xs ${isNegative ? 'text-red-500' : 'text-green-400'}`}>
+                                                            {isNegative ? <TrendingDown size={12} /> : <TrendingUp size={12} />}
+                                                            {formatCurrency(margin)}
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                         </td>
                                         <td className="px-6 py-2 text-right align-top">
                                             <div className="flex items-center justify-end gap-2 mt-0.5">
-                                                {order.status === 'PEDIDO' && !order.entregue && (
+                                                {order.status === 'PEDIDO' && (
                                                     <button
                                                         onClick={() => handleConvert(order.id)}
                                                         className="p-2 hover:bg-green-500/20 rounded-lg text-green-500 hover:text-green-400 transition-all shadow-sm"
-                                                        title="Converter para Venda"
+                                                        title="Confirmar Entrega e Transformar em Venda"
                                                     >
                                                         <CheckCircle2 size={16} />
                                                     </button>
