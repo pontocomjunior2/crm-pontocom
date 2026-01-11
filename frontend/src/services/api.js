@@ -330,3 +330,10 @@ export const supplierAPI = {
         });
     }
 };
+
+export const analyticsAPI = {
+    getFinancialSummary: (query = '') => fetchAPI(`/analytics/financial-summary${query}`),
+    getSalesTrends: (months = 6) => fetchAPI(`/analytics/sales-trends?months=${months}`),
+    getTopClients: (limit = 10) => fetchAPI(`/analytics/top-clients?limit=${limit}`),
+    getPerformanceMetrics: () => fetchAPI('/analytics/performance-metrics')
+};

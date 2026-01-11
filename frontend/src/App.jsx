@@ -36,6 +36,7 @@ import LocutorList from './components/LocutorList';
 import LocutorForm from './components/LocutorForm';
 import LocutorHistory from './components/LocutorHistory';
 import UserList from './components/UserList';
+import Relatorios from './components/Relatorios';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -484,9 +485,14 @@ const CRM = () => {
               </div>
             )}
 
+            {activeTab === 'relatorios' && (
+              <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
+                <Relatorios />
+              </div>
+            )}
 
 
-            {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores'].includes(activeTab) && (
+            {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios'].includes(activeTab) && (
               <div className="p-20 text-center">
                 <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
                 <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>

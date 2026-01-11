@@ -26,6 +26,7 @@ const importRoutes = require('./routes/import');
 const serviceTypesRoutes = require('./routes/serviceTypes');
 const userRoutes = require('./routes/users');
 const supplierRoutes = require('./routes/suppliers');
+const analyticsRoutes = require('./routes/analytics');
 
 // Middleware de Autenticação
 const authenticateToken = (req, res, next) => {
@@ -111,6 +112,7 @@ app.use('/api/import', authenticateToken, importRoutes);
 app.use('/api/service-types', authenticateToken, serviceTypesRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/suppliers', authenticateToken, supplierRoutes);
+app.use('/api/analytics', authenticateToken, analyticsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
