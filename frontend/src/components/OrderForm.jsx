@@ -40,6 +40,8 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
         arquivoOS: order?.arquivoOS || '',
         serviceType: order?.serviceType || '',
         numeroVenda: order?.numeroVenda ? String(order.numeroVenda) : '',
+        creditsConsumed: order?.creditsConsumed || 1,
+        costPerCreditSnapshot: order?.costPerCreditSnapshot || null
     });
 
     const [osFile, setOsFile] = useState(null);
@@ -100,7 +102,32 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
     useEffect(() => {
         const calc = calculateOrderMargins(formData.vendaValor, formData.cacheValor);
         setCalculations(calc);
+
     }, [formData.vendaValor, formData.cacheValor]);
+
+    // Calculate Cache based on Supplier Credits
+    useEffect(() => {
+        if (formData.locutorId && locutores.length > 0) {
+            const locutor = locutores.find(l => l.id === formData.locutorId);
+            if (locutor?.supplier?.packages?.length > 0) {
+                const latestPackage = locutor.supplier.packages[0];
+                const cost = parseFloat(latestPackage.costPerCredit);
+                const credits = parseInt(formData.creditsConsumed) || 1;
+                const newCache = cost * credits;
+
+                // Update cache only if it's different to avoid loops, and maybe only if not manually edited?
+                // For now, let's auto-update to ensure consistency with the credit system.
+                // We can add a check if the user manually changed it, but that adds complexity.
+                // Let's assume if a supplier is linked, the credit system rules apply.
+                setFormData(prev => {
+                    if (prev.cacheValor !== newCache) {
+                        return { ...prev, cacheValor: newCache, costPerCreditSnapshot: cost };
+                    }
+                    return prev;
+                });
+            }
+        }
+    }, [formData.locutorId, formData.creditsConsumed, locutores]);
 
     const loadClients = async () => {
         try {
@@ -633,7 +660,30 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                                     )}
                                 </div>
 
-                                <div>
+                                {/* Credits Input (Only if Supplier Linked) */}
+                                {locutores.find(l => l.id === formData.locutorId)?.supplier && (
+                                    <div className="animate-in fade-in slide-in-from-top-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Créditos Consumidos
+                                        </label>
+                                        <div className="flex items-center gap-3">
+                                            <input
+                                                type="number"
+                                                name="creditsConsumed"
+                                                value={formData.creditsConsumed}
+                                                onChange={handleChange}
+                                                min="1"
+                                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-bold"
+                                            />
+                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                                Package Cost:
+                                                <span className="font-bold text-green-400 ml-1">
+                                                    R$ {parseFloat(locutores.find(l => l.id === formData.locutorId)?.supplier?.packages[0]?.costPerCredit || 0).toFixed(2)}/cred
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}<div>
                                     <label className="block text-sm font-medium text-muted-foreground mb-2">
                                         Tipo <span className="text-red-500">*</span>
                                     </label>
@@ -743,6 +793,14 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                                     {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 && (
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                                             <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">Incluso no Mensal</span>
+                                        </div>
+
+                                    )}
+                                    {locutores.find(l => l.id === formData.locutorId)?.supplier && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                            <span className="text-[10px] font-bold text-green-500/60 uppercase tracking-widest flex items-center gap-1">
+                                                <Calculator size={10} /> Calculado (Créditos)
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -1139,10 +1197,10 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                             />
                         </div>
                     </div>
-                </form>
+                </form >
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-between p-6 border-t border-border bg-card">
+                < div className="flex items-center justify-between p-6 border-t border-border bg-card" >
                     <div>
                         {order && (
                             <button
@@ -1184,9 +1242,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                             )}
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
+                </div >
+            </div >
+        </div >
     );
 };
 

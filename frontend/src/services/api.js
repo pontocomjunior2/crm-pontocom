@@ -309,3 +309,24 @@ export const userAPI = {
         });
     }
 };
+
+// Supplier API calls
+export const supplierAPI = {
+    list: async () => {
+        return fetchAPI('/suppliers');
+    },
+
+    create: async (data) => {
+        return fetchAPI('/suppliers', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+
+    addPackage: async (id, data) => {
+        return fetchAPI(`/suppliers/${id}/packages`, {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+};

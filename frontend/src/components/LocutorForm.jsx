@@ -11,12 +11,26 @@ import {
     Info,
     CheckCircle2
 } from 'lucide-react';
-import { locutorAPI } from '../services/api';
+import { locutorAPI, supplierAPI } from '../services/api';
 import { formatCurrency, formatPhone } from '../utils/formatters';
 
 const LocutorForm = ({ locutor, onClose, onSave }) => {
     const isEditing = !!locutor;
     const [loading, setLoading] = useState(false);
+    const [suppliers, setSuppliers] = useState([]);
+
+    useEffect(() => {
+        const loadSuppliers = async () => {
+            try {
+                const data = await supplierAPI.list();
+                setSuppliers(data);
+            } catch (error) {
+                console.error('Error loading suppliers:', error);
+            }
+        };
+        loadSuppliers();
+    }, []);
+
     const [formData, setFormData] = useState({
         name: '',
         realName: '',
@@ -30,7 +44,8 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
         chavePix: '',
         tipoChavePix: 'CPF',
         banco: '',
-        description: ''
+        description: '',
+        supplierId: ''
     });
 
     useEffect(() => {
@@ -48,7 +63,10 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                 chavePix: locutor.chavePix || '',
                 tipoChavePix: locutor.tipoChavePix || 'CPF',
                 banco: locutor.banco || '',
-                description: locutor.description || ''
+                tipoChavePix: locutor.tipoChavePix || 'CPF',
+                banco: locutor.banco || '',
+                description: locutor.description || '',
+                supplierId: locutor.supplierId || ''
             });
         }
     }, [locutor]);
@@ -191,6 +209,31 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                                     placeholder="email@locutor.com"
                                     className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground transition-all"
                                 />
+                            </div>
+                        </div>
+
+                        {/* Supplier Link SECTION */}
+                        <div className="space-y-4">
+                            <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <span className="w-1 h-3 bg-primary rounded-full"></span>
+                                Vínculo com Fornecedor (Créditos)
+                            </h3>
+                            <div className="space-y-2">
+                                <label className="text-xs font-medium text-muted-foreground ml-1">Fornecedor (Estúdio Parceiro)</label>
+                                <select
+                                    name="supplierId"
+                                    value={formData.supplierId}
+                                    onChange={handleChange}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all"
+                                >
+                                    <option value="">Nenhum (Locutor Interno/Direto)</option>
+                                    {suppliers.map(sup => (
+                                        <option key={sup.id} value={sup.id}>{sup.name}</option>
+                                    ))}
+                                </select>
+                                <p className="text-[10px] text-muted-foreground ml-1">
+                                    Se vinculado, o custo será calculado com base nos créditos deste fornecedor.
+                                </p>
                             </div>
                         </div>
 

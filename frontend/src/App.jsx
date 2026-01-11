@@ -23,8 +23,10 @@ import {
   Loader2,
   Shield,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Building2
 } from 'lucide-react';
+import SupplierList from './components/SupplierList';
 import ClientForm from './components/ClientForm';
 import OrderForm from './components/OrderForm';
 import ClientList from './components/ClientList';
@@ -195,6 +197,7 @@ const CRM = () => {
     { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} /> },
     { id: 'clientes', label: 'Clientes', icon: <Users size={20} /> },
     { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} /> },
+    { id: 'fornecedores', label: 'Fornecedores', icon: <Building2 size={20} /> },
     { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} /> },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} /> },
     { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} /> },
@@ -457,6 +460,12 @@ const CRM = () => {
               </div>
             )}
 
+            {activeTab === 'fornecedores' && (
+              <div className="flex-1 overflow-y-auto h-full w-full custom-scrollbar">
+                <SupplierList />
+              </div>
+            )}
+
             {activeTab === 'faturamento' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
                 <FaturamentoList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(s); setShowOrderForm(true); }} />
@@ -475,7 +484,9 @@ const CRM = () => {
               </div>
             )}
 
-            {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil'].includes(activeTab) && (
+
+
+            {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores'].includes(activeTab) && (
               <div className="p-20 text-center">
                 <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
                 <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>
