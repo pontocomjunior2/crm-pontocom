@@ -5,11 +5,39 @@ const router = express.Router();
 // Get dashboard data
 router.get('/', async (req, res) => {
     try {
+        const { startDate, endDate } = req.query;
+
+        // Build date filter
+        let dateFilter = {};
+        if (startDate && endDate) {
+            dateFilter = {
+                date: {
+                    gte: new Date(startDate),
+                    lte: new Date(endDate)
+                }
+            };
+        } else if (startDate) {
+            dateFilter = {
+                date: { gte: new Date(startDate) }
+            };
+        }
+
         // 1. Core Metrics
-        const totalOrdersCount = await prisma.order.count();
-        const activeOrdersCount = await prisma.order.count({
-            where: { entregue: false }
+        const totalOrdersCount = await prisma.order.count({
+            where: dateFilter
         });
+
+        // Active orders: usually meant as "Current Queue". 
+        // If a date filter is applied, it implies "Active orders created within this period" 
+        // OR we can keep it as "Global Active" if that makes more sense. 
+        // For a Sales Dashboard, let's keep it consistent with the filter for now.
+        const activeOrdersCount = await prisma.order.count({
+            where: {
+                entregue: false,
+                ...dateFilter
+            }
+        });
+
         const totalClientsCount = await prisma.client.count({
             where: { status: 'ativado' }
         });
@@ -18,14 +46,23 @@ router.get('/', async (req, res) => {
             _sum: {
                 vendaValor: true,
                 cacheValor: true
+            },
+            where: {
+                ...dateFilter,
+                status: 'VENDA'
             }
         });
 
-        // 1.1 Calculate total fixed fees for locutores who have orders
+        // 1.1 Calculate total fixed fees for locutores who have orders IN THIS PERIOD
         const locutoresWithOrders = await prisma.locutor.findMany({
             where: {
                 valorFixoMensal: { gt: 0 },
-                orders: { some: {} } // Has at least one order
+                orders: {
+                    some: {
+                        ...dateFilter,
+                        status: 'VENDA'
+                    }
+                }
             },
             select: { valorFixoMensal: true }
         });
@@ -33,8 +70,11 @@ router.get('/', async (req, res) => {
         const totalFixedFees = locutoresWithOrders.reduce((sum, loc) => sum + Number(loc.valorFixoMensal), 0);
         const adjustedTotalCache = Number(revenueSums._sum.cacheValor || 0) + totalFixedFees;
 
-        // 2. Recent Orders (Last 5)
+        // 2. Recent Orders (Last 5 within filter or global if no filter?)
+        // Usually "Recent" implies global recent, but if filtering by "Last Year", we might want top 5 of that year?
+        // Let's apply filter to be consistent.
         const recentOrders = await prisma.order.findMany({
+            where: dateFilter,
             take: 5,
             orderBy: { date: 'desc' },
             include: {
@@ -45,10 +85,14 @@ router.get('/', async (req, res) => {
         });
 
         // 3. Pending Invoices (Delivered but not billed)
+        // This is a "ToDo" list. Time filter might hide old debts if strict.
+        // Usually, debts are debts regardless of when the order happened.
+        // However, if I select "Last Month", do I want to see debts FROM last month? Yes.
         const pendingInvoices = await prisma.order.findMany({
             where: {
                 entregue: true,
-                faturado: false
+                faturado: false,
+                ...dateFilter
             },
             take: 5,
             include: {

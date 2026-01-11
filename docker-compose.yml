@@ -7,8 +7,6 @@ services:
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET:-your_super_secret_jwt_key}
       PORT: 3001
-    networks:
-      - crm-network
     labels:
       - "easypanel.app.name=crm-backend"
 
@@ -21,11 +19,5 @@ services:
       VITE_STORAGE_URL: https://api-crm.pontocomaudio.net
     depends_on:
       - backend
-    networks:
-      - crm-network
     labels:
       - "easypanel.app.name=crm-frontend"
-
-networks:
-  crm-network:
-    driver: bridge

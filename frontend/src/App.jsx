@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
+  Calendar,
+  Filter,
   LayoutDashboard,
   Users,
   FileText,
@@ -51,6 +53,16 @@ const CRM = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [initialOrderStatus, setInitialOrderStatus] = useState('PEDIDO');
 
+  // Date Filter State
+  const [dateRange, setDateRange] = useState({
+    label: 'Últimos 30 dias',
+    value: '30days',
+    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
+  const [isCustomDate, setIsCustomDate] = useState(false);
+  const [showDateFilter, setShowDateFilter] = useState(false);
+
   const [dashboardData, setDashboardData] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(true);
 
@@ -60,7 +72,8 @@ const CRM = () => {
     const fetchDashboard = async () => {
       setLoadingDashboard(true);
       try {
-        const data = await dashboardAPI.get();
+        const query = `?startDate=${dateRange.start}&endDate=${dateRange.end}`;
+        const data = await dashboardAPI.get(query);
         setDashboardData(data);
       } catch (error) {
         console.error('Error fetching dashboard:', error);
@@ -70,7 +83,53 @@ const CRM = () => {
     };
 
     fetchDashboard();
-  }, [refreshTrigger, user]);
+  }, [refreshTrigger, user, dateRange]);
+
+  const handleDateFilterChange = (value) => {
+    const today = new Date();
+    let start = '';
+    let end = today.toISOString().split('T')[0];
+    let label = '';
+
+    switch (value) {
+      case '7days':
+        start = new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0];
+        label = 'Últimos 7 dias';
+        break;
+      case '15days':
+        start = new Date(today.setDate(today.getDate() - 15)).toISOString().split('T')[0];
+        label = 'Últimos 15 dias';
+        break;
+      case '30days':
+        start = new Date(today.setDate(today.getDate() - 30)).toISOString().split('T')[0];
+        label = 'Últimos 30 dias';
+        break;
+      case 'thisMonth':
+        start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        label = 'Este Mês';
+        break;
+      case '12months':
+        start = new Date(today.setFullYear(today.getFullYear() - 1)).toISOString().split('T')[0];
+        label = 'Últimos 12 meses';
+        break;
+      case 'custom':
+        setIsCustomDate(true);
+        label = 'Período Personalizado';
+        // Keep previous dates or reset? Let's keep current range if custom is clicked
+        start = dateRange.start;
+        end = dateRange.end;
+        break;
+      default:
+        break;
+    }
+
+    if (value !== 'custom') {
+      setIsCustomDate(false);
+    }
+
+    setDateRange({ label, value, start, end });
+    if (value !== 'custom') setShowDateFilter(false);
+  };
 
   if (loading) {
     return (
@@ -217,6 +276,77 @@ const CRM = () => {
             {activeTab === 'dashboard' && (
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
                 <div className="max-w-[1400px] mx-auto space-y-8 animate-in fade-in duration-500">
+
+                  {/* Date Filter Header */}
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <h2 className="text-2xl font-bold text-foreground">Visão Geral</h2>
+                      <p className="text-muted-foreground text-sm">Acompanhe métricas de vendas e produção</p>
+                    </div>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowDateFilter(!showDateFilter)}
+                        className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-lg hover:border-primary/50 transition-colors shadow-sm"
+                      >
+                        <Calendar size={16} className="text-primary" />
+                        <span className="text-sm font-medium text-foreground">{dateRange.label}</span>
+                        <Filter size={14} className="text-muted-foreground ml-2" />
+                      </button>
+
+                      {showDateFilter && (
+                        <div className="absolute right-0 top-12 w-64 bg-card border border-border rounded-xl shadow-2xl z-50 p-2 animate-in slide-in-from-top-2">
+                          <div className="space-y-1 mb-2">
+                            {[
+                              { label: 'Últimos 7 dias', val: '7days' },
+                              { label: 'Últimos 15 dias', val: '15days' },
+                              { label: 'Últimos 30 dias', val: '30days' },
+                              { label: 'Este Mês', val: 'thisMonth' },
+                              { label: 'Últimos 12 meses', val: '12months' },
+                              { label: 'Período Personalizado', val: 'custom' },
+                            ].map((opt) => (
+                              <button
+                                key={opt.val}
+                                onClick={() => handleDateFilterChange(opt.val)}
+                                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${dateRange.value === opt.val ? 'bg-primary/20 text-primary font-bold' : 'text-foreground hover:bg-accent'}`}
+                              >
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {isCustomDate && (
+                            <div className="pt-2 border-t border-border space-y-2">
+                              <div>
+                                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Início</label>
+                                <input
+                                  type="date"
+                                  value={dateRange.start}
+                                  onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
+                                  className="w-full bg-input-background border border-border rounded px-2 py-1 text-xs text-foreground"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Fim</label>
+                                <input
+                                  type="date"
+                                  value={dateRange.end}
+                                  onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
+                                  className="w-full bg-input-background border border-border rounded px-2 py-1 text-xs text-foreground"
+                                />
+                              </div>
+                              <button
+                                onClick={() => setShowDateFilter(false)} // Just close, state is already updated onChange
+                                className="w-full btn-primary py-1.5 text-xs rounded mt-2"
+                              >
+                                Aplicar Filtro
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
                   {loadingDashboard ? (
                     <div className="flex flex-col items-center justify-center h-[60vh]">
                       <Loader2 size={48} className="text-primary animate-spin mb-4" />

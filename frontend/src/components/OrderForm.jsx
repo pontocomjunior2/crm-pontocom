@@ -39,6 +39,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
         numeroOS: order?.numeroOS || '',
         arquivoOS: order?.arquivoOS || '',
         serviceType: order?.serviceType || '',
+        numeroVenda: order?.numeroVenda ? String(order.numeroVenda) : '',
     });
 
     const [osFile, setOsFile] = useState(null);
@@ -366,7 +367,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                     onClick={() => setShowServiceDropdown(false)}
                 />
             )}
-            <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden border border-border">
+            <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-border">
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-border">
@@ -403,7 +404,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                 )}
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] custom-scrollbar" onPaste={handlePaste}>
+                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 custom-scrollbar min-h-0" onPaste={handlePaste}>
 
                     {/* Client Selection (Searchable) */}
                     <div className="mb-6 relative">
