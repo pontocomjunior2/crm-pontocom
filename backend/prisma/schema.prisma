@@ -82,6 +82,10 @@ model Order {
   arquivoOS           String?
   serviceType         String?  // PLANO MENSAL, PACOTE DE AUDIOS, STREAMING, etc.
 
+  // Supplier Credit System
+  creditsConsumed     Int      @default(0) // Default 0 for normal orders, 1+ for Supplier orders
+  costPerCreditSnapshot Decimal? @db.Decimal(10, 2) // Snapshot of the cost at the time of order
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -107,6 +111,10 @@ model Locutor {
   banco           String?
   description     String?  @db.Text
   orders          Order[]
+  
+  supplierId      String?
+  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -130,4 +138,27 @@ model User {
 enum Role {
   ADMIN
   USER
+}
+
+model Supplier {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  locutores Locutor[]
+  packages  CreditPackage[]
+}
+
+model CreditPackage {
+  id              String   @id @default(uuid())
+  supplierId      String
+  supplier        Supplier @relation(fields: [supplierId], references: [id])
+  name            String   // Ex: Pacote Janeiro
+  price           Decimal  @db.Decimal(10, 2)
+  credits         Int
+  costPerCredit   Decimal  @db.Decimal(10, 4) // High precision for internal calculation
+  purchaseDate    DateTime @default(now())
+  
+  createdAt       DateTime @default(now())
 }

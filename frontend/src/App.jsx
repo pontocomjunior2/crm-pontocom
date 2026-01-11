@@ -450,7 +450,7 @@ const CRM = () => {
 
             {activeTab === 'pedidos' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-                <OrderList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(s); setShowOrderForm(true); }} onNavigate={setActiveTab} />
+                <OrderList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'PEDIDO'); setShowOrderForm(true); }} onNavigate={setActiveTab} />
               </div>
             )}
 
@@ -468,7 +468,7 @@ const CRM = () => {
 
             {activeTab === 'faturamento' && (
               <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-                <FaturamentoList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(s); setShowOrderForm(true); }} />
+                <FaturamentoList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'VENDA'); setShowOrderForm(true); }} />
               </div>
             )}
 

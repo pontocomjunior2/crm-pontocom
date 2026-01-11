@@ -163,7 +163,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                 </div>
 
                 <button
-                    onClick={onAddNewOrder}
+                    onClick={() => onAddNewOrder('PEDIDO')}
                     className="btn-primary flex items-center gap-2 px-6"
                 >
                     <Plus size={18} />
@@ -311,7 +311,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                         <div className="flex flex-col items-center gap-3 text-muted-foreground">
                                             <ShoppingCart size={48} className="opacity-20" />
                                             <p className="text-lg">Nenhum pedido encontrado</p>
-                                            <button onClick={onAddNewOrder} className="text-primary hover:underline text-sm font-medium">
+                                            <button onClick={() => onAddNewOrder('PEDIDO')} className="text-primary hover:underline text-sm font-medium">
                                                 Clique aqui para criar o primeiro pedido
                                             </button>
                                         </div>

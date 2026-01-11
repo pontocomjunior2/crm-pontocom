@@ -25,16 +25,30 @@ const locutoresRoutes = require('./routes/locutores');
 const importRoutes = require('./routes/import');
 const serviceTypesRoutes = require('./routes/serviceTypes');
 const userRoutes = require('./routes/users');
+const supplierRoutes = require('./routes/suppliers');
 
 // Middleware de Autenticação
 const authenticateToken = (req, res, next) => {
+  // Bypass auth for OPTIONS requests (CORS preflight)
+  if (req.method === 'OPTIONS') {
+    return next();
+  }
+
   const authHeader = req.headers['authorization'];
+  console.log(`[Auth] ${req.method} ${req.originalUrl} - Header Value: '${authHeader}'`); // Debug Content
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) return res.status(401).json({ error: 'Token não fornecido' });
+  if (!token) {
+    console.log(`[Auth] ${req.method} ${req.originalUrl} - No token provided`); // Debug
+    return res.status(401).json({ error: 'Token não fornecido' });
+  }
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) return res.status(403).json({ error: 'Token inválido ou expirado' });
+    if (err) {
+      console.log(`[Auth] ${req.method} ${req.originalUrl} - Verification error:`, err.message); // Debug
+      return res.status(403).json({ error: 'Token inválido ou expirado' });
+    }
+    // console.log(`[Auth] User ${user.email} authenticated`); // Debug (Reduce noise)
     req.user = user;
     next();
   });
@@ -96,6 +110,7 @@ app.use('/api/locutores', authenticateToken, locutoresRoutes);
 app.use('/api/import', authenticateToken, importRoutes);
 app.use('/api/service-types', authenticateToken, serviceTypesRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
+app.use('/api/suppliers', authenticateToken, supplierRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

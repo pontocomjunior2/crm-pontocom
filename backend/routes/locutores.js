@@ -34,6 +34,14 @@ router.get('/', async (req, res) => {
                         status: true
                     },
                     orderBy: { date: 'desc' }
+                },
+                supplier: {
+                    include: {
+                        packages: {
+                            orderBy: { purchaseDate: 'desc' },
+                            take: 1
+                        }
+                    }
                 }
             }
         });
@@ -154,7 +162,8 @@ router.post('/', async (req, res) => {
                 chavePix: data.chavePix,
                 tipoChavePix: data.tipoChavePix,
                 banco: data.banco,
-                description: data.description
+                description: data.description,
+                supplierId: data.supplierId || null
             }
         });
         res.status(201).json(locutor);
@@ -183,7 +192,8 @@ router.put('/:id', async (req, res) => {
                 chavePix: data.chavePix,
                 tipoChavePix: data.tipoChavePix,
                 banco: data.banco,
-                description: data.description
+                description: data.description,
+                supplierId: data.supplierId !== undefined ? (data.supplierId || null) : undefined
             }
         });
         res.json(locutor);

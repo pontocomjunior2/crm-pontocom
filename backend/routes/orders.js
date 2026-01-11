@@ -296,8 +296,40 @@ router.post('/', async (req, res) => {
             pendenciaMotivo = null,
             numeroOS = null,
             arquivoOS = null,
-            serviceType = null
+            serviceType = null,
+            creditsConsumed = 1
         } = req.body;
+
+        // Calculate Cache if Supplier Linked
+        let finalCacheValor = cacheValor ? parseFloat(cacheValor) : 0;
+        let creditsToConsume = status === 'PEDIDO' || status === 'VENDA' ? (creditsConsumed ? parseInt(creditsConsumed) : 1) : 0;
+        let costPerCreditVal = null;
+
+        if (locutorId) {
+            const locutor = await prisma.locutor.findUnique({
+                where: { id: locutorId },
+                include: {
+                    supplier: {
+                        include: {
+                            packages: {
+                                orderBy: { purchaseDate: 'desc' },
+                                take: 1
+                            }
+                        }
+                    }
+                }
+            });
+
+            if (locutor && locutor.supplier && locutor.supplier.packages.length > 0) {
+                const latestPackage = locutor.supplier.packages[0];
+                costPerCreditVal = latestPackage.costPerCredit;
+
+                // If cache is 0 (auto-calc) and we have credits to consume
+                if (finalCacheValor === 0 && creditsToConsume > 0) {
+                    finalCacheValor = parseFloat(costPerCreditVal) * creditsToConsume;
+                }
+            }
+        }
 
         // Validate required fields
         if (!clientId) {
@@ -356,7 +388,7 @@ router.post('/', async (req, res) => {
                 locutorId: locutorId || null,
                 tipo,
                 urgency,
-                cacheValor: parseFloat(cacheValor) || 0,
+                cacheValor: parseFloat(finalCacheValor),
                 vendaValor: parseFloat(vendaValor) || 0,
                 comentarios,
                 status,
@@ -367,13 +399,15 @@ router.post('/', async (req, res) => {
                 emiteBoleto,
                 dataFaturar: dataFaturar ? new Date(dataFaturar) : null,
                 vencimento: vencimento ? new Date(vencimento) : null,
-                serviceType,
                 pago,
                 statusEnvio,
                 pendenciaFinanceiro,
                 pendenciaMotivo,
-                numeroOS,
-                arquivoOS
+                numeroOS: numeroOS || null,
+                arquivoOS: arquivoOS || null,
+                serviceType: serviceType || null,
+                creditsConsumed: creditsToConsume,
+                costPerCreditSnapshot: costPerCreditVal
             },
             include: {
                 client: {
