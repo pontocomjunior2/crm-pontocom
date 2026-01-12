@@ -47,7 +47,7 @@ class BackupService {
     async createDump() {
         return new Promise((resolve, reject) => {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const filename = `backup-${timestamp}.sql`;
+            const filename = `backup-${timestamp}.dump`;
             const filePath = path.join(__dirname, '../backups', filename);
 
             if (!fs.existsSync(path.join(__dirname, '../backups'))) {
@@ -72,7 +72,7 @@ class BackupService {
                 }
 
                 const env = { ...process.env, PGPASSWORD: password };
-                const cmd = `pg_dump -h ${host} -p ${port} -U ${user} -d ${database} -F p -f "${filePath}"`;
+                const cmd = `pg_dump -h ${host} -p ${port} -U ${user} -d ${database} -F c -f "${filePath}"`;
 
                 exec(cmd, { env }, (error, stdout, stderr) => {
                     if (error) {
@@ -101,7 +101,7 @@ class BackupService {
             parents: this.config.folderId ? [this.config.folderId] : []
         };
         const media = {
-            mimeType: 'application/x-sql',
+            mimeType: 'application/octet-stream',
             body: fs.createReadStream(filePath)
         };
 
@@ -131,7 +131,7 @@ class BackupService {
 
         // List and delete remote backups
         try {
-            const query = `name contains 'backup-' and mimeType = 'application/x-sql' ${this.config.folderId ? `and '${this.config.folderId}' in parents` : ''}`;
+            const query = `name contains 'backup-' and name contains '.dump' ${this.config.folderId ? `and '${this.config.folderId}' in parents` : ''}`;
             const response = await this.drive.files.list({
                 q: query,
                 fields: 'files(id, name, createdTime)',
