@@ -1,36 +1,42 @@
 const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-const { S3Client, PutObjectCommand, ListObjectsV2Command, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const { google } = require('googleapis');
 const prisma = require('../db');
 
 /**
- * Service to handle database backups and MinIO integration
+ * Service to handle database backups and Google Drive integration
  */
 class BackupService {
     constructor() {
-        this.client = null;
+        this.drive = null;
         this.config = null;
     }
 
     /**
-     * Load configuration from database
+     * Load configuration from database and initialize Google Drive client
      */
     async loadConfig() {
         const config = await prisma.backupConfig.findUnique({
             where: { id: 'default' }
         });
-        if (config) {
+
+        if (config && config.serviceAccountKey && config.serviceAccountKey.trim() !== '') {
             this.config = config;
-            this.client = new S3Client({
-                endpoint: config.endpoint,
-                region: config.region,
-                credentials: {
-                    accessKeyId: config.accessKey,
-                    secretAccessKey: config.secretKey,
-                },
-                forcePathStyle: true, // Required for MinIO
-            });
+            try {
+                // Ensure the string is not empty or just whitespace before parsing
+                const credentials = JSON.parse(config.serviceAccountKey);
+                const auth = new google.auth.GoogleAuth({
+                    credentials,
+                    scopes: ['https://www.googleapis.com/auth/drive.file'],
+                });
+                this.drive = google.drive({ version: 'v3', auth });
+            } catch (err) {
+                console.error('Failed to parse Google Service Account Key:', err.message);
+                this.drive = null;
+            }
+        } else {
+            this.drive = null;
         }
         return config;
     }
@@ -48,55 +54,66 @@ class BackupService {
                 fs.mkdirSync(path.join(__dirname, '../backups'), { recursive: true });
             }
 
-            // Extract connection info from DATABASE_URL
             const dbUrl = process.env.DATABASE_URL;
-            // Format: postgresql://USER:PASSWORD@HOST:PORT/DATABASE
-            const regex = /postgresql:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/;
-            const match = dbUrl.match(regex);
+            if (!dbUrl) return reject(new Error('DATABASE_URL not found in environment'));
 
-            if (!match) {
-                return reject(new Error('Invalid DATABASE_URL format'));
-            }
+            try {
+                // Remove 'postgresql://' or 'postgres://' for URL parser if needed, 
+                // but new URL() handles it if it's well-formed.
+                const url = new URL(dbUrl.replace('postgresql://', 'http://').replace('postgres://', 'http://'));
+                const user = url.username;
+                const password = url.password;
+                const host = url.hostname;
+                const port = url.port || '5432';
+                const database = url.pathname.split('/')[1];
 
-            const [_, user, password, host, port, database] = match;
-
-            // Set PGPASSWORD env var for the command
-            const env = { ...process.env, PGPASSWORD: password };
-            const cmd = `pg_dump -h ${host} -p ${port} -U ${user} -d ${database} -F p -f "${filePath}"`;
-
-            exec(cmd, { env }, (error, stdout, stderr) => {
-                if (error) {
-                    console.error('pg_dump error:', stderr);
-                    return reject(error);
+                if (!user || !password || !host || !database) {
+                    throw new Error('Missing database connection components');
                 }
-                resolve({ filePath, filename });
-            });
+
+                const env = { ...process.env, PGPASSWORD: password };
+                const cmd = `pg_dump -h ${host} -p ${port} -U ${user} -d ${database} -F p -f "${filePath}"`;
+
+                exec(cmd, { env }, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error('pg_dump error:', stderr);
+                        return reject(new Error(`pg_dump failed: ${stderr || error.message}`));
+                    }
+                    resolve({ filePath, filename });
+                });
+            } catch (urlErr) {
+                console.error('DATABASE_URL parsing failed:', urlErr.message);
+                return reject(new Error('Invalid DATABASE_URL format. Please check your .env file.'));
+            }
         });
     }
 
     /**
-     * Upload file to MinIO
+     * Upload file to Google Drive
      */
-    async uploadToMinio(filePath, filename) {
-        if (!this.client || !this.config) {
-            throw new Error('Backup configuration not loaded or missing');
+    async uploadToDrive(filePath, filename) {
+        if (!this.drive || !this.config) {
+            throw new Error('Google Drive client not initialized or configuration missing');
         }
 
-        const fileStream = fs.createReadStream(filePath);
-        const stats = fs.statSync(filePath);
-
-        const uploadParams = {
-            Bucket: this.config.bucket,
-            Key: `backups/${filename}`,
-            Body: fileStream,
-            ContentLength: stats.size,
+        const fileMetadata = {
+            name: filename,
+            parents: this.config.folderId ? [this.config.folderId] : []
+        };
+        const media = {
+            mimeType: 'application/x-sql',
+            body: fs.createReadStream(filePath)
         };
 
         try {
-            await this.client.send(new PutObjectCommand(uploadParams));
-            return stats.size;
+            const response = await this.drive.files.create({
+                resource: fileMetadata,
+                media: media,
+                fields: 'id, size'
+            });
+            return response.data;
         } catch (error) {
-            console.error('MinIO upload error:', error);
+            console.error('Google Drive upload error:', error);
             throw error;
         }
     }
@@ -105,33 +122,32 @@ class BackupService {
      * Clean up local and remote backups (rotation)
      */
     async rotateBackups() {
-        if (!this.client || !this.config) return;
+        if (!this.drive || !this.config) return;
 
         const keepDays = this.config.keepDays || 7;
         const expirationDate = new Date();
         expirationDate.setDate(expirationDate.getDate() - keepDays);
 
-        // List remote backups
+        // List and delete remote backups
         try {
-            const listParams = {
-                Bucket: this.config.bucket,
-                Prefix: 'backups/',
-            };
-            const data = await this.client.send(new ListObjectsV2Command(listParams));
+            const query = `name contains 'backup-' and mimeType = 'application/x-sql' ${this.config.folderId ? `and '${this.config.folderId}' in parents` : ''}`;
+            const response = await this.drive.files.list({
+                q: query,
+                fields: 'files(id, name, createdTime)',
+                orderBy: 'createdTime desc'
+            });
 
-            if (data.Contents) {
-                for (const item of data.Contents) {
-                    if (item.LastModified < expirationDate) {
-                        console.log(`Deleting expired remote backup: ${item.Key}`);
-                        await this.client.send(new DeleteObjectCommand({
-                            Bucket: this.config.bucket,
-                            Key: item.Key
-                        }));
+            if (response.data.files) {
+                for (const file of response.data.files) {
+                    const createdTime = new Date(file.createdTime);
+                    if (createdTime < expirationDate) {
+                        console.log(`Deleting expired Drive backup: ${file.name}`);
+                        await this.drive.files.delete({ fileId: file.id });
                     }
                 }
             }
         } catch (error) {
-            console.error('Rotation error (MinIO):', error);
+            console.error('Rotation error (Google Drive):', error);
         }
 
         // Clean local folder
@@ -153,7 +169,7 @@ class BackupService {
      * Run full backup process
      */
     async runBackup() {
-        console.log('--- Starting Database Backup Process ---');
+        console.log('--- Starting Database Backup Process (Google Drive) ---');
         let filename = '';
         let filePath = '';
 
@@ -161,7 +177,7 @@ class BackupService {
             await this.loadConfig();
 
             if (!this.config || !this.config.enabled) {
-                console.log('Backup is disabled or not configured.');
+                console.log('Backup is disabled or not configured correctly.');
                 return;
             }
 
@@ -171,8 +187,9 @@ class BackupService {
 
             console.log(`Dump created: ${filename}`);
 
-            const size = await this.uploadToMinio(filePath, filename);
-            console.log(`Uploaded to MinIO. Size: ${size} bytes`);
+            const driveFile = await this.uploadToDrive(filePath, filename);
+            const size = parseInt(driveFile.size);
+            console.log(`Uploaded to Google Drive. File ID: ${driveFile.id}`);
 
             await prisma.backupLog.create({
                 data: {
@@ -185,7 +202,7 @@ class BackupService {
             await this.rotateBackups();
             console.log('Backup process completed successfully.');
 
-            return { success: true, filename };
+            return { success: true, filename, driveId: driveFile.id };
         } catch (error) {
             console.error('Backup process FAILED:', error);
 

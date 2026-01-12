@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import * as API from '../services/api';
 const { userAPI, tierAPI } = API;
-import { Plus, Trash2, Edit2, Shield, User as UserIcon, Mail, Loader2, X, Check, Search } from 'lucide-react';
+import { Plus, Trash2, Edit2, Shield, User as UserIcon, Mail, Loader2, X, Check, Search, Database } from 'lucide-react';
+import BackupSettings from './BackupSettings';
 
 const UserList = () => {
     const [users, setUsers] = useState([]);
@@ -186,7 +187,7 @@ const UserList = () => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {activeSubTab === 'users' ? (
+                    {activeSubTab === 'users' && (
                         <>
                             <div className="relative group">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" size={18} />
@@ -210,7 +211,8 @@ const UserList = () => {
                                 NOVO USUÁRIO
                             </button>
                         </>
-                    ) : (
+                    )}
+                    {activeSubTab === 'tiers' && (
                         <button
                             onClick={() => {
                                 setEditingTier(null);

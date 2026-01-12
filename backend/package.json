@@ -21,6 +21,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "fast-xml-parser": "^5.3.3",
+    "googleapis": "^170.0.0",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.562.0",
     "multer": "^2.0.2",

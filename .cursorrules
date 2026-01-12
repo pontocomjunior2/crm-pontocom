@@ -1,0 +1,11 @@
+# Project Rules - Database Safety
+
+## CRITICAL: Database Migrations
+- **NEVER** use `npx prisma migrate dev` on a database that contains production or important user data.
+- **ALWAYS** use `npx prisma db push` when adding new models or fields to the schema. This command synchronizes the schema without resetting the database.
+- If a change requires a destructive migration (like renaming a required field without a default), **ASK FOR USER CONFIRMATION** and backup validation before proceeding.
+- When the CLI warns that "All data will be lost", **ABORT IMMEDIATELY** and find a non-destructive way (db push or manual SQL migration).
+
+## AI behavior
+- Before running any Prisma command that modifies the database, check if the database is blank or contains data.
+- If data exists, prefer `db push`.

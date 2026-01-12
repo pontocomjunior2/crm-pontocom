@@ -19,25 +19,33 @@ router.get('/config', isAdmin, async (req, res) => {
         });
 
         if (!config) {
-            // Create default config if not exists
             config = await prisma.backupConfig.create({
                 data: {
                     id: 'default',
-                    endpoint: '',
-                    accessKey: '',
-                    secretKey: '',
-                    bucket: '',
                     enabled: false
                 }
             });
         }
 
-        // Don't send secret key to frontend (or send a placeholder)
+        // Mask the keys in the response
         const safeConfig = { ...config };
-        if (safeConfig.secretKey) safeConfig.secretKey = '********';
+        if (safeConfig.serviceAccountKey && safeConfig.serviceAccountKey.trim() !== '') {
+            try {
+                const parsed = JSON.parse(safeConfig.serviceAccountKey);
+                safeConfig.serviceAccountKey = JSON.stringify({
+                    project_id: parsed.project_id,
+                    client_email: parsed.client_email,
+                    private_key: '******** (PROTEGIDA PELO SISTEMA)'
+                }, null, 2);
+            } catch (e) {
+                // If it's not valid JSON but exists, show as masked anyway to avoid leakage if it's a raw string
+                safeConfig.serviceAccountKey = '******** (VALOR EXISTENTE)';
+            }
+        }
 
         res.json(safeConfig);
     } catch (error) {
+        console.error('GET config error:', error);
         res.status(500).json({ error: 'Falha ao buscar configuração de backup' });
     }
 });
@@ -45,30 +53,37 @@ router.get('/config', isAdmin, async (req, res) => {
 // PUT /api/backups/config - Update configuration
 router.put('/config', isAdmin, async (req, res) => {
     try {
-        const { endpoint, accessKey, secretKey, bucket, region, cronSchedule, keepDays, enabled } = req.body;
+        const { folderId, serviceAccountKey, cronSchedule, keepDays, enabled } = req.body;
 
+        // Prepare update data with basic fields
         const updateData = {
-            endpoint,
-            accessKey,
-            bucket,
-            region,
-            cronSchedule,
-            keepDays: parseInt(keepDays),
-            enabled
+            folderId: folderId || null,
+            cronSchedule: cronSchedule || '0 3 * * *',
+            keepDays: parseInt(keepDays) || 7,
+            enabled: !!enabled,
+            updatedAt: new Date()
         };
 
-        // Only update secretKey if it's not the placeholder
-        if (secretKey && secretKey !== '********') {
-            updateData.secretKey = secretKey;
+        // Only update key if it's NOT masked and NOT empty
+        const isNewKey = serviceAccountKey && !serviceAccountKey.includes('********') && serviceAccountKey.trim() !== '';
+        if (isNewKey) {
+            updateData.serviceAccountKey = serviceAccountKey;
         }
+
+        console.log('Upserting BackupConfig with FolderId:', updateData.folderId);
 
         const config = await prisma.backupConfig.upsert({
             where: { id: 'default' },
-            create: { id: 'default', ...updateData, secretKey: secretKey || '' },
+            create: {
+                id: 'default',
+                ...updateData,
+                // If creating and no key provided, default to null or empty
+                serviceAccountKey: isNewKey ? serviceAccountKey : null
+            },
             update: updateData
         });
 
-        res.json({ message: 'Configuração atualizada com sucesso', config });
+        res.json({ message: 'Configuração atualizada com sucesso', config: { ...config, serviceAccountKey: '********' } });
     } catch (error) {
         console.error('Update config error:', error);
         res.status(500).json({ error: 'Falha ao atualizar configuração' });
@@ -83,7 +98,6 @@ router.get('/logs', isAdmin, async (req, res) => {
             take: 50
         });
 
-        // Convert BigInt to string for JSON
         const serializedLogs = logs.map(log => ({
             ...log,
             size: log.size ? log.size.toString() : null
@@ -101,6 +115,7 @@ router.post('/trigger', isAdmin, async (req, res) => {
         const result = await backupService.runBackup();
         res.json({ message: 'Backup iniciado com sucesso', result });
     } catch (error) {
+        console.error('Trigger backup error:', error);
         res.status(500).json({ error: 'Falha ao realizar backup manual', details: error.message });
     }
 });

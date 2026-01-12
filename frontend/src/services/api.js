@@ -366,3 +366,14 @@ export const tierAPI = {
     }),
 };
 
+export const backupAPI = {
+    getConfig: async () => fetchAPI('/backups/config'),
+    updateConfig: async (data) => fetchAPI('/backups/config', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    getLogs: async () => fetchAPI('/backups/logs'),
+    trigger: async () => fetchAPI('/backups/trigger', {
+        method: 'POST',
+    }),
+};

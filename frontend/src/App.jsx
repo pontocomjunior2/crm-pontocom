@@ -24,8 +24,10 @@ import {
   Shield,
   LogOut,
   User as UserIcon,
-  Building2
+  Building2,
+  Database
 } from 'lucide-react';
+import BackupSettings from './components/BackupSettings';
 import SupplierList from './components/SupplierList';
 import ClientForm from './components/ClientForm';
 import OrderForm from './components/OrderForm';
@@ -78,12 +80,14 @@ const CRM = () => {
     { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, permission: 'accessFaturamento' },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} />, permission: 'accessRelatorios' },
     { id: 'usuarios', label: 'Usuários', icon: <Shield size={20} />, permission: 'accessUsuarios' },
+    { id: 'backup', label: 'Backup (GD)', icon: <Database size={20} />, adminOnly: true },
     { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} />, alwaysShow: true },
   ];
 
   const filteredMenuItems = menuItems.filter(item => {
     if (isAdmin) return true;
     if (item.alwaysShow) return true;
+    if (item.adminOnly) return false; // Fixed: only if isAdmin is true, but we handle it above
     if (!user?.tier) return false;
     return user.tier[item.permission];
   });
@@ -508,8 +512,14 @@ const CRM = () => {
               </div>
             )}
 
+            {activeTab === 'backup' && isAdmin && (
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 h-full max-w-[1400px] mx-auto w-full">
+                <BackupSettings />
+              </div>
+            )}
 
-            {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios'].includes(activeTab) && (
+
+            {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup'].includes(activeTab) && (
               <div className="p-20 text-center">
                 <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
                 <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>

@@ -191,14 +191,19 @@ model Tier {
 
 model BackupConfig {
   id                String   @id @default("default")
-  endpoint          String
-  accessKey         String
-  secretKey         String
-  bucket            String
-  region            String   @default("us-east-1")
-  cronSchedule      String   @default("0 3 * * *") // Daily at 3 AM
+  // MinIO / S3 (keeping for backward compatibility or optional use)
+  endpoint          String?
+  accessKey         String?
+  secretKey         String?
+  bucket            String?
+  region            String?  @default("us-east-1")
+  // Google Drive
+  folderId          String?
+  serviceAccountKey String?  @db.Text
+  // Common
+  cronSchedule      String   @default("0 3 * * *")
   keepDays          Int      @default(7)
-  enabled           Boolean  @default(true)
+  enabled           Boolean  @default(false)
   updatedAt         DateTime @updatedAt
 }
 
