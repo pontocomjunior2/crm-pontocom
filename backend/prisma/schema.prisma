@@ -188,3 +188,25 @@ model Tier {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 }
+
+model BackupConfig {
+  id                String   @id @default("default")
+  endpoint          String
+  accessKey         String
+  secretKey         String
+  bucket            String
+  region            String   @default("us-east-1")
+  cronSchedule      String   @default("0 3 * * *") // Daily at 3 AM
+  keepDays          Int      @default(7)
+  enabled           Boolean  @default(true)
+  updatedAt         DateTime @updatedAt
+}
+
+model BackupLog {
+  id                String   @id @default(uuid())
+  filename          String
+  size              BigInt?
+  status            String   // SUCCESS, FAILED
+  error             String?  @db.Text
+  createdAt         DateTime @default(now())
+}

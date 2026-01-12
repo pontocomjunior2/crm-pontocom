@@ -28,6 +28,9 @@ const userRoutes = require('./routes/users');
 const supplierRoutes = require('./routes/suppliers');
 const analyticsRoutes = require('./routes/analytics');
 const tierRoutes = require('./routes/tiers');
+const backupRoutes = require('./routes/backups');
+const backupService = require('./services/backupService');
+const cron = require('node-cron');
 // const uploadRoutes = require('./routes/upload');
 
 // Middleware de Autenticação
@@ -132,6 +135,7 @@ app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/suppliers', authenticateToken, supplierRoutes);
 app.use('/api/analytics', authenticateToken, analyticsRoutes);
 app.use('/api/tiers', authenticateToken, tierRoutes);
+app.use('/api/backups', authenticateToken, backupRoutes);
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Health check
@@ -148,7 +152,25 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Servidor Pontocom CRM rodando na porta ${PORT}`);
   console.log(`📡 API disponível em http://localhost:${PORT}/api`);
+
+  // Initialize Backup Scheduler
+  const initBackupScheduler = async () => {
+    try {
+      const config = await prisma.backupConfig.findUnique({ where: { id: 'default' } });
+      if (config && config.enabled && config.cronSchedule) {
+        console.log(`⏰ Backup Scheduler initialized: ${config.cronSchedule}`);
+        cron.schedule(config.cronSchedule, () => {
+          console.log('⏰ Running scheduled backup...');
+          backupService.runBackup().catch(err => console.error('Scheduled backup error:', err));
+        });
+      }
+    } catch (err) {
+      console.error('Failed to initialize backup scheduler:', err);
+    }
+  };
+
+  await initBackupScheduler();
 });
