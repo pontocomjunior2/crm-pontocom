@@ -56,7 +56,11 @@ model Order {
   locutor          String   // Nome do locutor (texto livre para histórico)
   locutorId        String?  // Link opcional para o novo modelo de Locutor
   locutorObj       Locutor? @relation(fields: [locutorId], references: [id])
-  tipo             String   // OFF ou PRODUZIDO
+  tipo             String   // OFF or PRODUZIDO
+  
+  supplierId       String?
+  supplier         Supplier? @relation(fields: [supplierId], references: [id])
+
   cacheValor       Decimal  @db.Decimal(10, 2)
   vendaValor       Decimal  @db.Decimal(10, 2)
   comentarios      String?  @db.Text
@@ -113,8 +117,7 @@ model Locutor {
   description     String?  @db.Text
   orders          Order[]
   
-  supplierId      String?
-  supplier        Supplier? @relation(fields: [supplierId], references: [id])
+  suppliers       Supplier[] @relation("LocutorSuppliers")
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -149,8 +152,9 @@ model Supplier {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
-  locutores Locutor[]
-  packages  CreditPackage[]
+  locutores       Locutor[] @relation("LocutorSuppliers")
+  packages        CreditPackage[]
+  orders          Order[]
 }
 
 model CreditPackage {

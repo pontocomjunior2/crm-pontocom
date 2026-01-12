@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
                     },
                     orderBy: { date: 'desc' }
                 },
-                supplier: {
+                suppliers: {
                     include: {
                         packages: {
                             orderBy: { purchaseDate: 'desc' },
@@ -60,7 +60,8 @@ router.get('/:id', async (req, res) => {
             include: {
                 _count: {
                     select: { orders: true }
-                }
+                },
+                suppliers: true
             }
         });
         if (!locutor) return res.status(404).json({ error: 'Locutor não encontrado' });
@@ -163,7 +164,9 @@ router.post('/', async (req, res) => {
                 tipoChavePix: data.tipoChavePix,
                 banco: data.banco,
                 description: data.description,
-                supplierId: data.supplierId || null
+                suppliers: data.supplierIds ? {
+                    connect: data.supplierIds.map(id => ({ id }))
+                } : undefined
             }
         });
         res.status(201).json(locutor);
@@ -193,7 +196,9 @@ router.put('/:id', async (req, res) => {
                 tipoChavePix: data.tipoChavePix,
                 banco: data.banco,
                 description: data.description,
-                supplierId: data.supplierId !== undefined ? (data.supplierId || null) : undefined
+                suppliers: data.supplierIds !== undefined ? {
+                    set: data.supplierIds.map(id => ({ id }))
+                } : undefined
             }
         });
         res.json(locutor);

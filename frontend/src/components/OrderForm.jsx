@@ -40,8 +40,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
         arquivoOS: order?.arquivoOS || '',
         serviceType: order?.serviceType || '',
         numeroVenda: order?.numeroVenda ? String(order.numeroVenda) : '',
-        creditsConsumed: order?.creditsConsumed || 0,
+        creditsConsumed: order?.creditsConsumed || 1,
         costPerCreditSnapshot: order?.costPerCreditSnapshot || null,
+        supplierId: order?.supplierId || '',
         cachePago: order?.cachePago || false
     });
 
@@ -108,18 +109,16 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
 
     // Calculate Cache based on Supplier Credits
     useEffect(() => {
-        if (formData.locutorId && locutores.length > 0) {
+        if (formData.locutorId && formData.supplierId && locutores.length > 0) {
             const locutor = locutores.find(l => l.id === formData.locutorId);
-            if (locutor?.supplier?.packages?.length > 0) {
-                const latestPackage = locutor.supplier.packages[0];
+            const supplier = locutor?.suppliers?.find(s => s.id === formData.supplierId);
+
+            if (supplier?.packages?.length > 0) {
+                const latestPackage = supplier.packages[0];
                 const cost = parseFloat(latestPackage.costPerCredit);
                 const credits = parseInt(formData.creditsConsumed) || 1;
                 const newCache = cost * credits;
 
-                // Update cache only if it's different to avoid loops, and maybe only if not manually edited?
-                // For now, let's auto-update to ensure consistency with the credit system.
-                // We can add a check if the user manually changed it, but that adds complexity.
-                // Let's assume if a supplier is linked, the credit system rules apply.
                 setFormData(prev => {
                     if (prev.cacheValor !== newCache) {
                         return { ...prev, cacheValor: newCache, costPerCreditSnapshot: cost };
@@ -128,7 +127,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                 });
             }
         }
-    }, [formData.locutorId, formData.creditsConsumed, locutores]);
+    }, [formData.locutorId, formData.supplierId, formData.creditsConsumed, locutores]);
 
     const loadClients = async () => {
         try {
@@ -200,14 +199,22 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
             const selectedLocutor = locutores.find(l => l.id === value);
             if (selectedLocutor) {
                 const cache = selectedLocutor.valorFixoMensal > 0 ? 0 : (formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
+
+                // Supplier logic
+                let newSupplierId = '';
+                if (selectedLocutor.suppliers?.length === 1) {
+                    newSupplierId = selectedLocutor.suppliers[0].id;
+                }
+
                 setFormData(prev => ({
                     ...prev,
                     locutorId: value,
                     locutor: selectedLocutor.name,
-                    cacheValor: cache
+                    cacheValor: cache,
+                    supplierId: newSupplierId
                 }));
             } else {
-                setFormData(prev => ({ ...prev, locutorId: '', locutor: '' }));
+                setFormData(prev => ({ ...prev, locutorId: '', locutor: '', supplierId: '' }));
             }
         } else if (name === 'tipo') {
             const currentLocutor = locutores.find(l => l.id === formData.locutorId);
@@ -278,6 +285,11 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
 
         if (formData.status === 'PEDIDO' && !formData.tipo) {
             newErrors.tipo = 'Selecione o tipo';
+        }
+
+        const selectedLocutor = locutores.find(l => l.id === formData.locutorId);
+        if (selectedLocutor?.suppliers?.length > 0 && !formData.supplierId) {
+            newErrors.supplierId = 'Selecione o fornecedor para este locutor';
         }
 
         if (formData.vendaValor <= 0) {
@@ -661,8 +673,30 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                                     )}
                                 </div>
 
-                                {/* Credits Input (Only if Supplier Linked) */}
-                                {locutores.find(l => l.id === formData.locutorId)?.supplier && (
+                                {/* Supplier Selection for Locutor */}
+                                {locutores.find(l => l.id === formData.locutorId)?.suppliers?.length > 0 && (
+                                    <div className="animate-in fade-in slide-in-from-top-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Fornecedor (Origem do áudio)
+                                        </label>
+                                        <select
+                                            name="supplierId"
+                                            value={formData.supplierId}
+                                            onChange={handleChange}
+                                            required
+                                            className={`w-full bg-input-background border ${errors.supplierId ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-medium`}
+                                        >
+                                            <option value="">Selecione o fornecedor...</option>
+                                            {locutores.find(l => l.id === formData.locutorId).suppliers.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            ))}
+                                        </select>
+                                        {errors.supplierId && <p className="text-red-400 text-xs mt-1">{errors.supplierId}</p>}
+                                    </div>
+                                )}
+
+                                {/* Credits Input (Only if Supplier is Selected) */}
+                                {formData.supplierId && (
                                     <div className="animate-in fade-in slide-in-from-top-2">
                                         <label className="block text-sm font-medium text-muted-foreground mb-2">
                                             Créditos Consumidos
@@ -677,14 +711,15 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                                                 className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-bold"
                                             />
                                             <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                                Package Cost:
+                                                Custo do Crédito:
                                                 <span className="font-bold text-green-400 ml-1">
-                                                    R$ {parseFloat(locutores.find(l => l.id === formData.locutorId)?.supplier?.packages[0]?.costPerCredit || 0).toFixed(2)}/cred
+                                                    R$ {parseFloat(locutores.find(l => l.id === formData.locutorId)?.suppliers?.find(s => s.id === formData.supplierId)?.packages[0]?.costPerCredit || 0).toFixed(2)}/un
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
-                                )}<div>
+                                )}
+                                <div>
                                     <label className="block text-sm font-medium text-muted-foreground mb-2">
                                         Tipo <span className="text-red-500">*</span>
                                     </label>

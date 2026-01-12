@@ -190,7 +190,8 @@ router.get('/', async (req, res) => {
                             cnpj_cpf: true
                         }
                     },
-                    locutorObj: true
+                    locutorObj: true,
+                    supplier: true
                 }
             }),
             prisma.order.count({ where })
@@ -297,6 +298,7 @@ router.post('/', async (req, res) => {
             numeroOS = null,
             arquivoOS = null,
             serviceType = null,
+            supplierId = null,
             creditsConsumed,
             costPerCreditSnapshot = null,
             cachePago = false
@@ -307,11 +309,12 @@ router.post('/', async (req, res) => {
         let creditsToConsume = (creditsConsumed !== undefined && creditsConsumed !== null) ? parseInt(creditsConsumed) : 0;
         let costPerCreditVal = null;
 
-        if (locutorId) {
+        if (locutorId && supplierId) {
             const locutor = await prisma.locutor.findUnique({
                 where: { id: locutorId },
                 include: {
-                    supplier: {
+                    suppliers: {
+                        where: { id: supplierId },
                         include: {
                             packages: {
                                 orderBy: { purchaseDate: 'desc' },
@@ -322,8 +325,10 @@ router.post('/', async (req, res) => {
                 }
             });
 
-            if (locutor && locutor.supplier && locutor.supplier.packages.length > 0) {
-                const latestPackage = locutor.supplier.packages[0];
+            const selectedSupplier = locutor?.suppliers.find(s => s.id === supplierId);
+
+            if (selectedSupplier && selectedSupplier.packages.length > 0) {
+                const latestPackage = selectedSupplier.packages[0];
                 costPerCreditVal = latestPackage.costPerCredit;
 
                 // If cache is 0 (auto-calc) and we have credits to consume
@@ -408,6 +413,7 @@ router.post('/', async (req, res) => {
                 numeroOS: numeroOS || null,
                 arquivoOS: arquivoOS || null,
                 serviceType: serviceType || null,
+                supplierId: supplierId || null,
                 creditsConsumed: creditsToConsume,
                 costPerCreditSnapshot: costPerCreditVal,
                 cachePago: cachePago || false
@@ -460,6 +466,7 @@ router.put('/:id', async (req, res) => {
             pendenciaMotivo,
             numeroOS,
             arquivoOS,
+            supplierId,
             cachePago,
             creditsConsumed,
             costPerCreditSnapshot
@@ -525,6 +532,7 @@ router.put('/:id', async (req, res) => {
                 pendenciaMotivo,
                 numeroOS,
                 arquivoOS,
+                supplierId,
                 cachePago: cachePago !== undefined ? cachePago : undefined,
                 creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined

@@ -234,7 +234,9 @@ router.get('/cache-report', async (req, res) => {
                 cacheValor: { gt: 0 },
                 locutorId: { not: null },
                 locutorObj: {
-                    supplierId: null // Not pre-paid
+                    suppliers: {
+                        none: {} // Not pre-paid (no suppliers linked)
+                    }
                 }
             },
             include: {

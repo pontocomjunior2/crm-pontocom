@@ -41,11 +41,9 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
         priceOff: 0,
         priceProduzido: 0,
         valorFixoMensal: 0,
-        chavePix: '',
-        tipoChavePix: 'CPF',
         banco: '',
         description: '',
-        supplierId: ''
+        supplierIds: []
     });
 
     useEffect(() => {
@@ -60,13 +58,9 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                 priceOff: locutor.priceOff ? Number(locutor.priceOff) : 0,
                 priceProduzido: locutor.priceProduzido ? Number(locutor.priceProduzido) : 0,
                 valorFixoMensal: locutor.valorFixoMensal ? Number(locutor.valorFixoMensal) : 0,
-                chavePix: locutor.chavePix || '',
-                tipoChavePix: locutor.tipoChavePix || 'CPF',
-                banco: locutor.banco || '',
-                tipoChavePix: locutor.tipoChavePix || 'CPF',
                 banco: locutor.banco || '',
                 description: locutor.description || '',
-                supplierId: locutor.supplierId || ''
+                supplierIds: locutor.suppliers ? locutor.suppliers.map(s => s.id) : []
             });
         }
     }, [locutor]);
@@ -216,23 +210,38 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                         <div className="space-y-4">
                             <h3 className="text-xs font-bold text-primary uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <span className="w-1 h-3 bg-primary rounded-full"></span>
-                                Vínculo com Fornecedor (Créditos)
+                                Vínculo com Fornecedores (Créditos)
                             </h3>
                             <div className="space-y-2">
-                                <label className="text-xs font-medium text-muted-foreground ml-1">Fornecedor (Estúdio Parceiro)</label>
-                                <select
-                                    name="supplierId"
-                                    value={formData.supplierId}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all"
-                                >
-                                    <option value="">Nenhum (Locutor Interno/Direto)</option>
+                                <label className="text-xs font-medium text-muted-foreground ml-1">Fornecedores (Estúdios Parceiros)</label>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-input-background border border-border rounded-xl p-4 max-h-48 overflow-y-auto custom-scrollbar shadow-inner">
                                     {suppliers.map(sup => (
-                                        <option key={sup.id} value={sup.id}>{sup.name}</option>
+                                        <label key={sup.id} className="flex items-center gap-3 cursor-pointer group hover:bg-white/5 p-2 rounded-lg transition-all">
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.supplierIds?.includes(sup.id)}
+                                                onChange={(e) => {
+                                                    const checked = e.target.checked;
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        supplierIds: checked
+                                                            ? [...(prev.supplierIds || []), sup.id]
+                                                            : (prev.supplierIds || []).filter(id => id !== sup.id)
+                                                    }));
+                                                }}
+                                                className="w-4 h-4 rounded border-border text-primary focus:ring-primary focus:ring-offset-0 bg-transparent transition-all"
+                                            />
+                                            <span className="text-sm text-foreground group-hover:text-primary transition-colors">{sup.name}</span>
+                                        </label>
                                     ))}
-                                </select>
-                                <p className="text-[10px] text-muted-foreground ml-1">
-                                    Se vinculado, o custo será calculado com base nos créditos deste fornecedor.
+                                    {suppliers.length === 0 && (
+                                        <p className="col-span-2 text-xs text-muted-foreground text-center py-2 italic opacity-50">
+                                            Nenhum fornecedor cadastrado.
+                                        </p>
+                                    )}
+                                </div>
+                                <p className="text-[10px] text-muted-foreground ml-1 italic">
+                                    * Se vinculado, o custo será calculado com base nos créditos do fornecedor selecionado no ato do pedido.
                                 </p>
                             </div>
                         </div>
