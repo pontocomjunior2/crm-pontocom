@@ -201,10 +201,27 @@ model BackupConfig {
   folderId          String?
   serviceAccountKey String?  @db.Text
   // Common
-  cronSchedule      String   @default("0 3 * * *")
+  cronSchedule      String?  @default("0 3 * * *") // Deprecated: use BackupSchedule instead
   keepDays          Int      @default(7)
   enabled           Boolean  @default(false)
   updatedAt         DateTime @updatedAt
+  
+  schedules         BackupSchedule[]
+}
+
+model BackupSchedule {
+  id          String   @id @default(uuid())
+  configId    String   @default("default")
+  config      BackupConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+  
+  hour        Int      // 0-23 (GMT-3)
+  minute      Int      // 0-59
+  days        String   // JSON array: [0,1,2,3,4,5,6] (domingo=0)
+  timezone    String   @default("America/Sao_Paulo")
+  enabled     Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model BackupLog {

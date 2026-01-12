@@ -156,17 +156,45 @@ app.listen(PORT, async () => {
   console.log(`🚀 Servidor Pontocom CRM rodando na porta ${PORT}`);
   console.log(`📡 API disponível em http://localhost:${PORT}/api`);
 
-  // Initialize Backup Scheduler
+  // Initialize Backup Scheduler with multiple schedules
   const initBackupScheduler = async () => {
     try {
-      const config = await prisma.backupConfig.findUnique({ where: { id: 'default' } });
-      if (config && config.enabled && config.cronSchedule) {
-        console.log(`⏰ Backup Scheduler initialized: ${config.cronSchedule}`);
-        cron.schedule(config.cronSchedule, () => {
-          console.log('⏰ Running scheduled backup...');
-          backupService.runBackup().catch(err => console.error('Scheduled backup error:', err));
-        });
+      const config = await prisma.backupConfig.findUnique({
+        where: { id: 'default' },
+        include: { schedules: true }
+      });
+
+      if (!config || !config.enabled) {
+        console.log('⏰ Backup system is disabled');
+        return;
       }
+
+      // Load active schedules
+      const activeSchedules = config.schedules.filter(s => s.enabled);
+
+      if (activeSchedules.length === 0) {
+        console.log('⏰ No active backup schedules found');
+        return;
+      }
+
+      console.log(`⏰ Initializing ${activeSchedules.length} backup schedule(s)...`);
+
+      activeSchedules.forEach(schedule => {
+        const days = JSON.parse(schedule.days);
+        const cronDays = days.length === 7 ? '*' : days.join(',');
+        const cronExpression = `${schedule.minute} ${schedule.hour} * * ${cronDays}`;
+
+        cron.schedule(cronExpression, () => {
+          console.log(`⏰ Running scheduled backup (${schedule.hour}:${String(schedule.minute).padStart(2, '0')} GMT-3)...`);
+          backupService.runBackup().catch(err => console.error('Scheduled backup error:', err));
+        }, {
+          timezone: schedule.timezone
+        });
+
+        const daysNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        const daysStr = days.map(d => daysNames[d]).join(', ');
+        console.log(`   ✓ ${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')} GMT-3 [${daysStr}]`);
+      });
     } catch (err) {
       console.error('Failed to initialize backup scheduler:', err);
     }

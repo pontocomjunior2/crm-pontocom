@@ -377,3 +377,18 @@ export const backupAPI = {
         method: 'POST',
     }),
 };
+
+export const scheduleAPI = {
+    list: async () => fetchAPI('/backups/schedules'),
+    create: async (data) => fetchAPI('/backups/schedules', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    update: async (id, data) => fetchAPI(`/backups/schedules/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    delete: async (id) => fetchAPI(`/backups/schedules/${id}`, {
+        method: 'DELETE',
+    }),
+};

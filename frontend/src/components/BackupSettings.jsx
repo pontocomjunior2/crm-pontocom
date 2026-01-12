@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { backupAPI } from '../services/api';
 import { Database, Cloud, Save, Play, Clock, Check, AlertCircle, Loader2, HardDrive, FileJson, Folder, ShieldCheck, PenTool } from 'lucide-react';
+import ScheduleManager from './ScheduleManager';
 
 const BackupSettings = () => {
     const [config, setConfig] = useState({
@@ -245,6 +246,11 @@ const BackupSettings = () => {
                             </button>
                         </div>
                     </form>
+                </div>
+
+                {/* Schedule Manager */}
+                <div className="bg-card/40 backdrop-blur-xl p-6 rounded-3xl border border-white/5 shadow-2xl">
+                    <ScheduleManager />
                 </div>
             </div>
 
