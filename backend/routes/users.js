@@ -20,6 +20,8 @@ router.get('/', isAdmin, async (req, res) => {
                 email: true,
                 name: true,
                 role: true,
+                tierId: true,
+                tier: true,
                 createdAt: true
             },
             orderBy: { createdAt: 'desc' }
@@ -47,13 +49,15 @@ router.post('/', isAdmin, async (req, res) => {
                 email,
                 password: hashedPassword,
                 name,
-                role: role || 'USER'
+                role: role || 'USER',
+                tierId: req.body.tierId || null
             },
             select: {
                 id: true,
                 email: true,
                 name: true,
-                role: true
+                role: true,
+                tier: true
             }
         });
 
@@ -78,8 +82,9 @@ router.put('/:id', async (req, res) => {
         const data = { email, name };
 
         // Only Admin can change role
-        if (req.user.role === 'ADMIN' && role) {
-            data.role = role;
+        if (req.user.role === 'ADMIN') {
+            if (role) data.role = role;
+            if (req.body.tierId !== undefined) data.tierId = req.body.tierId;
         }
 
         if (password) {
@@ -93,7 +98,8 @@ router.put('/:id', async (req, res) => {
                 id: true,
                 email: true,
                 name: true,
-                role: true
+                role: true,
+                tier: true
             }
         });
 

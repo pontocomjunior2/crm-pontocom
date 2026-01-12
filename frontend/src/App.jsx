@@ -69,6 +69,25 @@ const CRM = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loadingDashboard, setLoadingDashboard] = useState(true);
 
+  const menuItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, permission: 'accessDashboard' },
+    { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} />, permission: 'accessPedidos' },
+    { id: 'clientes', label: 'Clientes', icon: <Users size={20} />, permission: 'accessClientes' },
+    { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} />, permission: 'accessLocutores' },
+    { id: 'fornecedores', label: 'Fornecedores', icon: <Building2 size={20} />, permission: 'accessFornecedores' },
+    { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, permission: 'accessFaturamento' },
+    { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} />, permission: 'accessRelatorios' },
+    { id: 'usuarios', label: 'Usuários', icon: <Shield size={20} />, permission: 'accessUsuarios' },
+    { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} />, alwaysShow: true },
+  ];
+
+  const filteredMenuItems = menuItems.filter(item => {
+    if (isAdmin) return true;
+    if (item.alwaysShow) return true;
+    if (!user?.tier) return false;
+    return user.tier[item.permission];
+  });
+
   useEffect(() => {
     if (!user) return;
 
@@ -87,6 +106,18 @@ const CRM = () => {
 
     fetchDashboard();
   }, [refreshTrigger, user, dateRange]);
+
+  // Tab Access Control
+  useEffect(() => {
+    if (!user || activeTab === 'perfil') return;
+
+    const isPermitted = filteredMenuItems.some(item => item.id === activeTab);
+    if (!isPermitted) {
+      // If the current tab is not allowed, try to find the first allowed one
+      const firstAllowed = filteredMenuItems.find(i => i.id !== 'perfil')?.id || 'perfil';
+      setActiveTab(firstAllowed);
+    }
+  }, [user, activeTab, filteredMenuItems]);
 
   const handleDateFilterChange = (value) => {
     const today = new Date();
@@ -193,20 +224,6 @@ const CRM = () => {
   const recentOrders = dashboardData?.recentOrders || [];
   const pendingInvoices = dashboardData?.pendingInvoices || [];
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} /> },
-    { id: 'clientes', label: 'Clientes', icon: <Users size={20} /> },
-    { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} /> },
-    { id: 'fornecedores', label: 'Fornecedores', icon: <Building2 size={20} /> },
-    { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} /> },
-    { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} /> },
-    { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} /> },
-  ];
-
-  if (isAdmin) {
-    menuItems.push({ id: 'usuarios', label: 'Usuários', icon: <Shield size={20} /> });
-  }
 
   return (
     <div className="flex h-screen w-full bg-background overflow-hidden font-body text-foreground">
@@ -218,11 +235,11 @@ const CRM = () => {
             </div>
           </div>
           <nav className="flex-1 p-4 space-y-1">
-            {menuItems.map((item) => (
+            {filteredMenuItems.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${activeTab === item.id
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-1 ${activeTab === item.id
                   ? 'bg-primary/10 text-primary border border-primary/30'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
                   }`}

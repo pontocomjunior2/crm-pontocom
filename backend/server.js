@@ -27,6 +27,8 @@ const serviceTypesRoutes = require('./routes/serviceTypes');
 const userRoutes = require('./routes/users');
 const supplierRoutes = require('./routes/suppliers');
 const analyticsRoutes = require('./routes/analytics');
+const tierRoutes = require('./routes/tiers');
+// const uploadRoutes = require('./routes/upload');
 
 // Middleware de Autenticação
 const authenticateToken = (req, res, next) => {
@@ -69,7 +71,10 @@ app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await prisma.user.findUnique({ where: { email } });
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { tier: true }
+    });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
 
     const validPassword = await bcrypt.compare(password, user.password);
@@ -83,9 +88,16 @@ app.post('/api/auth/login', async (req, res) => {
 
     res.json({
       token,
-      user: { id: user.id, email: user.email, name: user.name, role: user.role }
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        tier: user.tier
+      }
     });
   } catch (error) {
+    console.error('[Login Error]:', error);
     res.status(500).json({ error: 'Erro interno no servidor' });
   }
 });
@@ -94,7 +106,13 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.userId },
-      select: { id: true, email: true, name: true, role: true }
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        tier: true
+      }
     });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
     res.json(user);
@@ -113,6 +131,8 @@ app.use('/api/service-types', authenticateToken, serviceTypesRoutes);
 app.use('/api/users', authenticateToken, userRoutes);
 app.use('/api/suppliers', authenticateToken, supplierRoutes);
 app.use('/api/analytics', authenticateToken, analyticsRoutes);
+app.use('/api/tiers', authenticateToken, tierRoutes);
+// app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

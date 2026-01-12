@@ -350,3 +350,19 @@ export const analyticsAPI = {
     getPerformanceMetrics: async (params = {}) => fetchAPI(`/analytics/performance-metrics${buildQueryString(params)}`),
     getCacheReport: async (params = {}) => fetchAPI(`/analytics/cache-report${buildQueryString(params)}`)
 };
+
+export const tierAPI = {
+    list: async () => fetchAPI('/tiers'),
+    create: async (data) => fetchAPI('/tiers', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    update: async (id, data) => fetchAPI(`/tiers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+    delete: async (id) => fetchAPI(`/tiers/${id}`, {
+        method: 'DELETE',
+    }),
+};
+

@@ -132,6 +132,8 @@ model User {
   password  String
   name      String?
   role      Role     @default(USER)
+  tierId    String?
+  tier      Tier?    @relation(fields: [tierId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -162,4 +164,23 @@ model CreditPackage {
   purchaseDate    DateTime @default(now())
   
   createdAt       DateTime @default(now())
+}
+
+model Tier {
+  id                String   @id @default(uuid())
+  name              String   @unique
+  
+  // Permissions
+  accessDashboard   Boolean  @default(false)
+  accessPedidos     Boolean  @default(false)
+  accessClientes    Boolean  @default(false)
+  accessLocutores   Boolean  @default(false)
+  accessFornecedores Boolean  @default(false)
+  accessFaturamento Boolean  @default(false)
+  accessRelatorios  Boolean  @default(false)
+  accessUsuarios    Boolean  @default(false)
+
+  users             User[]
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
