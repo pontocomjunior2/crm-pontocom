@@ -109,7 +109,8 @@ class BackupService {
             const response = await this.drive.files.create({
                 resource: fileMetadata,
                 media: media,
-                fields: 'id, size'
+                fields: 'id, size',
+                supportsAllDrives: true
             });
             return response.data;
         } catch (error) {
@@ -134,7 +135,9 @@ class BackupService {
             const response = await this.drive.files.list({
                 q: query,
                 fields: 'files(id, name, createdTime)',
-                orderBy: 'createdTime desc'
+                orderBy: 'createdTime desc',
+                supportsAllDrives: true,
+                includeItemsFromAllDrives: true
             });
 
             if (response.data.files) {
