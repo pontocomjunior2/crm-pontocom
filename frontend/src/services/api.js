@@ -331,9 +331,22 @@ export const supplierAPI = {
     }
 };
 
+const buildQueryString = (params) => {
+    if (typeof params === 'string') return params;
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+            searchParams.append(key, value);
+        }
+    });
+    const query = searchParams.toString();
+    return query ? `?${query}` : '';
+};
+
 export const analyticsAPI = {
-    getFinancialSummary: (query = '') => fetchAPI(`/analytics/financial-summary${query}`),
-    getSalesTrends: (months = 6) => fetchAPI(`/analytics/sales-trends?months=${months}`),
-    getTopClients: (limit = 10) => fetchAPI(`/analytics/top-clients?limit=${limit}`),
-    getPerformanceMetrics: () => fetchAPI('/analytics/performance-metrics')
+    getFinancialSummary: async (params = {}) => fetchAPI(`/analytics/financial-summary${buildQueryString(params)}`),
+    getSalesTrends: async (params = {}) => fetchAPI(`/analytics/sales-trends${buildQueryString(params)}`),
+    getTopClients: async (params = {}) => fetchAPI(`/analytics/top-clients${buildQueryString(params)}`),
+    getPerformanceMetrics: async (params = {}) => fetchAPI(`/analytics/performance-metrics${buildQueryString(params)}`),
+    getCacheReport: async (params = {}) => fetchAPI(`/analytics/cache-report${buildQueryString(params)}`)
 };

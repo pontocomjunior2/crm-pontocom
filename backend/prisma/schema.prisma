@@ -67,6 +67,7 @@ model Order {
   
   faturado         Boolean  @default(false)
   entregue         Boolean  @default(false)
+  cachePago        Boolean  @default(false)
   
   // Financeiro extra
   dispensaNF       Boolean  @default(false)

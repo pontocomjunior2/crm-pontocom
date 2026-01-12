@@ -10,8 +10,16 @@ router.get('/financial-summary', async (req, res) => {
         const dateFilter = {};
         if (startDate || endDate) {
             dateFilter.date = {};
-            if (startDate) dateFilter.date.gte = new Date(startDate);
-            if (endDate) dateFilter.date.lte = new Date(endDate);
+            if (startDate) {
+                const sDate = new Date(startDate);
+                if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
+            }
+            if (endDate) {
+                const eDate = new Date(endDate);
+                if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
+            }
+            // Remove date filter if both were invalid
+            if (Object.keys(dateFilter.date).length === 0) delete dateFilter.date;
         }
 
         // Get all sales (VENDA) in the period
@@ -59,6 +67,7 @@ router.get('/financial-summary', async (req, res) => {
 
         const netProfit = totalRevenue - totalCosts;
         const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
+        const commission = netProfit > 0 ? netProfit * 0.04 : 0;
 
         res.json({
             totalRevenue,
@@ -66,6 +75,7 @@ router.get('/financial-summary', async (req, res) => {
             netProfit,
             pendingReceivables,
             averageTicket,
+            commission,
             orderCount: orders.length
         });
     } catch (error) {
@@ -77,14 +87,27 @@ router.get('/financial-summary', async (req, res) => {
 // GET /api/analytics/sales-trends - For line charts
 router.get('/sales-trends', async (req, res) => {
     try {
-        const { months = 6 } = req.query;
+        const { months = 6, startDate, endDate } = req.query;
         const now = new Date();
-        const startDate = new Date(now.getFullYear(), now.getMonth() - parseInt(months) + 1, 1);
+        const defaultStart = new Date(now.getFullYear(), now.getMonth() - parseInt(months) + 1, 1);
+
+        const dateFilter = {
+            date: { gte: defaultStart }
+        };
+
+        if (startDate) {
+            const sDate = new Date(startDate);
+            if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
+        }
+        if (endDate) {
+            const eDate = new Date(endDate);
+            if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
+        }
 
         const orders = await prisma.order.findMany({
             where: {
                 status: 'VENDA',
-                date: { gte: startDate }
+                ...dateFilter
             },
             orderBy: { date: 'asc' }
         });
@@ -141,15 +164,35 @@ router.get('/top-clients', async (req, res) => {
 // GET /api/analytics/performance-metrics
 router.get('/performance-metrics', async (req, res) => {
     try {
+        const { startDate, endDate } = req.query;
+        const dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.date = {};
+            if (startDate) {
+                const sDate = new Date(startDate);
+                if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
+            }
+            if (endDate) {
+                const eDate = new Date(endDate);
+                if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
+            }
+        }
+
         const types = await prisma.order.groupBy({
             by: ['tipo'],
             _count: true,
-            where: { status: 'VENDA' }
+            where: {
+                status: 'VENDA',
+                ...dateFilter
+            }
         });
 
         const distribution = await prisma.order.groupBy({
             by: ['status'],
-            _count: true
+            _count: true,
+            where: {
+                ...dateFilter
+            }
         });
 
         res.json({
@@ -159,6 +202,76 @@ router.get('/performance-metrics', async (req, res) => {
     } catch (error) {
         console.error('Error in performance-metrics:', error);
         res.status(500).json({ error: 'Failed to fetch performance metrics' });
+    }
+});
+
+// GET /api/analytics/cache-report - Locutores needing payment
+router.get('/cache-report', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        const dateFilter = {};
+        if (startDate || endDate) {
+            dateFilter.date = {};
+            if (startDate) {
+                const sDate = new Date(startDate);
+                if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
+            }
+            if (endDate) {
+                const eDate = new Date(endDate);
+                if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
+            }
+            // Remove date filter if both were invalid
+            if (Object.keys(dateFilter.date).length === 0) delete dateFilter.date;
+        }
+
+        // Get orders with unpaid caches, excluding supplier-linked locutores
+        const orders = await prisma.order.findMany({
+            where: {
+                ...dateFilter,
+                status: 'VENDA', // Only sales generate cache payments
+                cachePago: false,
+                cacheValor: { gt: 0 },
+                locutorId: { not: null },
+                locutorObj: {
+                    supplierId: null // Not pre-paid
+                }
+            },
+            include: {
+                locutorObj: true
+            }
+        });
+
+        // Group by locutor
+        const cacheGroups = orders.reduce((acc, order) => {
+            const locId = order.locutorId;
+            if (!acc[locId]) {
+                acc[locId] = {
+                    locutorId: locId,
+                    name: order.locutorObj.name,
+                    pixKey: order.locutorObj.chavePix,
+                    pixType: order.locutorObj.tipoChavePix,
+                    bank: order.locutorObj.banco,
+                    pendingValue: 0,
+                    orderCount: 0,
+                    orders: []
+                };
+            }
+            acc[locId].pendingValue += parseFloat(order.cacheValor);
+            acc[locId].orderCount += 1;
+            acc[locId].orders.push({
+                id: order.id,
+                title: order.title,
+                date: order.date,
+                value: order.cacheValor
+            });
+            return acc;
+        }, {});
+
+        res.json(Object.values(cacheGroups));
+    } catch (error) {
+        console.error('Error fetching cache report:', error);
+        res.status(500).json({ error: 'Failed to fetch cache report' });
     }
 });
 

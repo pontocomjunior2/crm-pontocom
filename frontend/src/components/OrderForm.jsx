@@ -40,8 +40,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
         arquivoOS: order?.arquivoOS || '',
         serviceType: order?.serviceType || '',
         numeroVenda: order?.numeroVenda ? String(order.numeroVenda) : '',
-        creditsConsumed: order?.creditsConsumed || 1,
-        costPerCreditSnapshot: order?.costPerCreditSnapshot || null
+        creditsConsumed: order?.creditsConsumed || 0,
+        costPerCreditSnapshot: order?.costPerCreditSnapshot || null,
+        cachePago: order?.cachePago || false
     });
 
     const [osFile, setOsFile] = useState(null);
@@ -985,36 +986,61 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                         </div>
                     </div>
 
-                    {/* Billing Pendency */}
-                    <div className="mb-6 p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10">
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                            <input
-                                type="checkbox"
-                                name="pendenciaFinanceiro"
-                                checked={formData.pendenciaFinanceiro}
-                                onChange={handleChange}
-                                className="w-5 h-5 text-orange-500 focus:ring-orange-500 focus:ring-2 rounded-lg bg-input-background border-border"
-                            />
-                            <div className="flex flex-col">
-                                <span className="text-orange-400 font-bold text-sm flex items-center gap-2">
-                                    <AlertCircle size={16} />
-                                    Pendência para Financeiro
-                                </span>
-                                <span className="text-[11px] text-muted-foreground">Marque se faltam informações (OS, aprovação, etc.) para faturar</span>
-                            </div>
-                        </label>
+                    {/* Status/Financial Flags */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 h-full">
+                            <label className="flex items-start gap-4 cursor-pointer group">
+                                <div className="mt-1">
+                                    <input
+                                        type="checkbox"
+                                        name="pendenciaFinanceiro"
+                                        checked={formData.pendenciaFinanceiro}
+                                        onChange={handleChange}
+                                        className="w-5 h-5 rounded-lg bg-input-background border-border text-orange-500 focus:ring-orange-500/20 focus:ring-offset-0 transition-all cursor-pointer"
+                                    />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
+                                        <AlertCircle size={16} />
+                                        Pendência para Financeiro
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground">Marque se faltam informações (OS, aprovação, etc.) para faturar</span>
+                                </div>
+                            </label>
 
-                        {formData.pendenciaFinanceiro && (
-                            <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
-                                <textarea
-                                    name="pendenciaMotivo"
-                                    value={formData.pendenciaMotivo}
-                                    onChange={handleChange}
-                                    placeholder="Descreva o que falta para o faturamento (ex: Aguardando número de OS, Aprovação pendente...)"
-                                    className="w-full bg-input-background border border-border rounded-xl p-4 text-foreground text-sm focus:border-orange-500 outline-none transition-all min-h-[100px]"
-                                />
-                            </div>
-                        )}
+                            {formData.pendenciaFinanceiro && (
+                                <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                                    <textarea
+                                        name="pendenciaMotivo"
+                                        value={formData.pendenciaMotivo}
+                                        onChange={handleChange}
+                                        placeholder="Descreva o que falta para o faturamento..."
+                                        className="w-full bg-input-background border border-border rounded-xl p-4 text-foreground text-sm focus:border-orange-500 outline-none transition-all min-h-[100px]"
+                                    />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 h-full">
+                            <label className="flex items-start gap-4 cursor-pointer group">
+                                <div className="mt-1">
+                                    <input
+                                        type="checkbox"
+                                        name="cachePago"
+                                        checked={formData.cachePago}
+                                        onChange={handleChange}
+                                        className="w-5 h-5 rounded-lg bg-input-background border-border text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 transition-all cursor-pointer"
+                                    />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-emerald-400 flex items-center gap-2 mb-1">
+                                        <DollarSign size={16} />
+                                        Cachê já pago?
+                                    </span>
+                                    <span className="text-[11px] text-muted-foreground">Sinalize se o locutor já recebeu este cachê (ex: pagamento antecipado)</span>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     {/* OS/PP Registration */}

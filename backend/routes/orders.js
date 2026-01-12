@@ -297,12 +297,14 @@ router.post('/', async (req, res) => {
             numeroOS = null,
             arquivoOS = null,
             serviceType = null,
-            creditsConsumed = 1
+            creditsConsumed,
+            costPerCreditSnapshot = null,
+            cachePago = false
         } = req.body;
 
         // Calculate Cache if Supplier Linked
         let finalCacheValor = cacheValor ? parseFloat(cacheValor) : 0;
-        let creditsToConsume = status === 'PEDIDO' || status === 'VENDA' ? (creditsConsumed ? parseInt(creditsConsumed) : 1) : 0;
+        let creditsToConsume = (creditsConsumed !== undefined && creditsConsumed !== null) ? parseInt(creditsConsumed) : 0;
         let costPerCreditVal = null;
 
         if (locutorId) {
@@ -407,7 +409,8 @@ router.post('/', async (req, res) => {
                 arquivoOS: arquivoOS || null,
                 serviceType: serviceType || null,
                 creditsConsumed: creditsToConsume,
-                costPerCreditSnapshot: costPerCreditVal
+                costPerCreditSnapshot: costPerCreditVal,
+                cachePago: cachePago || false
             },
             include: {
                 client: {
@@ -456,7 +459,10 @@ router.put('/:id', async (req, res) => {
             pendenciaFinanceiro,
             pendenciaMotivo,
             numeroOS,
-            arquivoOS
+            arquivoOS,
+            cachePago,
+            creditsConsumed,
+            costPerCreditSnapshot
         } = req.body;
 
         // Check if order exists
@@ -518,7 +524,10 @@ router.put('/:id', async (req, res) => {
                 pendenciaFinanceiro,
                 pendenciaMotivo,
                 numeroOS,
-                arquivoOS
+                arquivoOS,
+                cachePago: cachePago !== undefined ? cachePago : undefined,
+                creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
+                costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined
             },
             include: {
                 client: {

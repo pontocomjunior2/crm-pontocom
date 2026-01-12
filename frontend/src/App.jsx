@@ -486,7 +486,7 @@ const CRM = () => {
             )}
 
             {activeTab === 'relatorios' && (
-              <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 h-full max-w-[1400px] mx-auto w-full">
                 <Relatorios />
               </div>
             )}
