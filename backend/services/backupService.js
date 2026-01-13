@@ -2,6 +2,7 @@ const { exec } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const { google } = require('googleapis');
+const cron = require('node-cron');
 const prisma = require('../db');
 
 /**
@@ -11,6 +12,7 @@ class BackupService {
     constructor() {
         this.drive = null;
         this.config = null;
+        this.cronJobs = []; // Store active cron jobs
     }
 
     /**
@@ -219,6 +221,77 @@ class BackupService {
 
             throw error;
         }
+    }
+
+    /**
+     * Stop all active cron jobs
+     */
+    stopScheduler() {
+        console.log(`⏰ Stopping ${this.cronJobs.length} active backup schedule(s)...`);
+        this.cronJobs.forEach(job => {
+            if (job && job.stop) {
+                job.stop();
+            }
+        });
+        this.cronJobs = [];
+    }
+
+    /**
+     * Initialize backup scheduler from database
+     */
+    async initializeScheduler() {
+        try {
+            const config = await prisma.backupConfig.findUnique({
+                where: { id: 'default' },
+                include: { schedules: true }
+            });
+
+            if (!config || !config.enabled) {
+                console.log('⏰ Backup system is disabled');
+                return;
+            }
+
+            // Load active schedules
+            const activeSchedules = config.schedules.filter(s => s.enabled);
+
+            if (activeSchedules.length === 0) {
+                console.log('⏰ No active backup schedules found');
+                return;
+            }
+
+            console.log(`⏰ Initializing ${activeSchedules.length} backup schedule(s)...`);
+
+            const daysNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+            activeSchedules.forEach(schedule => {
+                const days = JSON.parse(schedule.days);
+                const cronDays = days.length === 7 ? '*' : days.join(',');
+                const cronExpression = `${schedule.minute} ${schedule.hour} * * ${cronDays}`;
+
+                const job = cron.schedule(cronExpression, () => {
+                    console.log(`⏰ Running scheduled backup (${schedule.hour}:${String(schedule.minute).padStart(2, '0')} ${schedule.timezone})...`);
+                    this.runBackup().catch(err => console.error('Scheduled backup error:', err));
+                }, {
+                    timezone: schedule.timezone
+                });
+
+                this.cronJobs.push(job);
+
+                const daysStr = days.map(d => daysNames[d]).join(', ');
+                console.log(`   ✓ ${String(schedule.hour).padStart(2, '0')}:${String(schedule.minute).padStart(2, '0')} ${schedule.timezone} [${daysStr}]`);
+            });
+        } catch (err) {
+            console.error('Failed to initialize backup scheduler:', err);
+        }
+    }
+
+    /**
+     * Reload scheduler (stop all jobs and reinitialize)
+     */
+    async reloadScheduler() {
+        console.log('⏰ Reloading backup scheduler...');
+        this.stopScheduler();
+        await this.initializeScheduler();
     }
 }
 

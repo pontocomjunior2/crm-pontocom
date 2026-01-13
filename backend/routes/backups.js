@@ -83,6 +83,9 @@ router.put('/config', isAdmin, async (req, res) => {
             update: updateData
         });
 
+        // Reload scheduler when enabled status changes
+        await backupService.reloadScheduler();
+
         res.json({ message: 'Configuração atualizada com sucesso', config: { ...config, serviceAccountKey: '********' } });
     } catch (error) {
         console.error('Update config error:', error);
@@ -169,6 +172,9 @@ router.post('/schedules', isAdmin, async (req, res) => {
             }
         });
 
+        // Reload scheduler to register new cron job
+        await backupService.reloadScheduler();
+
         res.json({ ...schedule, days: JSON.parse(schedule.days) });
     } catch (error) {
         console.error('Create schedule error:', error);
@@ -193,6 +199,9 @@ router.put('/schedules/:id', isAdmin, async (req, res) => {
             data: updateData
         });
 
+        // Reload scheduler to update cron job
+        await backupService.reloadScheduler();
+
         res.json({ ...schedule, days: JSON.parse(schedule.days) });
     } catch (error) {
         console.error('Update schedule error:', error);
@@ -205,6 +214,10 @@ router.delete('/schedules/:id', isAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         await prisma.backupSchedule.delete({ where: { id } });
+
+        // Reload scheduler to remove cron job
+        await backupService.reloadScheduler();
+
         res.json({ message: 'Agendamento removido com sucesso' });
     } catch (error) {
         console.error('Delete schedule error:', error);
