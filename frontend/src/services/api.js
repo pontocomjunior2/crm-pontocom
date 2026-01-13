@@ -26,8 +26,9 @@ const fetchAPI = async (endpoint, options = {}) => {
 
 // Dashboard API calls
 export const dashboardAPI = {
-    get: async () => {
-        return fetchAPI('/dashboard');
+    get: async (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return fetchAPI(`/dashboard${queryString ? `?${queryString}` : ''}`);
     }
 };
 

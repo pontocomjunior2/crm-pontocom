@@ -60,10 +60,10 @@ const CRM = () => {
 
   // Date Filter State
   const [dateRange, setDateRange] = useState({
-    label: 'Últimos 30 dias',
-    value: '30days',
-    start: new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
+    label: 'Todo o Período',
+    value: 'all',
+    start: '',
+    end: ''
   });
   const [isCustomDate, setIsCustomDate] = useState(false);
   const [showDateFilter, setShowDateFilter] = useState(false);
@@ -98,8 +98,10 @@ const CRM = () => {
     const fetchDashboard = async () => {
       setLoadingDashboard(true);
       try {
-        const query = `?startDate=${dateRange.start}&endDate=${dateRange.end}`;
-        const data = await dashboardAPI.get(query);
+        const params = {};
+        if (dateRange.start) params.startDate = dateRange.start;
+        if (dateRange.end) params.endDate = dateRange.end;
+        const data = await dashboardAPI.get(params);
         setDashboardData(data);
       } catch (error) {
         console.error('Error fetching dashboard:', error);
@@ -130,6 +132,11 @@ const CRM = () => {
     let label = '';
 
     switch (value) {
+      case 'all':
+        start = '';
+        end = '';
+        label = 'Todo o Período';
+        break;
       case '7days':
         start = new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0];
         label = 'Últimos 7 dias';
@@ -242,7 +249,12 @@ const CRM = () => {
             {filteredMenuItems.map((item) => (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  if (item.id === 'dashboard') {
+                    setRefreshTrigger(prev => prev + 1);
+                  }
+                }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all mb-1 ${activeTab === item.id
                   ? 'bg-primary/10 text-primary border border-primary/30'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-foreground'
@@ -322,6 +334,7 @@ const CRM = () => {
                         <div className="absolute right-0 top-12 w-64 bg-card border border-border rounded-xl shadow-2xl z-50 p-2 animate-in slide-in-from-top-2">
                           <div className="space-y-1 mb-2">
                             {[
+                              { label: 'Todo o Período', val: 'all' },
                               { label: 'Últimos 7 dias', val: '7days' },
                               { label: 'Últimos 15 dias', val: '15days' },
                               { label: 'Últimos 30 dias', val: '30days' },
