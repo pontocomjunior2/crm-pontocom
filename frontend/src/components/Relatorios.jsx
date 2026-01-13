@@ -22,8 +22,6 @@ import {
     CheckCircle2,
     Clock,
     User,
-    ChevronDown,
-    ChevronUp,
     Copy,
     Check,
     X

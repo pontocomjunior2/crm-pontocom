@@ -183,7 +183,7 @@ router.get('/', async (req, res) => {
             orderBy[sortBy] = sortOrder;
         }
 
-        const [ordersRaw, total] = await Promise.all([
+        const [ordersRaw, total, activeCount, salesCount, billedCount] = await Promise.all([
             prisma.order.findMany({
                 where,
                 skip,
@@ -202,7 +202,10 @@ router.get('/', async (req, res) => {
                     supplier: true
                 }
             }),
-            prisma.order.count({ where })
+            prisma.order.count({ where }),
+            prisma.order.count({ where: { ...where, status: 'PEDIDO' } }),
+            prisma.order.count({ where: { ...where, status: 'VENDA' } }),
+            prisma.order.count({ where: { ...where, faturado: true } })
         ]);
 
         // Dynamic cache calculation for monthly fixed-fee locutores
@@ -246,6 +249,12 @@ router.get('/', async (req, res) => {
                 page: parseInt(page),
                 limit: parseInt(limit),
                 totalPages: Math.ceil(total / parseInt(limit))
+            },
+            stats: {
+                total,
+                active: activeCount,
+                sales: salesCount,
+                billed: billedCount
             }
         });
     } catch (error) {

@@ -53,6 +53,13 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
     const [observationModal, setObservationModal] = useState(null);
     const [pendencyModal, setPendencyModal] = useState(null);
 
+    const [stats, setStats] = useState({
+        total: 0,
+        active: 0,
+        sales: 0,
+        billed: 0
+    });
+
     const fetchOrders = useCallback(async () => {
         setLoading(true);
         try {
@@ -70,6 +77,9 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                 total: response.pagination.total,
                 totalPages: response.pagination.totalPages
             }));
+            if (response.stats) {
+                setStats(response.stats);
+            }
         } catch (error) {
             console.error('Error fetching orders:', error);
         } finally {
@@ -174,10 +184,10 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
             {/* Stats Summary Section */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                 {[
-                    { label: 'Total', value: pagination.total, icon: <ShoppingCart size={14} />, color: 'text-blue-400' },
-                    { label: 'Ativos', value: orders.filter(o => o.status === 'PEDIDO').length, icon: <Clock size={14} />, color: 'text-amber-400' },
-                    { label: 'Vendas', value: orders.filter(o => o.status === 'VENDA').length, icon: <TrendingUp size={14} />, color: 'text-emerald-400' },
-                    { label: 'Faturados', value: orders.filter(o => o.faturado).length, icon: <DollarSign size={14} />, color: 'text-slate-400' },
+                    { label: 'Total', value: stats.total, icon: <ShoppingCart size={14} />, color: 'text-blue-400' },
+                    { label: 'Ativos', value: stats.active, icon: <Clock size={14} />, color: 'text-amber-400' },
+                    { label: 'Vendas', value: stats.sales, icon: <TrendingUp size={14} />, color: 'text-emerald-400' },
+                    { label: 'Faturados', value: stats.billed, icon: <DollarSign size={14} />, color: 'text-slate-400' },
                 ].map((stat, i) => (
                     <div key={i} className="card-glass-dark p-3 rounded-xl border border-white/5 flex items-center gap-3">
                         <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center ${stat.color}`}>
