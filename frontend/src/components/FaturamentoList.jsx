@@ -21,7 +21,9 @@ import {
     Clock,
     X,
     Trash2,
-    Ban
+    Ban,
+    ChevronLeft,
+    ChevronRight
 } from 'lucide-react';
 import { orderAPI, STORAGE_URL } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -40,6 +42,12 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [observationModal, setObservationModal] = useState(null);
     const [pendencyModal, setPendencyModal] = useState(null);
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 200,
+        total: 0,
+        totalPages: 0
+    });
     const [sortConfig, setSortConfig] = useState({
         key: 'date',
         order: 'desc'
@@ -119,7 +127,8 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
         try {
             const response = await orderAPI.list({
                 status: 'VENDA',
-                limit: 100,
+                page: pagination.page,
+                limit: pagination.limit,
                 sortBy: sortConfig.key,
                 sortOrder: sortConfig.order,
                 search: searchTerm,
@@ -131,6 +140,11 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                 faturado: statusFilter === 'all' ? '' : (statusFilter === 'faturado' ? 'true' : 'false')
             });
             setOrders(response.orders || []);
+            setPagination(prev => ({
+                ...prev,
+                total: response.pagination.total,
+                totalPages: response.pagination.totalPages
+            }));
         } catch (error) {
             console.error('Error fetching billing orders:', error);
         } finally {
@@ -143,7 +157,7 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
             fetchOrders();
         }, 300);
         return () => clearTimeout(timer);
-    }, [searchTerm, statusFilter, clientFilter, titleFilter, idFilter, dateFrom, dateTo, sortConfig]);
+    }, [searchTerm, statusFilter, clientFilter, titleFilter, idFilter, dateFrom, dateTo, sortConfig, pagination.page, pagination.limit]);
 
     const filteredOrders = orders;
 
@@ -626,46 +640,89 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                 </div>
 
                 {/* Summary Footer */}
-                <div className="mt-auto flex items-center justify-between px-6 py-2.5 bg-card border-t border-border flex-shrink-0">
-                    <span className="text-xs text-muted-foreground">
-                        Exibindo {filteredOrders.length} registros
-                    </span>
-                    <div className="flex items-center gap-4">
-                        {selectedOrders.length > 0 && (
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={handleBulkMarkAsFaturado}
-                                    className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs font-bold rounded-lg hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20"
-                                >
-                                    <CheckCircle2 size={14} />
-                                    Marcar Faturado ({selectedOrders.length})
-                                </button>
-                                <button
-                                    onClick={handleGenerateList}
-                                    className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
-                                >
-                                    <Copy size={14} />
-                                    Gerar Lista
-                                </button>
-                            </div>
-                        )}
+                <div className="mt-auto px-6 py-2.5 bg-card border-t border-border flex items-center justify-between flex-shrink-0">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                            Exibindo {orders.length} de {pagination.total} registros
+                        </span>
                     </div>
+
+                    <div className="flex items-center gap-1">
+                        <button
+                            disabled={pagination.page === 1 || loading}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                            className="p-1.5 hover:bg-white/5 rounded-md disabled:opacity-30 text-[#999999] transition-colors"
+                        >
+                            <ChevronLeft size={18} />
+                        </button>
+                        <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(pagination.totalPages, 5) }).map((_, i) => {
+                                const pageNum = i + 1;
+                                return (
+                                    <button
+                                        key={pageNum}
+                                        onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
+                                        className={`min-w-[32px] h-8 rounded-md text-[11px] font-bold transition-all ${pagination.page === pageNum
+                                            ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
+                                            : 'text-muted-foreground hover:text-foreground hover:bg-white/5'
+                                            }`}
+                                    >
+                                        {pageNum}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        <button
+                            disabled={pagination.page === pagination.totalPages || loading}
+                            onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                            className="p-1.5 hover:bg-white/5 rounded-md disabled:opacity-30 text-[#999999] transition-colors"
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                    </div>
+
                     <div className="flex items-center gap-6">
                         <div className="text-right">
                             <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">Total Pendente</span>
                             <span className="text-sm font-bold text-orange-400">
-                                {formatCurrency(filteredOrders.filter(o => !o.faturado).reduce((acc, curr) => acc + (Number(curr.vendaValor) || 0), 0))}
+                                {formatCurrency(orders.filter(o => !o.faturado).reduce((acc, curr) => acc + (Number(curr.vendaValor) || 0), 0))}
                             </span>
                         </div>
                         <div className="h-8 w-px bg-border"></div>
                         <div className="text-right">
                             <span className="text-[10px] text-muted-foreground uppercase tracking-wider block">Total Faturado</span>
                             <span className="text-sm font-bold text-green-400">
-                                {formatCurrency(filteredOrders.filter(o => o.faturado).reduce((acc, curr) => acc + (Number(curr.vendaValor) || 0), 0))}
+                                {formatCurrency(orders.filter(o => o.faturado).reduce((acc, curr) => acc + (Number(curr.vendaValor) || 0), 0))}
                             </span>
                         </div>
                     </div>
                 </div>
+
+                {selectedOrders.length > 0 && (
+                    <div className="px-6 py-2.5 bg-primary/5 border-t border-primary/10 flex items-center justify-between animate-in slide-in-from-bottom-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-1 rounded-lg">
+                                {selectedOrders.length} selecionados
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={handleBulkMarkAsFaturado}
+                                className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white text-xs font-bold rounded-lg hover:bg-green-600 transition-colors shadow-lg shadow-green-500/20"
+                            >
+                                <CheckCircle2 size={14} />
+                                Marcar Faturado
+                            </button>
+                            <button
+                                onClick={handleGenerateList}
+                                className="flex items-center gap-2 px-4 py-2 bg-primary text-white text-xs font-bold rounded-lg hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+                            >
+                                <Copy size={14} />
+                                Gerar Lista
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Observation Modal */}

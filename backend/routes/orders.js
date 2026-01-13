@@ -160,17 +160,25 @@ router.get('/', async (req, res) => {
         }
 
         // Define sorting
-        let orderBy = {};
         if (sortBy === 'client') {
             orderBy = { client: { name: sortOrder } };
         } else if (sortBy === 'date') {
-            orderBy = { date: sortOrder };
+            orderBy = [
+                { date: sortOrder },
+                { numeroVenda: sortOrder }
+            ];
         } else if (sortBy === 'sequentialId') {
             orderBy = { sequentialId: sortOrder };
         } else if (sortBy === 'numeroVenda') {
-            orderBy = { numeroVenda: sortOrder };
+            orderBy = [
+                { numeroVenda: sortOrder },
+                { date: sortOrder }
+            ];
         } else if (sortBy === 'vendaValor') {
-            orderBy = { vendaValor: sortOrder };
+            orderBy = [
+                { vendaValor: sortOrder },
+                { date: sortOrder }
+            ];
         } else {
             orderBy[sortBy] = sortOrder;
         }

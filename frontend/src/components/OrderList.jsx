@@ -39,7 +39,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
     });
     const [pagination, setPagination] = useState({
         page: 1,
-        limit: 10,
+        limit: 30,
         total: 0,
         totalPages: 0
     });

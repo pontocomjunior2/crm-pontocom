@@ -587,8 +587,9 @@ const Relatorios = () => {
                                                     <Calendar size={12} className="text-muted-foreground" />
                                                     <span className="text-[10px] text-muted-foreground">{new Date(order.date).toLocaleDateString('pt-BR')}</span>
                                                 </div>
-                                                <h4 className="text-sm font-bold text-foreground truncate">{order.title}</h4>
-                                                <p className="text-xs font-black text-primary/80 mt-1">{formatCurrency(order.value)}</p>
+                                                <h4 className="text-sm font-bold text-foreground truncate">
+                                                    {order.numeroVenda ? `${order.numeroVenda} - ` : ''}{order.title.toUpperCase()} ({formatCurrency(order.value)})
+                                                </h4>
                                             </div>
                                             <button
                                                 onClick={() => handleCopyTitle(order.title, order.id)}

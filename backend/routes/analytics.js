@@ -265,7 +265,8 @@ router.get('/cache-report', async (req, res) => {
                 id: order.id,
                 title: order.title,
                 date: order.date,
-                value: order.cacheValor
+                value: order.cacheValor,
+                numeroVenda: order.numeroVenda
             });
             return acc;
         }, {});
