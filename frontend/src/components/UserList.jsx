@@ -375,8 +375,8 @@ const UserList = () => {
             {modalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setModalOpen(false)}></div>
-                    <div className="relative bg-card border border-white/10 w-full max-w-md rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-                        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                    <div className="relative bg-card border border-white/10 w-full max-w-md max-h-[90vh] flex flex-col rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                        <div className="flex-none p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                             <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
                                 {editingUser ? <Edit2 size={20} className="text-primary" /> : <Plus size={20} className="text-primary" />}
                                 {editingUser ? 'EDITAR USUÁRIO' : 'NOVO USUÁRIO'}
@@ -386,7 +386,7 @@ const UserList = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                        <form onSubmit={handleSubmit} className="p-6 space-y-4 flex-1 overflow-y-auto custom-scrollbar">
                             <div>
                                 <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">Nome Completo</label>
                                 <input
@@ -487,8 +487,8 @@ const UserList = () => {
             {tierModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setTierModalOpen(false)}></div>
-                    <div className="relative bg-card border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
-                        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                    <div className="relative bg-card border border-white/10 w-full max-w-lg max-h-[90vh] flex flex-col rounded-3xl shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                        <div className="flex-none p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                             <h2 className="text-xl font-black text-white tracking-tight flex items-center gap-2">
                                 <Plus size={20} className="text-primary" />
                                 {editingTier ? 'EDITAR TIER' : 'NOVO TIER (CARGO)'}
@@ -498,7 +498,7 @@ const UserList = () => {
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmitTier} className="p-6 space-y-6">
+                        <form onSubmit={handleSubmitTier} className="p-6 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
                             <div>
                                 <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-1.5 ml-1">Nome do Tier</label>
                                 <input

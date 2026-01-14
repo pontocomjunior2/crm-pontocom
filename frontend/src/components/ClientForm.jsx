@@ -186,7 +186,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
     return (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-card rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden border border-border">
+            <div className="bg-card rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-border">
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-border">
@@ -217,7 +217,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 )}
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto max-h-[calc(90vh-180px)] custom-scrollbar">
+                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 custom-scrollbar">
 
                     {/* Dados da Empresa */}
                     <div className="mb-8">

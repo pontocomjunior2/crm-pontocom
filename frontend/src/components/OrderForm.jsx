@@ -410,7 +410,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
             <div className="bg-card rounded-3xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-border">
 
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-border">
+                <div className="flex-none flex items-center justify-between p-6 border-b border-border">
                     <div>
                         <h2 className="text-2xl font-bold text-foreground flex items-center gap-3">
                             {initialStatus === 'VENDA' ? (
@@ -434,12 +434,14 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
 
                 {/* Message Alert */}
                 {message.text && (
-                    <div className={`mx-6 mt-4 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
-                        ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-                        : 'bg-red-500/10 border border-red-500/30 text-red-400'
-                        }`}>
-                        {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                        <span className="text-sm font-medium">{message.text}</span>
+                    <div className="flex-none px-6 mt-4">
+                        <div className={`p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
+                            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
+                            : 'bg-red-500/10 border border-red-500/30 text-red-400'
+                            }`}>
+                            {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
+                            <span className="text-sm font-medium">{message.text}</span>
+                        </div>
                     </div>
                 )}
 
@@ -1261,7 +1263,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                 </form >
 
                 {/* Footer Actions */}
-                < div className="flex items-center justify-between p-6 border-t border-border bg-card" >
+                <div className="flex-none flex items-center justify-between p-6 border-t border-border bg-card">
                     <div>
                         {order && (
                             <button

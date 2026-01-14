@@ -190,7 +190,7 @@ const SupplierList = () => {
             {/* New Supplier Modal */}
             {showNewSupplierModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md border border-border p-6 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-border p-6 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                         <h3 className="text-xl font-bold text-foreground mb-4">Novo Fornecedor</h3>
                         <form onSubmit={handleCreateSupplier}>
                             <div className="mb-6">
@@ -228,12 +228,12 @@ const SupplierList = () => {
             {/* New Package Modal */}
             {showNewPackageModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-                    <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md border border-border p-6 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-border p-6 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                         <h3 className="text-xl font-bold text-foreground mb-1">Novo Pacote de Créditos</h3>
                         <p className="text-sm text-muted-foreground mb-6">Adicionar pacote para {selectedSupplier?.name}</p>
 
-                        <form onSubmit={handleAddPackage}>
-                            <div className="space-y-4 mb-6">
+                        <form onSubmit={handleAddPackage} className="flex flex-col flex-1 overflow-hidden">
+                            <div className="space-y-4 mb-6 flex-1 overflow-y-auto custom-scrollbar px-1">
                                 <div>
                                     <label className="block text-xs font-medium text-muted-foreground mb-1">Nome do Pacote</label>
                                     <input
@@ -290,7 +290,7 @@ const SupplierList = () => {
                                     </div>
                                 )}
                             </div>
-                            <div className="flex justify-end gap-3">
+                            <div className="flex justify-end gap-3 flex-none pt-2">
                                 <button
                                     type="button"
                                     onClick={() => setShowNewPackageModal(false)}
@@ -309,7 +309,7 @@ const SupplierList = () => {
                     </div>
                 </div>
             )}
-        </div>
+        </div >
     );
 };
 
