@@ -215,26 +215,38 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         setShowPackageForm(true);
     };
 
-    const handleDeletePackage = async (id) => {
-        if (!window.confirm('Tem certeza que deseja excluir este pacote?')) return;
+    const handleDeletePackage = async (id, forceDelete = false) => {
+        if (!forceDelete && !window.confirm('Tem certeza que deseja excluir este pacote?')) return;
         setLoading(true);
         try {
-            await clientPackageAPI.delete(id);
+            await clientPackageAPI.delete(id, forceDelete);
             setMessage({ type: 'success', text: 'Pacote excluído com sucesso!' });
             fetchPackages();
         } catch (error) {
-            setMessage({ type: 'error', text: 'Erro ao excluir pacote' });
+            // Verificar se é um erro de venda faturada
+            if (error.message.includes('BILLING_ALREADY_INVOICED') || error.message.includes('já foi faturada')) {
+                const confirmDelete = window.confirm(
+                    'A venda deste pacote já foi faturada. Se você continuar, a venda também será excluída do faturamento. Deseja continuar?'
+                );
+                if (confirmDelete) {
+                    // Tentar novamente com forceDelete
+                    return handleDeletePackage(id, true);
+                }
+            } else {
+                setMessage({ type: 'error', text: 'Erro ao excluir pacote' });
+            }
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSavePackage = async () => {
+    const handleSavePackage = async (forceUpdate = false) => {
         setLoading(true);
         try {
             const data = {
                 ...packageFormData,
-                clientId: client.id
+                clientId: client.id,
+                forceUpdate
             };
 
             if (editingPackage) {
@@ -249,7 +261,18 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
             setEditingPackage(null);
             fetchPackages();
         } catch (error) {
-            setMessage({ type: 'error', text: error.message });
+            // Verificar se é um erro de venda faturada
+            if (error.message.includes('BILLING_ALREADY_INVOICED') || error.message.includes('já foi faturada')) {
+                const confirmUpdate = window.confirm(
+                    'A venda deste pacote já foi faturada. Se você continuar com a alteração, a venda voltará ao status "pendente" (não faturado). Deseja continuar?'
+                );
+                if (confirmUpdate) {
+                    // Tentar novamente com forceUpdate
+                    return handleSavePackage(true);
+                }
+            } else {
+                setMessage({ type: 'error', text: error.message });
+            }
         } finally {
             setLoading(false);
         }
@@ -384,7 +407,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     </button>
                     <button
                         type="button"
-                        onClick={handleSavePackage}
+                        onClick={() => handleSavePackage()}
                         disabled={loading}
                         className="btn-primary px-8 flex items-center gap-2"
                     >

@@ -81,6 +81,7 @@ model Order {
   vencimento       DateTime?
   pago             Boolean  @default(false)
   statusEnvio      String   @default("PENDENTE") // PENDENTE, ENVIADO
+  wasReopened      Boolean  @default(false) // Indica se foi faturado e depois reaberto
 
   pendenciaFinanceiro Boolean @default(false)
   pendenciaMotivo     String? @db.Text
@@ -93,7 +94,9 @@ model Order {
   costPerCreditSnapshot Decimal? @db.Decimal(10, 2) // Snapshot of the cost at the time of order
 
   packageId        String?
-  package          ClientPackage? @relation(fields: [packageId], references: [id])
+  package          ClientPackage? @relation("PackageOrders", fields: [packageId], references: [id])
+  
+  packageBilling   ClientPackage? @relation("PackageBilling")
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -257,7 +260,9 @@ model ClientPackage {
   startDate       DateTime
   endDate         DateTime
   active          Boolean  @default(true)
-  orders          Order[]
+  billingOrderId  String?  @unique // Venda automática gerada para este pacote
+  billingOrder    Order?   @relation("PackageBilling", fields: [billingOrderId], references: [id])
+  orders          Order[]  @relation("PackageOrders")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

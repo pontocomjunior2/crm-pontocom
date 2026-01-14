@@ -96,8 +96,9 @@ export const clientPackageAPI = {
         });
     },
 
-    delete: async (id) => {
-        return fetchAPI(`/client-packages/${id}`, {
+    delete: async (id, forceDelete = false) => {
+        const url = `/client-packages/${id}${forceDelete ? '?forceDelete=true' : ''}`;
+        return fetchAPI(url, {
             method: 'DELETE',
         });
     },

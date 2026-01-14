@@ -566,6 +566,15 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                                             Nv: {order.numeroVenda}
                                                         </span>
                                                     )}
+                                                    {order.wasReopened && (
+                                                        <span
+                                                            className="text-[10px] font-black px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 border border-orange-500/30 uppercase tracking-wider flex items-center gap-1 shadow-sm animate-pulse"
+                                                            title="Este pedido foi faturado e depois reaberto. Verifique as alterações!"
+                                                        >
+                                                            <AlertCircle size={10} />
+                                                            REABERTO
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </td>
