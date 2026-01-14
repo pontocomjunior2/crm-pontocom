@@ -32,6 +32,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
     const [nameFilter, setNameFilter] = useState('');
     const [cityFilter, setCityFilter] = useState('');
     const [cnpjFilter, setCnpjFilter] = useState('');
+    const [packageFilter, setPackageFilter] = useState(''); // '', 'active', 'inactive'
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
@@ -51,7 +52,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
 
     useEffect(() => {
         fetchClients();
-    }, [pagination.page, pagination.limit, statusFilter, sortConfig]);
+    }, [pagination.page, pagination.limit, statusFilter, sortConfig, packageFilter]);
 
     const fetchClients = async () => {
         setLoading(true);
@@ -64,6 +65,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                 cidade: cityFilter,
                 cnpj_cpf: cnpjFilter,
                 status: statusFilter,
+                packageStatus: packageFilter,
                 sortBy: sortConfig.key,
                 sortOrder: sortConfig.order
             });
@@ -120,6 +122,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
         setCityFilter('');
         setCnpjFilter('');
         setStatusFilter('ativado');
+        setPackageFilter('');
         setPagination(prev => ({ ...prev, page: 1 }));
     };
 
@@ -216,7 +219,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
             {/* Filters & Search */}
             <div className="card-glass-dark p-4 rounded-2xl mb-6 border border-white/5 bg-card">
                 <div className="flex flex-col gap-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                             <input
@@ -250,9 +253,18 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                             onChange={(e) => setStatusFilter(e.target.value)}
                             className="bg-input-background border border-border rounded-xl px-4 py-2 text-foreground text-sm focus:outline-none focus:border-primary/50"
                         >
-                            <option value="ativado">Ativados</option>
-                            <option value="inativo">Inativos</option>
-                            <option value="">Todos os Status</option>
+                            <option value="ativado">Status: Ativados</option>
+                            <option value="inativo">Status: Inativos</option>
+                            <option value="">Status: Todos</option>
+                        </select>
+                        <select
+                            value={packageFilter}
+                            onChange={(e) => setPackageFilter(e.target.value)}
+                            className="bg-input-background border border-border rounded-xl px-4 py-2 text-foreground text-sm focus:outline-none focus:border-primary/50"
+                        >
+                            <option value="">Pacotes: Todos</option>
+                            <option value="active">Com Pacote Ativo</option>
+                            <option value="inactive">Sem Pacote Ativo</option>
                         </select>
                     </div>
 
@@ -375,9 +387,17 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                     <tr key={client.id} className="hover:bg-white/[0.02] transition-colors group">
                                         <td className="px-6 py-2">
                                             <div className="flex flex-col">
-                                                <span className="text-foreground font-semibold text-[13px] group-hover:text-primary transition-colors">
-                                                    {client.name}
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-foreground font-semibold text-[13px] group-hover:text-primary transition-colors">
+                                                        {client.name}
+                                                    </span>
+                                                    {client.packages?.length > 0 && (
+                                                        <span className="px-1.5 py-0.5 rounded-md bg-green-500/10 text-green-400 text-[10px] font-bold uppercase tracking-wider border border-green-500/20 flex items-center gap-1">
+                                                            <CheckCircle2 size={10} />
+                                                            Plano Ativo
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-2">

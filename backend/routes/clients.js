@@ -41,10 +41,12 @@ router.get('/', async (req, res) => {
             name = '',
             cidade = '',
             cnpj_cpf = '',
+            packageStatus = '', // 'active', 'inactive'
             sortBy = 'createdAt',
             sortOrder = 'desc'
         } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
+        const now = new Date();
 
         const where = {};
 
@@ -76,9 +78,29 @@ router.get('/', async (req, res) => {
             where.AND = andFilters;
         }
 
-        // Status filter
         if (status) {
             where.status = status;
+        }
+
+        // Package status filter
+        if (packageStatus === 'active') {
+            where.packages = {
+                some: {
+                    active: true,
+                    startDate: { lte: now },
+                    endDate: { gte: now }
+                }
+            };
+        } else if (packageStatus === 'inactive') {
+            where.NOT = {
+                packages: {
+                    some: {
+                        active: true,
+                        startDate: { lte: now },
+                        endDate: { gte: now }
+                    }
+                }
+            };
         }
 
         // Define sorting
@@ -100,6 +122,14 @@ router.get('/', async (req, res) => {
                 take: parseInt(limit),
                 orderBy,
                 include: {
+                    packages: {
+                        where: {
+                            active: true,
+                            startDate: { lte: now },
+                            endDate: { gte: now }
+                        },
+                        take: 1
+                    },
                     _count: {
                         select: { orders: true }
                     }

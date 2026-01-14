@@ -88,7 +88,7 @@ router.post('/', async (req, res) => {
                 await prisma.order.create({
                     data: {
                         clientId,
-                        title: `Mensalidade - ${name}`,
+                        title: name,
                         serviceType: 'PLANO MENSAL',
                         vendaValor: parseFloat(fixedFee),
                         cacheValor: 0,
@@ -96,7 +96,7 @@ router.post('/', async (req, res) => {
                         faturado: false,
                         date: new Date(startDate), // Data de início do pacote
                         numeroVenda: nextNumeroVenda,
-                        comentarios: `Faturamento automático referente ao pacote: ${name}`
+                        comentarios: `Lançamento automático referente ao pacote: ${name}`
                     }
                 });
             } catch (billingError) {
@@ -132,6 +132,20 @@ router.put('/:id', async (req, res) => {
     } catch (error) {
         console.error('Erro ao atualizar pacote:', error);
         res.status(500).json({ error: 'Falha ao atualizar pacote' });
+    }
+});
+
+// DELETE /api/client-packages/:id - Excluir pacote
+router.delete('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await prisma.clientPackage.delete({
+            where: { id }
+        });
+        res.status(204).send();
+    } catch (error) {
+        console.error('Erro ao excluir pacote:', error);
+        res.status(500).json({ error: 'Falha ao excluir pacote' });
     }
 });
 

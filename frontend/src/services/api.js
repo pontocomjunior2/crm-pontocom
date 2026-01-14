@@ -21,6 +21,10 @@ const fetchAPI = async (endpoint, options = {}) => {
         throw new Error(error.message || `HTTP error! status: ${response.status}`);
     }
 
+    if (response.status === 204) {
+        return null;
+    }
+
     return response.json();
 };
 
@@ -89,6 +93,12 @@ export const clientPackageAPI = {
         return fetchAPI(`/client-packages/${id}`, {
             method: 'PUT',
             body: JSON.stringify(data),
+        });
+    },
+
+    delete: async (id) => {
+        return fetchAPI(`/client-packages/${id}`, {
+            method: 'DELETE',
         });
     },
 };

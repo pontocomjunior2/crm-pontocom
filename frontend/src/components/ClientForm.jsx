@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Search, Loader2, CheckCircle2, AlertCircle, Building2, Mail, Phone, MapPin, Music, Plus, Calendar, Flame, Clock } from 'lucide-react';
+import { X, Search, Loader2, CheckCircle2, AlertCircle, Building2, Mail, Phone, MapPin, Music, Plus, Calendar, Flame, Clock, Pencil, Trash2 } from 'lucide-react';
 import { formatCNPJ, formatPhone, formatCEP, removeMask, validateCNPJ, validateEmail, formatCurrency, parseCurrency } from '../utils/formatters';
 import { lookupCNPJ, lookupCEP, clientAPI, clientPackageAPI } from '../services/api';
 
@@ -131,11 +131,29 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                         {new Date(pkg.startDate).toLocaleDateString()} - {new Date(pkg.endDate).toLocaleDateString()}
                                     </p>
                                 </div>
-                                <div className="text-right">
-                                    <p className="text-lg font-bold text-primary">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pkg.fixedFee)}
-                                    </p>
-                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Mensalidade</p>
+                                <div className="flex items-center gap-2">
+                                    <div className="text-right mr-2">
+                                        <p className="text-lg font-bold text-primary">
+                                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pkg.fixedFee)}
+                                        </p>
+                                        <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Mensalidade</p>
+                                    </div>
+                                    <div className="flex flex-col gap-1">
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleEditPackage(pkg); }}
+                                            className="p-1.5 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-primary transition-all"
+                                            title="Editar pacote"
+                                        >
+                                            <Pencil size={14} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); handleDeletePackage(pkg.id); }}
+                                            className="p-1.5 hover:bg-white/10 rounded-lg text-muted-foreground hover:text-red-500 transition-all"
+                                            title="Excluir pacote"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -182,6 +200,35 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         setPackageFormData(prev => ({ ...prev, [name]: floatValue }));
     };
 
+    const handleEditPackage = (pkg) => {
+        setEditingPackage(pkg);
+        setPackageFormData({
+            name: pkg.name,
+            type: pkg.type,
+            fixedFee: pkg.fixedFee,
+            audioLimit: pkg.audioLimit,
+            extraAudioFee: pkg.extraAudioFee,
+            startDate: new Date(pkg.startDate).toISOString().split('T')[0],
+            endDate: new Date(pkg.endDate).toISOString().split('T')[0],
+            active: pkg.active
+        });
+        setShowPackageForm(true);
+    };
+
+    const handleDeletePackage = async (id) => {
+        if (!window.confirm('Tem certeza que deseja excluir este pacote?')) return;
+        setLoading(true);
+        try {
+            await clientPackageAPI.delete(id);
+            setMessage({ type: 'success', text: 'Pacote excluído com sucesso!' });
+            fetchPackages();
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Erro ao excluir pacote' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSavePackage = async () => {
         setLoading(true);
         try {
@@ -189,9 +236,17 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 ...packageFormData,
                 clientId: client.id
             };
-            await clientPackageAPI.create(data);
-            setMessage({ type: 'success', text: 'Pacote criado com sucesso!' });
+
+            if (editingPackage) {
+                await clientPackageAPI.update(editingPackage.id, data);
+                setMessage({ type: 'success', text: 'Pacote atualizado com sucesso!' });
+            } else {
+                await clientPackageAPI.create(data);
+                setMessage({ type: 'success', text: 'Pacote criado com sucesso!' });
+            }
+
             setShowPackageForm(false);
+            setEditingPackage(null);
             fetchPackages();
         } catch (error) {
             setMessage({ type: 'error', text: error.message });
@@ -205,11 +260,14 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
-                        <Plus size={20} className="text-primary" />
-                        Novo Pacote Mensal
+                        {editingPackage ? <Pencil size={20} className="text-primary" /> : <Plus size={20} className="text-primary" />}
+                        {editingPackage ? 'Editar Pacote Mensal' : 'Novo Pacote Mensal'}
                     </h3>
                     <button
-                        onClick={() => setShowPackageForm(false)}
+                        onClick={() => {
+                            setShowPackageForm(false);
+                            setEditingPackage(null);
+                        }}
                         className="text-muted-foreground hover:text-foreground text-sm"
                     >
                         Voltar para lista
@@ -517,13 +575,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     <div className="flex gap-4 px-6 border-b border-border bg-card/50">
                         <button
                             onClick={() => setActiveTab('dados')}
-                            className={`px - 4 py - 3 text - sm font - medium transition - colors border - b - 2 ${activeTab === 'dados' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'} `}
+                            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'dados' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                         >
                             Dados Gerais
                         </button>
                         <button
                             onClick={() => setActiveTab('pacotes')}
-                            className={`px - 4 py - 3 text - sm font - medium transition - colors border - b - 2 ${activeTab === 'pacotes' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'} `}
+                            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'pacotes' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                         >
                             Pacotes Mensais
                         </button>
@@ -532,10 +590,10 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
                 {/* Message Alert */}
                 {message.text && (
-                    <div className={`mx - 6 mt - 4 p - 4 rounded - xl flex items - center gap - 3 ${message.type === 'success'
+                    <div className={`mx-6 mt-4 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
                         ? 'bg-green-500/10 border border-green-500/30 text-green-400'
                         : 'bg-red-500/10 border border-red-500/30 text-red-400'
-                        } `}>
+                        }`}>
                         {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                         <span className="text-sm font-medium">{message.text}</span>
                     </div>
@@ -565,7 +623,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                                 name="cnpj_cpf"
                                                 value={formData.cnpj_cpf}
                                                 onChange={handleChange}
-                                                className={`flex - 1 bg - input - background border ${errors.cnpj_cpf ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
+                                                className={`flex-1 bg-input-background border ${errors.cnpj_cpf ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                                 placeholder="00.000.000/0000-00"
                                                 maxLength={18}
                                             />
@@ -605,7 +663,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             name="name"
                                             value={formData.name}
                                             onChange={handleChange}
-                                            className={`w - full bg - input - background border ${errors.name ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
+                                            className={`w-full bg-input-background border ${errors.name ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                             placeholder="Como é conhecida"
                                         />
                                         {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
@@ -644,7 +702,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             name="emailPrincipal"
                                             value={formData.emailPrincipal}
                                             onChange={handleChange}
-                                            className={`w - full bg - input - background border ${errors.emailPrincipal ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
+                                            className={`w-full bg-input-background border ${errors.emailPrincipal ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                             placeholder="contato@empresa.com.br"
                                         />
                                         {errors.emailPrincipal && <p className="text-red-400 text-xs mt-1">{errors.emailPrincipal}</p>}
@@ -815,7 +873,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             name="emailContato"
                                             value={formData.emailContato}
                                             onChange={handleChange}
-                                            className={`w - full bg - input - background border ${errors.emailContato ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
+                                            className={`w-full bg-input-background border ${errors.emailContato ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
                                             placeholder="contato@email.com"
                                         />
                                         {errors.emailContato && <p className="text-red-400 text-xs mt-1">{errors.emailContato}</p>}
