@@ -337,7 +337,8 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
             newErrors.supplierId = 'Selecione o fornecedor para este locutor';
         }
 
-        if (formData.vendaValor <= 0) {
+        // Se tiver pacote ativo, valor pode ser 0. Se não, deve ser > 0
+        if (!activePackage && formData.vendaValor <= 0) {
             newErrors.vendaValor = 'Valor da venda deve ser maior que zero';
         }
 
@@ -952,7 +953,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
 
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Valor da Venda (R$) <span className="text-red-500">*</span>
+                                    Valor da Venda (R$) {!activePackage && <span className="text-red-500">*</span>}
                                 </label>
                                 <input
                                     type="text"
@@ -963,6 +964,18 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                                     placeholder="R$ 0,00"
                                 />
                                 {errors.vendaValor && <p className="text-red-400 text-xs mt-1">{errors.vendaValor}</p>}
+                                {activePackage && formData.vendaValor > 0 && (
+                                    <p className="text-orange-400 text-xs mt-1 flex items-center gap-1">
+                                        <AlertCircle size={10} />
+                                        Valor definido: Será lançado como PEDIDO AVULSO (não desconta do pacote)
+                                    </p>
+                                )}
+                                {activePackage && formData.vendaValor <= 0 && (
+                                    <p className="text-emerald-400 text-xs mt-1 flex items-center gap-1">
+                                        <CheckCircle2 size={10} />
+                                        Valor zero: Será descontado do saldo do pacote
+                                    </p>
+                                )}
                             </div>
                         </div>
 

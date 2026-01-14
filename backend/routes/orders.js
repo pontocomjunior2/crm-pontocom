@@ -367,7 +367,12 @@ router.post('/', async (req, res) => {
 
         // --- Lógica de Pacote Mensal ---
         let finalVendaValor = vendaValor !== undefined ? parseFloat(vendaValor) : 0;
-        if (packageId) {
+
+        // Se o usuário informou um valor maior que 0, trata como pedido avulso (ignora pacote)
+        if (finalVendaValor > 0 && packageId) {
+            packageId = null; // Remove vínculo com pacote
+        }
+        else if (packageId) {
             const pkg = await prisma.clientPackage.findUnique({
                 where: { id: packageId }
             });
@@ -565,6 +570,72 @@ router.put('/:id', async (req, res) => {
             }
         }
 
+        // Lógica de Estorno se virar Avulso
+        const newVendaValor = vendaValor !== undefined ? parseFloat(vendaValor) : undefined;
+
+        console.log('DEBUG UPDATE ORDER:', {
+            id,
+            newVendaValor,
+            bodyPackageId: req.body.packageId,
+            existingPackageId: existing.packageId,
+            existingValor: existing.vendaValor
+        });
+
+        // Se tinha pacote E agora está definindo um valor > 0 (virando avulso)
+        if (existing.packageId && newVendaValor > 0) {
+            // Só executa o estorno se o valor anterior era 0 (era consumo de pacote)
+            if (Number(existing.vendaValor) === 0) {
+                const pkg = await prisma.clientPackage.findUnique({
+                    where: { id: existing.packageId }
+                });
+                if (pkg) {
+                    await prisma.clientPackage.update({
+                        where: { id: pkg.id },
+                        data: { usedAudios: { decrement: 1 } }
+                    });
+                }
+            }
+            // Forçar desvinculação do pacote na atualização
+            req.body.packageId = null;
+        } else if (newVendaValor === 0) {
+            // Lógica inversa: Se virar Pacote (valor 0)
+            // Verifica se estava consumindo antes
+            const wasConsuming = existing.packageId && Number(existing.vendaValor) === 0;
+
+            if (!wasConsuming) {
+                let pkgToDebitId = req.body.packageId;
+
+                // Se não veio ID do pacote, buscar ativo no banco
+                if (!pkgToDebitId) {
+                    const now = new Date();
+                    const activePkg = await prisma.clientPackage.findFirst({
+                        where: {
+                            clientId: clientId || existing.clientId,
+                            active: true,
+                            startDate: { lte: now },
+                            endDate: { gte: now }
+                        }
+                    });
+                    if (activePkg) pkgToDebitId = activePkg.id;
+                }
+
+                if (pkgToDebitId) {
+                    try {
+                        await prisma.clientPackage.update({
+                            where: { id: pkgToDebitId },
+                            data: { usedAudios: { increment: 1 } }
+                        });
+                        // Garantir que o vínculo seja salvo no pedido
+                        req.body.packageId = pkgToDebitId;
+                    } catch (e) {
+                        console.error('Falha ao debitar pacote na edição:', e);
+                        // Se falhou (ex: erro de banco), garantimos que não fica vinculado incorretamente
+                        req.body.packageId = null;
+                    }
+                }
+            }
+        }
+
         const order = await prisma.order.update({
             where: { id },
             data: {
@@ -572,7 +643,7 @@ router.put('/:id', async (req, res) => {
                 title,
                 fileName,
                 locutor,
-                locutorId,
+                locutorId: locutorId || null,
                 tipo,
                 urgency,
                 cacheValor: cacheValor !== undefined ? parseFloat(cacheValor) : undefined,
@@ -592,7 +663,8 @@ router.put('/:id', async (req, res) => {
                 pendenciaMotivo,
                 numeroOS,
                 arquivoOS,
-                supplierId,
+                supplierId: supplierId || null, // Convert empty string to null
+                packageId: req.body.packageId, // Allow explicit packageId update
                 cachePago: cachePago !== undefined ? cachePago : undefined,
                 creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined
@@ -738,6 +810,26 @@ router.post('/bulk-delete', async (req, res) => {
             return res.status(400).json({ error: 'IDs array is required' });
         }
 
+        const ordersToDelete = await prisma.order.findMany({
+            where: { id: { in: ids } },
+            select: { id: true, packageId: true }
+        });
+
+        // Estorno de créditos de pacote
+        for (const order of ordersToDelete) {
+            if (order.packageId) {
+                const pkg = await prisma.clientPackage.findUnique({
+                    where: { id: order.packageId }
+                });
+                if (pkg) {
+                    await prisma.clientPackage.update({
+                        where: { id: pkg.id },
+                        data: { usedAudios: { decrement: 1 } }
+                    });
+                }
+            }
+        }
+
         await prisma.order.deleteMany({
             where: { id: { in: ids } }
         });
@@ -757,6 +849,21 @@ router.delete('/:id', async (req, res) => {
         const order = await prisma.order.findUnique({ where: { id } });
         if (!order) {
             return res.status(404).json({ error: 'Order not found' });
+        }
+
+        // Estorno de crédito se vinculado a pacote
+        if (order.packageId) {
+            const pkg = await prisma.clientPackage.findUnique({
+                where: { id: order.packageId }
+            });
+            if (pkg) {
+                // Decrement use, ensuring it doesn't go below 0 handled by logic or db check
+                // Using decrement is safer for concurrency
+                await prisma.clientPackage.update({
+                    where: { id: pkg.id },
+                    data: { usedAudios: { decrement: 1 } }
+                });
+            }
         }
 
         await prisma.order.delete({ where: { id } });
