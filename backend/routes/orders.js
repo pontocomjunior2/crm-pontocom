@@ -156,6 +156,15 @@ router.get('/', async (req, res) => {
             } else {
                 // Physical status (PEDIDO, VENDA)
                 where.status = status;
+
+                // Se estivermos listando VENDAS (Faturamento), ocultar os pedidos de pacote com valor 0
+                // para não poluir a visão financeira, já que a mensalidade já foi lançada.
+                if (status === 'VENDA') {
+                    where.OR = [
+                        { vendaValor: { gt: 0 } }, // Mostrar tudo que tem valor
+                        { packageId: null }        // Ou que não seja vinculado a pacote
+                    ];
+                }
             }
         }
 

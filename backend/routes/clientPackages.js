@@ -74,6 +74,36 @@ router.post('/', async (req, res) => {
             }
         });
 
+        // Automação Financeira: Criar registro de Venda para a mensalidade fixa
+        if (parseFloat(fixedFee) > 0) {
+            try {
+                // Auto-generate numeroVenda
+                const lastSale = await prisma.order.findFirst({
+                    where: { numeroVenda: { not: null } },
+                    orderBy: { numeroVenda: 'desc' }
+                });
+                const lastId = lastSale?.numeroVenda || 42531;
+                const nextNumeroVenda = lastId + 1;
+
+                await prisma.order.create({
+                    data: {
+                        clientId,
+                        title: `Mensalidade - ${name}`,
+                        serviceType: 'PLANO MENSAL',
+                        vendaValor: parseFloat(fixedFee),
+                        cacheValor: 0,
+                        status: 'VENDA',
+                        faturado: false,
+                        date: new Date(startDate), // Data de início do pacote
+                        numeroVenda: nextNumeroVenda,
+                        comentarios: `Faturamento automático referente ao pacote: ${name}`
+                    }
+                });
+            } catch (billingError) {
+                console.error('Erro ao gerar faturamento automático do pacote:', billingError);
+            }
+        }
+
         res.status(201).json(newPackage);
     } catch (error) {
         console.error('Erro ao criar pacote:', error);
