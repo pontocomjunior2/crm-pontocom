@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Loader2, CheckCircle2, AlertCircle, Building2, Mail, Phone, MapPin, Music, Plus, Calendar, Flame, Clock } from 'lucide-react';
-import { formatCNPJ, formatPhone, formatCEP, validateCNPJ, validateEmail, removeMask } from '../utils/formatters';
+import { formatCNPJ, formatPhone, formatCEP, removeMask, validateCNPJ, validateEmail, formatCurrency, parseCurrency } from '../utils/formatters';
 import { lookupCNPJ, lookupCEP, clientAPI, clientPackageAPI } from '../services/api';
 
 const ClientForm = ({ client = null, onClose, onSuccess }) => {
@@ -175,6 +175,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         }));
     };
 
+    const handlePackageCurrencyChange = (e) => {
+        const { name, value } = e.target;
+        const numericValue = value.replace(/\D/g, '');
+        const floatValue = parseFloat(numericValue) / 100;
+        setPackageFormData(prev => ({ ...prev, [name]: floatValue }));
+    };
+
     const handleSavePackage = async () => {
         setLoading(true);
         try {
@@ -240,11 +247,12 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-2">Valor Fixo Mensal</label>
                         <input
-                            type="number"
+                            type="text"
                             name="fixedFee"
-                            value={packageFormData.fixedFee}
-                            onChange={handlePackageFormChange}
-                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                            value={formatCurrency(packageFormData.fixedFee)}
+                            onChange={handlePackageCurrencyChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground font-mono"
+                            placeholder="R$ 0,00"
                         />
                     </div>
 
@@ -262,11 +270,12 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-2">Valor Áudio Extra</label>
                         <input
-                            type="number"
+                            type="text"
                             name="extraAudioFee"
-                            value={packageFormData.extraAudioFee}
-                            onChange={handlePackageFormChange}
-                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                            value={formatCurrency(packageFormData.extraAudioFee)}
+                            onChange={handlePackageCurrencyChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground font-mono"
+                            placeholder="R$ 0,00"
                         />
                     </div>
 
@@ -508,13 +517,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     <div className="flex gap-4 px-6 border-b border-border bg-card/50">
                         <button
                             onClick={() => setActiveTab('dados')}
-                            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'dados' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                            className={`px - 4 py - 3 text - sm font - medium transition - colors border - b - 2 ${activeTab === 'dados' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'} `}
                         >
                             Dados Gerais
                         </button>
                         <button
                             onClick={() => setActiveTab('pacotes')}
-                            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'pacotes' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                            className={`px - 4 py - 3 text - sm font - medium transition - colors border - b - 2 ${activeTab === 'pacotes' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'} `}
                         >
                             Pacotes Mensais
                         </button>
@@ -523,10 +532,10 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
                 {/* Message Alert */}
                 {message.text && (
-                    <div className={`mx-6 mt-4 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
+                    <div className={`mx - 6 mt - 4 p - 4 rounded - xl flex items - center gap - 3 ${message.type === 'success'
                         ? 'bg-green-500/10 border border-green-500/30 text-green-400'
                         : 'bg-red-500/10 border border-red-500/30 text-red-400'
-                        }`}>
+                        } `}>
                         {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
                         <span className="text-sm font-medium">{message.text}</span>
                     </div>
@@ -556,7 +565,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                                 name="cnpj_cpf"
                                                 value={formData.cnpj_cpf}
                                                 onChange={handleChange}
-                                                className={`flex-1 bg-input-background border ${errors.cnpj_cpf ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                                className={`flex - 1 bg - input - background border ${errors.cnpj_cpf ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
                                                 placeholder="00.000.000/0000-00"
                                                 maxLength={18}
                                             />
@@ -596,7 +605,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             name="name"
                                             value={formData.name}
                                             onChange={handleChange}
-                                            className={`w-full bg-input-background border ${errors.name ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                            className={`w - full bg - input - background border ${errors.name ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
                                             placeholder="Como é conhecida"
                                         />
                                         {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
@@ -635,7 +644,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             name="emailPrincipal"
                                             value={formData.emailPrincipal}
                                             onChange={handleChange}
-                                            className={`w-full bg-input-background border ${errors.emailPrincipal ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                            className={`w - full bg - input - background border ${errors.emailPrincipal ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
                                             placeholder="contato@empresa.com.br"
                                         />
                                         {errors.emailPrincipal && <p className="text-red-400 text-xs mt-1">{errors.emailPrincipal}</p>}
@@ -806,7 +815,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             name="emailContato"
                                             value={formData.emailContato}
                                             onChange={handleChange}
-                                            className={`w-full bg-input-background border ${errors.emailContato ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                            className={`w - full bg - input - background border ${errors.emailContato ? 'border-red-500' : 'border-border'} rounded - xl px - 4 py - 3 text - foreground focus: outline - none focus: border - primary / 50 focus: ring - 2 focus: ring - primary / 20 transition - all`}
                                             placeholder="contato@email.com"
                                         />
                                         {errors.emailContato && <p className="text-red-400 text-xs mt-1">{errors.emailContato}</p>}
