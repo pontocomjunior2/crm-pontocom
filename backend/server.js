@@ -29,6 +29,7 @@ const supplierRoutes = require('./routes/suppliers');
 const analyticsRoutes = require('./routes/analytics');
 const tierRoutes = require('./routes/tiers');
 const backupRoutes = require('./routes/backups');
+const clientPackageRoutes = require('./routes/clientPackages');
 const backupService = require('./services/backupService');
 const cron = require('node-cron');
 // const uploadRoutes = require('./routes/upload');
@@ -136,6 +137,7 @@ app.use('/api/suppliers', authenticateToken, supplierRoutes);
 app.use('/api/analytics', authenticateToken, analyticsRoutes);
 app.use('/api/tiers', authenticateToken, tierRoutes);
 app.use('/api/backups', authenticateToken, backupRoutes);
+app.use('/api/client-packages', authenticateToken, clientPackageRoutes);
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Health check

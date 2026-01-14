@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2 } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
-import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL } from '../services/api';
+import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI } from '../services/api';
 
 const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess }) => {
     const [clients, setClients] = useState([]);
@@ -43,8 +43,12 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
         creditsConsumed: order?.creditsConsumed || 1,
         costPerCreditSnapshot: order?.costPerCreditSnapshot || null,
         supplierId: order?.supplierId || '',
-        cachePago: order?.cachePago || false
+        cachePago: order?.cachePago || false,
+        packageId: order?.packageId || null
     });
+
+    const [activePackage, setActivePackage] = useState(null);
+    const [fetchingPackage, setFetchingPackage] = useState(false);
 
     const [osFile, setOsFile] = useState(null);
     const [fileConflict, setFileConflict] = useState(null); // { exists: true, name: '', newName: '' }
@@ -73,6 +77,21 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
         setFormData(prev => ({ ...prev, clientId: client.id }));
         setClientSearch(client.name);
         setShowClientDropdown(false);
+        fetchClientPackage(client.id);
+    };
+
+    const fetchClientPackage = async (clientId) => {
+        if (!clientId) return;
+        setFetchingPackage(true);
+        try {
+            const pkg = await clientPackageAPI.getActive(clientId);
+            setActivePackage(pkg);
+            setFormData(prev => ({ ...prev, packageId: pkg?.id || null }));
+        } catch (error) {
+            console.error('Error fetching client package:', error);
+        } finally {
+            setFetchingPackage(false);
+        }
     };
 
     const [attachments, setAttachments] = useState([]);
@@ -99,6 +118,32 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
             setServiceSearch(formData.serviceType);
         }
     }, [formData.serviceType]);
+
+    // Fetch package if clientId exists initially
+    useEffect(() => {
+        if (formData.clientId && !activePackage) {
+            fetchClientPackage(formData.clientId);
+        }
+    }, [formData.clientId]);
+
+    // Auto-suggest price based on package
+    useEffect(() => {
+        if (activePackage && !order) {
+            let suggestedVenda = 0;
+            if (activePackage.type === 'FIXO_ILIMITADO') {
+                suggestedVenda = 0;
+            } else if (activePackage.type === 'FIXO_COM_LIMITE' || activePackage.type === 'FIXO_COM_LIMITE_VENCIMENTO') {
+                if (activePackage.usedAudios < activePackage.audioLimit) {
+                    suggestedVenda = 0;
+                } else {
+                    suggestedVenda = activePackage.extraAudioFee;
+                }
+            } else if (activePackage.type === 'FIXO_SOB_DEMANDA') {
+                suggestedVenda = activePackage.extraAudioFee;
+            }
+            setFormData(prev => ({ ...prev, vendaValor: suggestedVenda }));
+        }
+    }, [activePackage, order]);
 
     // Recalculate margins when values change
     useEffect(() => {
@@ -487,6 +532,67 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
                             )}
                         </div>
 
+                        {/* Package Info Alert */}
+                        {formData.clientId && (
+                            <div className="mt-4">
+                                {fetchingPackage ? (
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                                        <Loader2 size={14} className="animate-spin" />
+                                        Buscando informações do pacote...
+                                    </div>
+                                ) : activePackage ? (
+                                    <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/10 border-red-500/30' : 'bg-primary/5 border-primary/20'}`}>
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'}`}>
+                                                <TrendingUp size={20} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-bold text-foreground">{activePackage.name}</h4>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Vence em: {new Date(activePackage.endDate).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-center md:text-right">
+                                                <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumo</p>
+                                                <p className="text-sm font-bold text-foreground">
+                                                    {activePackage.usedAudios} / {activePackage.audioLimit || '∞'}
+                                                </p>
+                                            </div>
+
+                                            {new Date(activePackage.endDate) < new Date() ? (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30">
+                                                    <AlertCircle size={14} />
+                                                    <span className="text-[10px] font-bold uppercase">Pacote Expirado</span>
+                                                </div>
+                                            ) : (activePackage.audioLimit > 0 && activePackage.usedAudios >= activePackage.audioLimit) ? (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                                    <AlertCircle size={14} />
+                                                    <span className="text-[10px] font-bold uppercase">Limite Atingido</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30">
+                                                    <CheckCircle2 size={14} />
+                                                    <span className="text-[10px] font-bold uppercase">Pacote Ativo</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="p-4 rounded-2xl border border-dashed border-border bg-muted/20 flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground">
+                                            <AlertCircle size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-foreground">Sem pacote ativo</p>
+                                            <p className="text-xs text-muted-foreground">Este cliente será cobrado de forma avulsa.</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                         {/* Dropdown Results */}
                         {showClientDropdown && (
                             <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">

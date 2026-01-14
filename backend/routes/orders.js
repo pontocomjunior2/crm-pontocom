@@ -318,7 +318,8 @@ router.post('/', async (req, res) => {
             supplierId = null,
             creditsConsumed,
             costPerCreditSnapshot = null,
-            cachePago = false
+            cachePago = false,
+            packageId = null
         } = req.body;
 
         // Calculate Cache if Supplier Linked
@@ -351,6 +352,38 @@ router.post('/', async (req, res) => {
                 // If cache is 0 (auto-calc) and we have credits to consume
                 if (finalCacheValor === 0 && creditsToConsume > 0) {
                     finalCacheValor = parseFloat(costPerCreditVal) * creditsToConsume;
+                }
+            }
+        }
+
+        // --- Lógica de Pacote Mensal ---
+        let finalVendaValor = vendaValor !== undefined ? parseFloat(vendaValor) : 0;
+        if (packageId) {
+            const pkg = await prisma.clientPackage.findUnique({
+                where: { id: packageId }
+            });
+
+            if (pkg && pkg.active) {
+                const now = new Date();
+                // Verificar se está dentro da validade
+                if (now >= pkg.startDate && now <= pkg.endDate) {
+                    const usage = pkg.usedAudios + 1;
+
+                    // Se for sob demanda e exceder o limite, cobra taxa extra
+                    if (pkg.type === 'FIXO_SOB_DEMANDA' && usage > pkg.audioLimit) {
+                        finalVendaValor = parseFloat(pkg.extraAudioFee);
+                    } else if (pkg.type === 'FIXO_ILIMITADO') {
+                        finalVendaValor = 0;
+                    } else if (usage <= pkg.audioLimit) {
+                        // Dentro da cota de qualquer plano com limite
+                        finalVendaValor = 0;
+                    }
+
+                    // Incrementar uso no pacote
+                    await prisma.clientPackage.update({
+                        where: { id: packageId },
+                        data: { usedAudios: usage }
+                    });
                 }
             }
         }
@@ -413,7 +446,7 @@ router.post('/', async (req, res) => {
                 tipo,
                 urgency,
                 cacheValor: parseFloat(finalCacheValor),
-                vendaValor: parseFloat(vendaValor) || 0,
+                vendaValor: parseFloat(finalVendaValor),
                 comentarios,
                 status,
                 numeroVenda: finalNumeroVenda || null,
@@ -433,7 +466,8 @@ router.post('/', async (req, res) => {
                 supplierId: supplierId || null,
                 creditsConsumed: creditsToConsume,
                 costPerCreditSnapshot: costPerCreditVal,
-                cachePago: cachePago || false
+                cachePago: cachePago || false,
+                packageId: packageId || null
             },
             include: {
                 client: {

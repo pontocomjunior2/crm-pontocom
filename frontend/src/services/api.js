@@ -68,6 +68,31 @@ export const clientAPI = {
     },
 };
 
+// Client Package API calls
+export const clientPackageAPI = {
+    list: async (clientId) => {
+        return fetchAPI(`/client-packages/${clientId}`);
+    },
+
+    getActive: async (clientId) => {
+        return fetchAPI(`/client-packages/active/${clientId}`);
+    },
+
+    create: async (data) => {
+        return fetchAPI('/client-packages', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+
+    update: async (id, data) => {
+        return fetchAPI(`/client-packages/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+};
+
 // Order API calls
 export const orderAPI = {
     list: async (params = {}) => {

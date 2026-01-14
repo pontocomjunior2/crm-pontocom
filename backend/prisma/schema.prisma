@@ -38,6 +38,7 @@ model Client {
   salesCount       Int?     @default(0)
 
   orders           Order[]
+  packages         ClientPackage[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -90,6 +91,9 @@ model Order {
   // Supplier Credit System
   creditsConsumed     Int      @default(0) // Default 0 for normal orders, 1+ for Supplier orders
   costPerCreditSnapshot Decimal? @db.Decimal(10, 2) // Snapshot of the cost at the time of order
+
+  packageId        String?
+  package          ClientPackage? @relation(fields: [packageId], references: [id])
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -231,4 +235,32 @@ model BackupLog {
   status            String   // SUCCESS, FAILED
   error             String?  @db.Text
   createdAt         DateTime @default(now())
+}
+
+enum PackageType {
+  FIXO_ILIMITADO
+  FIXO_COM_LIMITE
+  FIXO_COM_LIMITE_VENCIMENTO
+  FIXO_SOB_DEMANDA
+}
+
+model ClientPackage {
+  id              String   @id @default(uuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id])
+  name            String
+  type            PackageType
+  fixedFee        Decimal  @db.Decimal(10, 2)
+  audioLimit      Int      @default(0)
+  usedAudios      Int      @default(0)
+  extraAudioFee   Decimal  @db.Decimal(10, 2) @default(0)
+  startDate       DateTime
+  endDate         DateTime
+  active          Boolean  @default(true)
+  orders          Order[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([active])
 }

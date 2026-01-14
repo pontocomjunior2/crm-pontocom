@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { X, Search, Loader2, CheckCircle2, AlertCircle, Building2, Mail, Phone, MapPin } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Search, Loader2, CheckCircle2, AlertCircle, Building2, Mail, Phone, MapPin, Music, Plus, Calendar, Flame, Clock } from 'lucide-react';
 import { formatCNPJ, formatPhone, formatCEP, validateCNPJ, validateEmail, removeMask } from '../utils/formatters';
-import { lookupCNPJ, lookupCEP, clientAPI } from '../services/api';
+import { lookupCNPJ, lookupCEP, clientAPI, clientPackageAPI } from '../services/api';
 
 const ClientForm = ({ client = null, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
@@ -30,6 +30,304 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
     const [lookingUpCEP, setLookingUpCEP] = useState(false);
     const [errors, setErrors] = useState({});
     const [message, setMessage] = useState({ type: '', text: '' });
+
+    // Package states
+    const [activeTab, setActiveTab] = useState('dados'); // 'dados' or 'pacotes'
+    const [packages, setPackages] = useState([]);
+    const [fetchingPackages, setFetchingPackages] = useState(false);
+    const [showPackageForm, setShowPackageForm] = useState(false);
+    const [editingPackage, setEditingPackage] = useState(null);
+    const [packageFormData, setPackageFormData] = useState({
+        name: '',
+        type: 'FIXO_COM_LIMITE',
+        fixedFee: 0,
+        audioLimit: 0,
+        extraAudioFee: 0,
+        startDate: new Date().toISOString().split('T')[0],
+        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+        active: true
+    });
+
+    useEffect(() => {
+        if (activeTab === 'pacotes' && client?.id) {
+            fetchPackages();
+        }
+    }, [activeTab, client?.id]);
+
+    const fetchPackages = async () => {
+        setFetchingPackages(true);
+        try {
+            const data = await clientPackageAPI.list(client.id);
+            setPackages(data);
+        } catch (error) {
+            setMessage({ type: 'error', text: 'Erro ao buscar pacotes' });
+        } finally {
+            setFetchingPackages(false);
+        }
+    };
+
+    const renderPackages = () => {
+        if (fetchingPackages) {
+            return (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Loader2 size={40} className="animate-spin mb-4 text-primary/50" />
+                    <p>Carregando pacotes...</p>
+                </div>
+            );
+        }
+
+        if (packages.length === 0) {
+            return (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                        <Music size={40} className="text-primary" />
+                    </div>
+                    <h3 className="text-xl font-bold text-foreground mb-2">Sem pacotes ativos</h3>
+                    <p className="text-muted-foreground max-w-xs mx-auto mb-6">
+                        Este cliente ainda não possui pacotes de áudio mensais configurados.
+                    </p>
+                    <button
+                        onClick={() => setShowPackageForm(true)}
+                        className="btn-primary flex items-center gap-2"
+                    >
+                        <Plus size={20} />
+                        Configurar Primeiro Pacote
+                    </button>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-4">
+                <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-lg font-bold text-foreground">Histórico de Pacotes</h3>
+                    <button
+                        onClick={() => setShowPackageForm(true)}
+                        className="btn-primary py-2 px-4 text-sm flex items-center gap-2"
+                    >
+                        <Plus size={16} />
+                        Novo Pacote
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                    {packages.map((pkg) => (
+                        <div
+                            key={pkg.id}
+                            className={`p-5 rounded-2xl border transition-all ${pkg.active ? 'bg-primary/5 border-primary/20' : 'bg-muted/30 border-border opacity-70'}`}
+                        >
+                            <div className="flex items-start justify-between mb-4">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h4 className="font-bold text-foreground">{pkg.name}</h4>
+                                        {pkg.active && (
+                                            <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-[10px] font-bold uppercase tracking-wider border border-green-500/20">
+                                                Ativo
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                                        <Calendar size={12} />
+                                        {new Date(pkg.startDate).toLocaleDateString()} - {new Date(pkg.endDate).toLocaleDateString()}
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-lg font-bold text-primary">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pkg.fixedFee)}
+                                    </p>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">Mensalidade</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="bg-card/50 p-3 rounded-xl border border-border/50">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Consumo</p>
+                                    <div className="flex items-end gap-1">
+                                        <span className="text-xl font-bold text-foreground">{pkg.usedAudios}</span>
+                                        <span className="text-xs text-muted-foreground pb-1">/ {pkg.audioLimit || '∞'}</span>
+                                    </div>
+                                </div>
+                                <div className="bg-card/50 p-3 rounded-xl border border-border/50">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Tipo</p>
+                                    <p className="text-sm font-bold text-foreground truncate">
+                                        {pkg.type.replace(/_/g, ' ')}
+                                    </p>
+                                </div>
+                                <div className="bg-card/50 p-3 rounded-xl border border-border/50">
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold mb-1">Extra</p>
+                                    <p className="text-sm font-bold text-foreground">
+                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pkg.extraAudioFee)}/un
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    const handlePackageFormChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setPackageFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : (type === 'number' ? Number(value) : value)
+        }));
+    };
+
+    const handleSavePackage = async () => {
+        setLoading(true);
+        try {
+            const data = {
+                ...packageFormData,
+                clientId: client.id
+            };
+            await clientPackageAPI.create(data);
+            setMessage({ type: 'success', text: 'Pacote criado com sucesso!' });
+            setShowPackageForm(false);
+            fetchPackages();
+        } catch (error) {
+            setMessage({ type: 'error', text: error.message });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderPackageForm = () => {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
+                        <Plus size={20} className="text-primary" />
+                        Novo Pacote Mensal
+                    </h3>
+                    <button
+                        onClick={() => setShowPackageForm(false)}
+                        className="text-muted-foreground hover:text-foreground text-sm"
+                    >
+                        Voltar para lista
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Nome do Pacote</label>
+                        <input
+                            type="text"
+                            name="name"
+                            value={packageFormData.name}
+                            onChange={handlePackageFormChange}
+                            placeholder="Ex: Plano Bronze, Mensalidade Outubro..."
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Tipo de Pacote</label>
+                        <select
+                            name="type"
+                            value={packageFormData.type}
+                            onChange={handlePackageFormChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        >
+                            <option value="FIXO_ILIMITADO">Fixo Ilimitado</option>
+                            <option value="FIXO_COM_LIMITE">Fixo com Limite</option>
+                            <option value="FIXO_COM_LIMITE_VENCIMENTO">Fixo com Limite e Vencimento</option>
+                            <option value="FIXO_SOB_DEMANDA">Fixo + Sob Demanda</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Valor Fixo Mensal</label>
+                        <input
+                            type="number"
+                            name="fixedFee"
+                            value={packageFormData.fixedFee}
+                            onChange={handlePackageFormChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Limite de Áudios (0 = ilimitado)</label>
+                        <input
+                            type="number"
+                            name="audioLimit"
+                            value={packageFormData.audioLimit}
+                            onChange={handlePackageFormChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Valor Áudio Extra</label>
+                        <input
+                            type="number"
+                            name="extraAudioFee"
+                            value={packageFormData.extraAudioFee}
+                            onChange={handlePackageFormChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Data de Início</label>
+                        <input
+                            type="date"
+                            name="startDate"
+                            value={packageFormData.startDate}
+                            onChange={handlePackageFormChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-muted-foreground mb-2">Data de Vencimento</label>
+                        <input
+                            type="date"
+                            name="endDate"
+                            value={packageFormData.endDate}
+                            onChange={handlePackageFormChange}
+                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground"
+                        />
+                    </div>
+
+                    <div className="flex items-center gap-3 py-4 md:col-span-2">
+                        <input
+                            type="checkbox"
+                            id="pkg-active"
+                            name="active"
+                            checked={packageFormData.active}
+                            onChange={handlePackageFormChange}
+                            className="w-5 h-5 rounded border-border bg-input-background text-primary focus:ring-primary/20"
+                        />
+                        <label htmlFor="pkg-active" className="text-sm font-medium text-foreground cursor-pointer">
+                            Ativar pacote imediatamente (isto desativará outros pacotes deste cliente)
+                        </label>
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
+                    <button
+                        type="button"
+                        onClick={() => setShowPackageForm(false)}
+                        className="btn-secondary px-6"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleSavePackage}
+                        disabled={loading}
+                        className="btn-primary px-8 flex items-center gap-2"
+                    >
+                        {loading ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
+                        Salvar Pacote
+                    </button>
+                </div>
+            </div>
+        );
+    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -205,6 +503,24 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     </button>
                 </div>
 
+                {/* Tabs */}
+                {client && (
+                    <div className="flex gap-4 px-6 border-b border-border bg-card/50">
+                        <button
+                            onClick={() => setActiveTab('dados')}
+                            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'dados' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                        >
+                            Dados Gerais
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('pacotes')}
+                            className={`px-4 py-3 text-sm font-medium transition-colors border-b-2 ${activeTab === 'pacotes' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                        >
+                            Pacotes Mensais
+                        </button>
+                    </div>
+                )}
+
                 {/* Message Alert */}
                 {message.text && (
                     <div className={`mx-6 mt-4 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
@@ -216,343 +532,352 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     </div>
                 )}
 
-                {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+                {/* Content Area */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    {activeTab === 'dados' && (
+                        <form onSubmit={handleSubmit} className="p-6">
 
-                    {/* Dados da Empresa */}
-                    <div className="mb-8">
-                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                            <Building2 size={20} className="text-primary" />
-                            Dados da Empresa
-                        </h3>
+                            {/* Dados da Empresa */}
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                                    <Building2 size={20} className="text-primary" />
+                                    Dados da Empresa
+                                </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* CNPJ/CPF with Lookup */}
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    CNPJ/CPF <span className="text-red-500">*</span>
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        name="cnpj_cpf"
-                                        value={formData.cnpj_cpf}
-                                        onChange={handleChange}
-                                        className={`flex-1 bg-input-background border ${errors.cnpj_cpf ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                                        placeholder="00.000.000/0000-00"
-                                        maxLength={18}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleCNPJLookup}
-                                        disabled={lookingUpCNPJ}
-                                        className="btn-primary px-4 flex items-center gap-2"
-                                    >
-                                        {lookingUpCNPJ ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                                        Buscar
-                                    </button>
-                                </div>
-                                {errors.cnpj_cpf && <p className="text-red-400 text-xs mt-1">{errors.cnpj_cpf}</p>}
-                            </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* CNPJ/CPF with Lookup */}
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            CNPJ/CPF <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                name="cnpj_cpf"
+                                                value={formData.cnpj_cpf}
+                                                onChange={handleChange}
+                                                className={`flex-1 bg-input-background border ${errors.cnpj_cpf ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                                placeholder="00.000.000/0000-00"
+                                                maxLength={18}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleCNPJLookup}
+                                                disabled={lookingUpCNPJ}
+                                                className="btn-primary px-4 flex items-center gap-2"
+                                            >
+                                                {lookingUpCNPJ ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                                                Buscar
+                                            </button>
+                                        </div>
+                                        {errors.cnpj_cpf && <p className="text-red-400 text-xs mt-1">{errors.cnpj_cpf}</p>}
+                                    </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Razão Social
-                                </label>
-                                <input
-                                    type="text"
-                                    name="razaoSocial"
-                                    value={formData.razaoSocial}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Nome da empresa"
-                                />
-                            </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Razão Social
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="razaoSocial"
+                                            value={formData.razaoSocial}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="Nome da empresa"
+                                        />
+                                    </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Nome Fantasia <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value={formData.name}
-                                    onChange={handleChange}
-                                    className={`w-full bg-input-background border ${errors.name ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                                    placeholder="Como é conhecida"
-                                />
-                                {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
-                            </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Nome Fantasia <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="name"
+                                            value={formData.name}
+                                            onChange={handleChange}
+                                            className={`w-full bg-input-background border ${errors.name ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                            placeholder="Como é conhecida"
+                                        />
+                                        {errors.name && <p className="text-red-400 text-xs mt-1">{errors.name}</p>}
+                                    </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Inscrição Estadual
-                                </label>
-                                <input
-                                    type="text"
-                                    name="inscricaoEstadual"
-                                    value={formData.inscricaoEstadual}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="000.000.000.000"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Contato */}
-                    <div className="mb-8">
-                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                            <Mail size={20} className="text-primary" />
-                            Contato
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Email Principal
-                                </label>
-                                <input
-                                    type="email"
-                                    name="emailPrincipal"
-                                    value={formData.emailPrincipal}
-                                    onChange={handleChange}
-                                    className={`w-full bg-input-background border ${errors.emailPrincipal ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                                    placeholder="contato@empresa.com.br"
-                                />
-                                {errors.emailPrincipal && <p className="text-red-400 text-xs mt-1">{errors.emailPrincipal}</p>}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Telefone Principal
-                                </label>
-                                <input
-                                    type="text"
-                                    name="telefonePrincipal"
-                                    value={formData.telefonePrincipal}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="(11) 98765-4321"
-                                    maxLength={15}
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Endereço */}
-                    <div className="mb-8">
-                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                            <MapPin size={20} className="text-primary" />
-                            Endereço
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    CEP
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        name="cep"
-                                        value={formData.cep}
-                                        onChange={handleChange}
-                                        className="flex-1 bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                        placeholder="00000-000"
-                                        maxLength={9}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={handleCEPLookup}
-                                        disabled={lookingUpCEP}
-                                        className="btn-secondary px-3"
-                                    >
-                                        {lookingUpCEP ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
-                                    </button>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Inscrição Estadual
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="inscricaoEstadual"
+                                            value={formData.inscricaoEstadual}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="000.000.000.000"
+                                        />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                            {/* Contato */}
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                                    <Mail size={20} className="text-primary" />
+                                    Contato
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Email Principal
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="emailPrincipal"
+                                            value={formData.emailPrincipal}
+                                            onChange={handleChange}
+                                            className={`w-full bg-input-background border ${errors.emailPrincipal ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                            placeholder="contato@empresa.com.br"
+                                        />
+                                        {errors.emailPrincipal && <p className="text-red-400 text-xs mt-1">{errors.emailPrincipal}</p>}
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Telefone Principal
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="telefonePrincipal"
+                                            value={formData.telefonePrincipal}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="(11) 98765-4321"
+                                            maxLength={15}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Endereço */}
+                            <div className="mb-8">
+                                <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                                    <MapPin size={20} className="text-primary" />
                                     Endereço
-                                </label>
-                                <input
-                                    type="text"
-                                    name="endereco"
-                                    value={formData.endereco}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Rua, Avenida..."
-                                />
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            CEP
+                                        </label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                name="cep"
+                                                value={formData.cep}
+                                                onChange={handleChange}
+                                                className="flex-1 bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                                placeholder="00000-000"
+                                                maxLength={9}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={handleCEPLookup}
+                                                disabled={lookingUpCEP}
+                                                className="btn-secondary px-3"
+                                            >
+                                                {lookingUpCEP ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="md:col-span-2">
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Endereço
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="endereco"
+                                            value={formData.endereco}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="Rua, Avenida..."
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Número
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="numero"
+                                            value={formData.numero}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="123"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Complemento
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="complemento"
+                                            value={formData.complemento}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="Apto, Sala..."
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Bairro
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="bairro"
+                                            value={formData.bairro}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="Centro"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Cidade
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="cidade"
+                                            value={formData.cidade}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="São Paulo"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Estado
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="estado"
+                                            value={formData.estado}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="SP"
+                                            maxLength={2}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Número
-                                </label>
-                                <input
-                                    type="text"
-                                    name="numero"
-                                    value={formData.numero}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="123"
-                                />
-                            </div>
+                            {/* Informações Adicionais */}
+                            <div className="mb-6">
+                                <h3 className="text-lg font-bold text-foreground mb-4">Informações Adicionais</h3>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Complemento
-                                </label>
-                                <input
-                                    type="text"
-                                    name="complemento"
-                                    value={formData.complemento}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Apto, Sala..."
-                                />
-                            </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Nome do Contato
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="nomeContato"
+                                            value={formData.nomeContato}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                            placeholder="Nome do responsável"
+                                        />
+                                    </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Bairro
-                                </label>
-                                <input
-                                    type="text"
-                                    name="bairro"
-                                    value={formData.bairro}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Centro"
-                                />
-                            </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Email do Contato
+                                        </label>
+                                        <input
+                                            type="email"
+                                            name="emailContato"
+                                            value={formData.emailContato}
+                                            onChange={handleChange}
+                                            className={`w-full bg-input-background border ${errors.emailContato ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                            placeholder="contato@email.com"
+                                        />
+                                        {errors.emailContato && <p className="text-red-400 text-xs mt-1">{errors.emailContato}</p>}
+                                    </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Cidade
-                                </label>
-                                <input
-                                    type="text"
-                                    name="cidade"
-                                    value={formData.cidade}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="São Paulo"
-                                />
-                            </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Data de Aniversário
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="dataAniversario"
+                                            value={formData.dataAniversario}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                        />
+                                    </div>
+                                </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Estado
-                                </label>
-                                <input
-                                    type="text"
-                                    name="estado"
-                                    value={formData.estado}
+                                <textarea
+                                    name="observacoes"
+                                    value={formData.observacoes}
                                     onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="SP"
-                                    maxLength={2}
+                                    rows={4}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                                    placeholder="Informações adicionais sobre o cliente..."
                                 />
                             </div>
+                        </form>
+                    )}
+
+                    {activeTab === 'pacotes' && (
+                        <div className="p-6">
+                            {showPackageForm ? renderPackageForm() : renderPackages()}
                         </div>
-                    </div>
-
-                    {/* Informações Adicionais */}
-                    <div className="mb-6">
-                        <h3 className="text-lg font-bold text-foreground mb-4">Informações Adicionais</h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Nome do Contato
-                                </label>
-                                <input
-                                    type="text"
-                                    name="nomeContato"
-                                    value={formData.nomeContato}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                    placeholder="Nome do responsável"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Email do Contato
-                                </label>
-                                <input
-                                    type="email"
-                                    name="emailContato"
-                                    value={formData.emailContato}
-                                    onChange={handleChange}
-                                    className={`w-full bg-input-background border ${errors.emailContato ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                                    placeholder="contato@email.com"
-                                />
-                                {errors.emailContato && <p className="text-red-400 text-xs mt-1">{errors.emailContato}</p>}
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Data de Aniversário
-                                </label>
-                                <input
-                                    type="date"
-                                    name="dataAniversario"
-                                    value={formData.dataAniversario}
-                                    onChange={handleChange}
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Observações
-                            </label>
-                            <textarea
-                                name="observacoes"
-                                value={formData.observacoes}
-                                onChange={handleChange}
-                                rows={4}
-                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                                placeholder="Informações adicionais sobre o cliente..."
-                            />
-                        </div>
-                    </div>
-                </form>
+                    )}
+                </div>
 
                 {/* Footer Actions */}
-                <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-card">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="btn-secondary px-6"
-                        disabled={loading}
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="submit"
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        className="btn-primary px-8 flex items-center gap-2"
-                    >
-                        {loading ? (
-                            <>
-                                <Loader2 size={18} className="animate-spin" />
-                                Salvando...
-                            </>
-                        ) : (
-                            <>
-                                <CheckCircle2 size={18} />
-                                {client ? 'Atualizar' : 'Cadastrar'}
-                            </>
+                {!showPackageForm && (
+                    <div className="flex items-center justify-end gap-3 p-6 border-t border-border bg-card">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="btn-secondary px-6"
+                            disabled={loading}
+                        >
+                            {activeTab === 'dados' ? 'Cancelar' : 'Fechar'}
+                        </button>
+                        {activeTab === 'dados' && (
+                            <button
+                                type="submit"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="btn-primary px-8 flex items-center gap-2"
+                            >
+                                {loading ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin" />
+                                        Salvando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 size={18} />
+                                        {client ? 'Atualizar' : 'Cadastrar'}
+                                    </>
+                                )}
+                            </button>
                         )}
-                    </button>
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );
