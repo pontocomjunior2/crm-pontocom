@@ -59,11 +59,24 @@ const CRM = () => {
   const [initialOrderStatus, setInitialOrderStatus] = useState('PEDIDO');
 
   // Date Filter State
-  const [dateRange, setDateRange] = useState({
-    label: 'Todo o Período',
-    value: 'all',
-    start: '',
-    end: ''
+  const [dateRange, setDateRange] = useState(() => {
+    // Try to restore from session storage
+    const saved = sessionStorage.getItem('dashboardDateFilter');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+
+    // Default to 'This Month'
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+    const end = today.toISOString().split('T')[0];
+
+    return {
+      label: 'Este Mês',
+      value: 'thisMonth',
+      start,
+      end
+    };
   });
   const [isCustomDate, setIsCustomDate] = useState(false);
   const [showDateFilter, setShowDateFilter] = useState(false);
@@ -172,7 +185,9 @@ const CRM = () => {
       setIsCustomDate(false);
     }
 
-    setDateRange({ label, value, start, end });
+    const newRange = { label, value, start, end };
+    setDateRange(newRange);
+    sessionStorage.setItem('dashboardDateFilter', JSON.stringify(newRange));
     if (value !== 'custom') setShowDateFilter(false);
   };
 
