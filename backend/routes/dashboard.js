@@ -10,10 +10,21 @@ router.get('/', async (req, res) => {
         // Build date filter
         let dateFilter = {};
         if (startDate && endDate) {
+            // Append time to ensure it picks up the end of the day in LOCAL time (or consistent string parsing)
+            // Using ISO format with T without Z usually parses as local time or explicit components
+            const end = new Date(`${endDate}T23:59:59.999`);
+
+            console.log('Dashboard Filter:', {
+                startDateArgs: startDate,
+                endDateArgs: endDate,
+                constructedEnd: end,
+                endISO: end.toISOString()
+            });
+
             dateFilter = {
                 date: {
                     gte: new Date(startDate),
-                    lte: new Date(endDate)
+                    lte: end
                 }
             };
         } else if (startDate) {
