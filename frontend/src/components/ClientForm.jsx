@@ -25,6 +25,17 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         status: client?.status || 'ativado'
     });
 
+    const [isInternational, setIsInternational] = useState(false);
+
+    useEffect(() => {
+        if (client?.cnpj_cpf) {
+            // Heuristic: if it has letters, it is definitely international
+            if (/[a-zA-Z]/.test(client.cnpj_cpf)) {
+                setIsInternational(true);
+            }
+        }
+    }, [client]);
+
     const [loading, setLoading] = useState(false);
     const [lookingUpCNPJ, setLookingUpCNPJ] = useState(false);
     const [lookingUpCEP, setLookingUpCEP] = useState(false);
@@ -423,10 +434,12 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         const { name, value } = e.target;
         let formattedValue = value;
 
-        // Apply formatting
-        if (name === 'cnpj_cpf') formattedValue = formatCNPJ(value);
-        if (name === 'telefonePrincipal') formattedValue = formatPhone(value);
-        if (name === 'cep') formattedValue = formatCEP(value);
+        // Apply formatting ONLY if not international
+        if (!isInternational) {
+            if (name === 'cnpj_cpf') formattedValue = formatCNPJ(value);
+            if (name === 'telefonePrincipal') formattedValue = formatPhone(value);
+            if (name === 'cep') formattedValue = formatCEP(value);
+        }
 
         setFormData(prev => ({ ...prev, [name]: formattedValue }));
 
@@ -438,6 +451,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
     const handleCNPJLookup = async () => {
         const cleanCNPJ = removeMask(formData.cnpj_cpf);
+
+        if (isInternational) return; // Skip lookup for international
 
         if (!cleanCNPJ || cleanCNPJ.length < 11) {
             setMessage({ type: 'error', text: 'Digite um CNPJ/CPF válido' });
@@ -478,6 +493,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
     };
 
     const handleCEPLookup = async () => {
+        if (isInternational) return; // Skip lookup for international
+
         const cleanCEP = removeMask(formData.cep);
 
         if (!cleanCEP || cleanCEP.length !== 8) {
@@ -510,11 +527,13 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         const newErrors = {};
 
         if (!formData.cnpj_cpf) {
-            newErrors.cnpj_cpf = 'CNPJ/CPF é obrigatório';
+            newErrors.cnpj_cpf = 'CNPJ/CPF/ID é obrigatório';
         } else {
-            const clean = removeMask(formData.cnpj_cpf);
-            if (clean.length === 14 && !validateCNPJ(formData.cnpj_cpf)) {
-                newErrors.cnpj_cpf = 'CNPJ inválido';
+            if (!isInternational) {
+                const clean = removeMask(formData.cnpj_cpf);
+                if (clean.length === 14 && !validateCNPJ(formData.cnpj_cpf)) {
+                    newErrors.cnpj_cpf = 'CNPJ inválido';
+                }
             }
         }
 
@@ -548,9 +567,10 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         try {
             const dataToSend = {
                 ...formData,
-                cnpj_cpf: removeMask(formData.cnpj_cpf),
-                cep: removeMask(formData.cep),
-                telefonePrincipal: removeMask(formData.telefonePrincipal),
+                cnpj_cpf: isInternational ? formData.cnpj_cpf : removeMask(formData.cnpj_cpf),
+                cep: isInternational ? formData.cep : removeMask(formData.cep),
+                telefonePrincipal: isInternational ? formData.telefonePrincipal : removeMask(formData.telefonePrincipal),
+                isInternational
             };
 
             if (client) {
@@ -634,11 +654,24 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                     Dados da Empresa
                                 </h3>
 
+                                <div className="mb-4 flex items-center gap-2">
+                                    <input
+                                        type="checkbox"
+                                        id="isInternational"
+                                        checked={isInternational}
+                                        onChange={(e) => setIsInternational(e.target.checked)}
+                                        className="w-4 h-4 rounded border-border bg-input-background text-primary focus:ring-primary/20"
+                                    />
+                                    <label htmlFor="isInternational" className="text-sm text-foreground font-medium cursor-pointer">
+                                        Cliente Internacional (Fora do Brasil)
+                                    </label>
+                                </div>
+
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {/* CNPJ/CPF with Lookup */}
                                     <div className="md:col-span-2">
                                         <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                            CNPJ/CPF <span className="text-red-500">*</span>
+                                            {isInternational ? 'ID / Tax ID' : 'CNPJ/CPF'} <span className="text-red-500">*</span>
                                         </label>
                                         <div className="flex gap-2">
                                             <input
@@ -653,8 +686,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             <button
                                                 type="button"
                                                 onClick={handleCNPJLookup}
-                                                disabled={lookingUpCNPJ}
-                                                className="btn-primary px-4 flex items-center gap-2"
+                                                disabled={isInternational || lookingUpCNPJ}
+                                                className={`btn-primary px-4 flex items-center gap-2 ${isInternational ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 {lookingUpCNPJ ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
                                                 Buscar
@@ -773,8 +806,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                                             <button
                                                 type="button"
                                                 onClick={handleCEPLookup}
-                                                disabled={lookingUpCEP}
-                                                className="btn-secondary px-3"
+                                                disabled={isInternational || lookingUpCEP}
+                                                className={`btn-secondary px-3 ${isInternational ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 {lookingUpCEP ? <Loader2 size={18} className="animate-spin" /> : <Search size={18} />}
                                             </button>

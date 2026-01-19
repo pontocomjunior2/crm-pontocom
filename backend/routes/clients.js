@@ -60,15 +60,23 @@ router.get('/', async (req, res) => {
             andFilters.push({ cidade: { contains: cidade, mode: 'insensitive' } });
         }
         if (cnpj_cpf) {
-            andFilters.push({ cnpj_cpf: { contains: cnpj_cpf.replace(/\D/g, '') } });
+            const hasLetters = /[a-zA-Z]/.test(cnpj_cpf);
+            if (hasLetters) {
+                andFilters.push({ cnpj_cpf: { contains: cnpj_cpf, mode: 'insensitive' } });
+            } else {
+                andFilters.push({ cnpj_cpf: { contains: cnpj_cpf.replace(/\D/g, '') } });
+            }
         }
 
         // Global search filter (fallback/combined)
         if (search) {
+            const searchHasLetters = /[a-zA-Z]/.test(search);
+            const searchCNPJ = searchHasLetters ? search : search.replace(/\D/g, '');
+
             const searchOR = [
                 { name: { contains: search, mode: 'insensitive' } },
                 { razaoSocial: { contains: search, mode: 'insensitive' } },
-                { cnpj_cpf: { contains: search.replace(/\D/g, '') } },
+                { cnpj_cpf: { contains: searchCNPJ, mode: 'insensitive' } },
                 { emailPrincipal: { contains: search, mode: 'insensitive' } },
             ];
             andFilters.push({ OR: searchOR });
@@ -115,7 +123,7 @@ router.get('/', async (req, res) => {
             orderBy[sortBy] = sortOrder;
         }
 
-        const [clients, total] = await Promise.all([
+        const [rawClients, total] = await Promise.all([
             prisma.client.findMany({
                 where,
                 skip,
@@ -130,13 +138,47 @@ router.get('/', async (req, res) => {
                         },
                         take: 1
                     },
+                    orders: {
+                        where: {
+                            status: 'VENDA'
+                        },
+                        select: {
+                            vendaValor: true,
+                            date: true
+                        },
+                        orderBy: {
+                            date: 'desc'
+                        }
+                    },
                     _count: {
-                        select: { orders: true }
+                        select: { orders: { where: { status: 'VENDA' } } }
                     }
                 }
             }),
             prisma.client.count({ where })
         ]);
+
+        const clients = rawClients.map(client => {
+            // Calculate total sales
+            const totalVendas = client.orders.reduce((sum, order) => {
+                return sum + parseFloat(order.vendaValor || 0);
+            }, 0);
+
+            // Get last sale date
+            let dataUltimaVenda = null;
+            if (client.orders.length > 0) {
+                const lastDate = new Date(client.orders[0].date);
+                dataUltimaVenda = lastDate.toLocaleDateString('pt-BR');
+            }
+
+            return {
+                ...client,
+                totalVendas,
+                dataUltimaVenda: dataUltimaVenda || client.dataUltimaVenda, // Fallback to stored if computed is null (though computed is more accurate)
+                salesCount: client._count.orders,
+                orders: undefined // Remove orders from response to keep it light
+            };
+        });
 
         res.json({
             clients,
@@ -201,7 +243,8 @@ router.post('/', async (req, res) => {
             nomeContato,
             emailContato,
             dataAniversario,
-            observacoes
+            observacoes,
+            isInternational
         } = req.body;
 
         // Validate required fields
@@ -214,7 +257,14 @@ router.post('/', async (req, res) => {
         }
 
         // Check for duplicate CNPJ/CPF
-        const cleanCNPJ = cnpj_cpf.replace(/\D/g, '');
+        // If international, allow raw value (maybe trim). If clean BR, use digits only
+        let cleanCNPJ = cnpj_cpf;
+        if (!isInternational) {
+            cleanCNPJ = cnpj_cpf.replace(/\D/g, '');
+        } else {
+            cleanCNPJ = cnpj_cpf.trim();
+        }
+
         const existing = await prisma.client.findUnique({
             where: { cnpj_cpf: cleanCNPJ }
         });
@@ -278,7 +328,8 @@ router.put('/:id', async (req, res) => {
             nomeContato,
             emailContato,
             dataAniversario,
-            observacoes
+            observacoes,
+            isInternational
         } = req.body;
 
         // Check if client exists
@@ -288,13 +339,21 @@ router.put('/:id', async (req, res) => {
         }
 
         // If CNPJ is being changed, check for duplicates
-        if (cnpj_cpf && cnpj_cpf !== existing.cnpj_cpf) {
-            const cleanCNPJ = cnpj_cpf.replace(/\D/g, '');
-            const duplicate = await prisma.client.findUnique({
-                where: { cnpj_cpf: cleanCNPJ }
-            });
-            if (duplicate && duplicate.id !== id) {
-                return res.status(409).json({ error: 'Client with this CNPJ/CPF already exists' });
+        let cleanCNPJ = undefined;
+        if (cnpj_cpf) {
+            if (!isInternational) {
+                cleanCNPJ = cnpj_cpf.replace(/\D/g, '');
+            } else {
+                cleanCNPJ = cnpj_cpf.trim();
+            }
+
+            if (cleanCNPJ !== existing.cnpj_cpf) {
+                const duplicate = await prisma.client.findUnique({
+                    where: { cnpj_cpf: cleanCNPJ }
+                });
+                if (duplicate && duplicate.id !== id) {
+                    return res.status(409).json({ error: 'Client with this CNPJ/CPF already exists' });
+                }
             }
         }
 
@@ -303,7 +362,7 @@ router.put('/:id', async (req, res) => {
             data: {
                 name,
                 razaoSocial,
-                cnpj_cpf: cnpj_cpf ? cnpj_cpf.replace(/\D/g, '') : undefined,
+                cnpj_cpf: cleanCNPJ,
                 dataCriacao,
                 status,
                 inscricaoEstadual,
