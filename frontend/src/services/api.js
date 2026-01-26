@@ -18,7 +18,23 @@ const fetchAPI = async (endpoint, options = {}) => {
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ message: 'Request failed' }));
-        throw new Error(error.message || `HTTP error! status: ${response.status}`);
+        const status = response.status;
+
+        let customMessage = error.message;
+
+        if (status === 409) {
+            customMessage = 'Este registro (CNPJ/CPF ou E-mail) já está cadastrado no sistema.';
+        } else if (status === 403) {
+            customMessage = 'Acesso negado ou Sessão expirada. Por favor, faça login novamente.';
+        } else if (status === 401) {
+            customMessage = 'Não autorizado. Verifique suas credenciais.';
+        } else if (status === 404) {
+            customMessage = 'Recurso não encontrado no servidor.';
+        } else if (status === 500) {
+            customMessage = 'Erro interno no servidor. Tente novamente mais tarde.';
+        }
+
+        throw new Error(customMessage || `Erro HTTP! Status: ${status}`);
     }
 
     if (response.status === 204) {

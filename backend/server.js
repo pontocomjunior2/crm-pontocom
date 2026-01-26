@@ -52,10 +52,13 @@ const authenticateToken = (req, res, next) => {
 
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
-      console.log(`[Auth] ${req.method} ${req.originalUrl} - Verification error:`, err.message); // Debug
-      return res.status(403).json({ error: 'Token inválido ou expirado' });
+      console.log(`[Auth Error] ${req.method} ${req.originalUrl} - Reason: ${err.message}`); // Debug
+      if (err.name === 'TokenExpiredError') {
+        return res.status(403).json({ error: 'Sessão expirada. Por favor, faça login novamente.' });
+      }
+      return res.status(403).json({ error: 'Token inválido ou acesso negado' });
     }
-    // console.log(`[Auth] User ${user.email} authenticated`); // Debug (Reduce noise)
+    // console.log(`[Auth Success] User ${user.email} authenticated`); // Debug
     req.user = user;
     next();
   });
