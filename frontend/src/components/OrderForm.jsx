@@ -4,7 +4,7 @@ import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calcul
 import { parseCurrency, formatCurrency } from '../utils/formatters';
 import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI } from '../services/api';
 
-const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess }) => {
+const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = null, onClose, onSuccess }) => {
     const [clients, setClients] = useState([]);
     const [locutores, setLocutores] = useState([]);
     const [loadingClients, setLoadingClients] = useState(true);
@@ -110,6 +110,13 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', onClose, onSuccess 
         loadClients();
         loadLocutores();
         loadServiceTypes();
+
+        // If a client is pre-selected (e.g. from PackageList)
+        if (initialClient && !order) {
+            setFormData(prev => ({ ...prev, clientId: initialClient.id }));
+            setClientSearch(initialClient.name);
+            fetchClientPackage(initialClient.id);
+        }
     }, []);
 
     // Sync serviceSearch with serviceType

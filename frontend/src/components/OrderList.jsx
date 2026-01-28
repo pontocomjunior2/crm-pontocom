@@ -35,7 +35,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
     const [search, setSearch] = useState('');
     const [filters, setFilters] = useState({
         type: '',
-        status: ''
+        status: 'PEDIDO'
     });
     const [pagination, setPagination] = useState({
         page: 1,

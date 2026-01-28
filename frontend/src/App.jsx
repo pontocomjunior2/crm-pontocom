@@ -40,6 +40,8 @@ import LocutorForm from './components/LocutorForm';
 import LocutorHistory from './components/LocutorHistory';
 import UserList from './components/UserList';
 import Relatorios from './components/Relatorios';
+import PackageList from './components/PackageList';
+import PackageOrderForm from './components/PackageOrderForm';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -56,6 +58,8 @@ const CRM = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedLocutor, setSelectedLocutor] = useState(null);
   const [viewingLocutorHistory, setViewingLocutorHistory] = useState(null);
+  const [selectedPackage, setSelectedPackage] = useState(null);
+  const [showPackageOrderForm, setShowPackageOrderForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [initialOrderStatus, setInitialOrderStatus] = useState('PEDIDO');
 
@@ -100,6 +104,7 @@ const CRM = () => {
     { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} />, permission: 'accessLocutores' },
     { id: 'fornecedores', label: 'Fornecedores', icon: <Building2 size={20} />, permission: 'accessFornecedores' },
     { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, permission: 'accessFaturamento' },
+    { id: 'pacotes', label: 'Pacotes', icon: <Package size={20} />, permission: 'accessPacotes' },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} />, permission: 'accessRelatorios' },
     { id: 'usuarios', label: 'Usuários', icon: <Shield size={20} />, permission: 'accessUsuarios' },
     { id: 'backup', label: 'Backup (GD)', icon: <Database size={20} />, adminOnly: true },
@@ -111,7 +116,7 @@ const CRM = () => {
     if (item.alwaysShow) return true;
     if (item.adminOnly) return false; // Fixed: only if isAdmin is true, but we handle it above
     if (!user?.tier) return false;
-    return user.tier[item.permission];
+    return user.tier[item.permission] || isAdmin;
   });
 
   useEffect(() => {
@@ -578,8 +583,17 @@ const CRM = () => {
             </div>
           )}
 
+          {activeTab === 'pacotes' && (
+            <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
+              <PackageList key={refreshTrigger} onAddNewOrder={(pkg) => {
+                setSelectedPackage(pkg);
+                setShowPackageOrderForm(true);
+              }} />
+            </div>
+          )}
 
-          {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup'].includes(activeTab) && (
+
+          {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup', 'pacotes'].includes(activeTab) && (
             <div className="p-20 text-center">
               <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
               <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>
@@ -589,7 +603,8 @@ const CRM = () => {
       </div>
 
       {showClientForm && <ClientForm client={selectedClient} onClose={() => { setShowClientForm(false); setSelectedClient(null); }} onSuccess={() => { setShowClientForm(false); setSelectedClient(null); setRefreshTrigger(prev => prev + 1); }} />}
-      {showOrderForm && <OrderForm order={selectedOrder} initialStatus={initialOrderStatus} onClose={() => { setShowOrderForm(false); setSelectedOrder(null); }} onSuccess={() => { setShowOrderForm(false); setSelectedOrder(null); setRefreshTrigger(prev => prev + 1); }} />}
+      {showOrderForm && <OrderForm order={selectedOrder} initialStatus={initialOrderStatus} initialClient={selectedClient} onClose={() => { setShowOrderForm(false); setSelectedOrder(null); setSelectedClient(null); }} onSuccess={() => { setShowOrderForm(false); setSelectedOrder(null); setSelectedClient(null); setRefreshTrigger(prev => prev + 1); }} />}
+      {showPackageOrderForm && <PackageOrderForm pkg={selectedPackage} onClose={() => { setShowPackageOrderForm(false); setSelectedPackage(null); }} onSuccess={() => { setShowPackageOrderForm(false); setSelectedPackage(null); setRefreshTrigger(prev => prev + 1); }} />}
       {showLocutorForm && <LocutorForm locutor={selectedLocutor} onClose={() => { setShowLocutorForm(false); setSelectedLocutor(null); }} onSave={() => { setShowLocutorForm(false); setSelectedLocutor(null); setRefreshTrigger(prev => prev + 1); }} />}
     </div >
   );

@@ -94,6 +94,10 @@ export const clientPackageAPI = {
         return fetchAPI(`/client-packages/${clientId}`);
     },
 
+    listAll: async () => {
+        return fetchAPI('/client-packages');
+    },
+
     getActive: async (clientId) => {
         return fetchAPI(`/client-packages/active/${clientId}`);
     },

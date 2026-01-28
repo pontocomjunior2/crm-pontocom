@@ -3,6 +3,29 @@ const prisma = require('../db');
 
 const router = express.Router();
 
+// GET /api/client-packages - Listar todos os pacotes ativos globalmente
+router.get('/', async (req, res) => {
+    try {
+        const packages = await prisma.clientPackage.findMany({
+            where: { active: true },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        razaoSocial: true
+                    }
+                }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(packages);
+    } catch (error) {
+        console.error('Erro ao buscar todos os pacotes ativos:', error);
+        res.status(500).json({ error: 'Erro no Backend: Falha ao buscar lista global de pacotes' });
+    }
+});
+
 // GET /api/client-packages/:clientId - Listar pacotes de um cliente
 router.get('/:clientId', async (req, res) => {
     try {
@@ -50,7 +73,8 @@ router.post('/', async (req, res) => {
             audioLimit,
             extraAudioFee,
             startDate,
-            endDate
+            endDate,
+            clientCode
         } = req.body;
 
         // Desativar pacotes anteriores do mesmo cliente (opcional, dependendo da regra de ter apenas um ativo)
@@ -70,7 +94,8 @@ router.post('/', async (req, res) => {
                 extraAudioFee: parseFloat(extraAudioFee) || 0,
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
-                active: true
+                active: true,
+                clientCode: clientCode || null
             }
         });
 
@@ -154,6 +179,7 @@ router.put('/:id', async (req, res) => {
         if (updateData.audioLimit !== undefined) updateData.audioLimit = parseInt(updateData.audioLimit);
         if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
         if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
+        if (updateData.clientCode !== undefined) updateData.clientCode = updateData.clientCode || null;
 
         // Atualizar o pacote
         const updated = await prisma.clientPackage.update({

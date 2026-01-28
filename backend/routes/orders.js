@@ -381,7 +381,7 @@ router.post('/', async (req, res) => {
                 const now = new Date();
                 // Verificar se está dentro da validade
                 if (now >= pkg.startDate && now <= pkg.endDate) {
-                    const usage = pkg.usedAudios + 1;
+                    const usage = pkg.usedAudios + creditsToConsume;
 
                     // Se for sob demanda e exceder o limite, cobra taxa extra
                     if (pkg.type === 'FIXO_SOB_DEMANDA' && usage > pkg.audioLimit) {
@@ -718,6 +718,19 @@ router.patch('/:id/convert', async (req, res) => {
             include: { client: true }
         });
 
+        // Lógica de Débito de Pacote se for consumo (vendaValor 0)
+        if (order.packageId && Number(order.vendaValor) === 0) {
+            try {
+                await prisma.clientPackage.update({
+                    where: { id: order.packageId },
+                    data: { usedAudios: { increment: 1 } }
+                });
+            } catch (pkgError) {
+                console.error('Erro ao debitar crédito do pacote na conversão:', pkgError);
+                // Não travamos a conversão, mas logamos o erro específico
+            }
+        }
+
         res.json(order);
     } catch (error) {
         console.error('Error converting order:', error);
@@ -738,6 +751,18 @@ router.patch('/:id/revert', async (req, res) => {
             },
             include: { client: true }
         });
+
+        // Lógica de Estorno de Pacote se era consumo (vendaValor 0)
+        if (order.packageId && Number(order.vendaValor) === 0) {
+            try {
+                await prisma.clientPackage.update({
+                    where: { id: order.packageId },
+                    data: { usedAudios: { decrement: 1 } }
+                });
+            } catch (pkgError) {
+                console.error('Erro ao estornar crédito do pacote na reversão:', pkgError);
+            }
+        }
 
         res.json(order);
     } catch (error) {

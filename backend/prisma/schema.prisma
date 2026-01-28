@@ -260,6 +260,7 @@ model ClientPackage {
   startDate       DateTime
   endDate         DateTime
   active          Boolean  @default(true)
+  clientCode      String?  // Código identificador para auto-preenchimento de nome de arquivo
   billingOrderId  String?  @unique // Venda automática gerada para este pacote
   billingOrder    Order?   @relation("PackageBilling", fields: [billingOrderId], references: [id])
   orders          Order[]  @relation("PackageOrders")
