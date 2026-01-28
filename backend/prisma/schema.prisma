@@ -184,6 +184,7 @@ model Tier {
   
   // Permissions
   accessDashboard   Boolean  @default(false)
+  accessPacotes     Boolean  @default(false)
   accessPedidos     Boolean  @default(false)
   accessClientes    Boolean  @default(false)
   accessLocutores   Boolean  @default(false)

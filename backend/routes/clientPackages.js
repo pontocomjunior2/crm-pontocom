@@ -1,10 +1,11 @@
 const express = require('express');
 const prisma = require('../db');
+const { checkPermission } = require('../utils/permissions');
 
 const router = express.Router();
 
 // GET /api/client-packages - Listar todos os pacotes ativos globalmente
-router.get('/', async (req, res) => {
+router.get('/', checkPermission('accessPacotes'), async (req, res) => {
     try {
         const packages = await prisma.clientPackage.findMany({
             where: { active: true },
@@ -27,7 +28,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/client-packages/all/orders - Listar TODOS os pedidos de pacotes (lista universal)
-router.get('/all/orders', async (req, res) => {
+router.get('/all/orders', checkPermission('accessPacotes'), async (req, res) => {
     try {
         // Buscar todos os pedidos que estão vinculados a pacotes
         const orders = await prisma.order.findMany({
@@ -114,7 +115,7 @@ router.get('/active/:clientId', async (req, res) => {
 });
 
 // POST /api/client-packages - Criar novo pacote
-router.post('/', async (req, res) => {
+router.post('/', checkPermission('accessPacotes'), async (req, res) => {
     try {
         const {
             clientId,
@@ -200,7 +201,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT /api/client-packages/:id - Atualizar pacote
-router.put('/:id', async (req, res) => {
+router.put('/:id', checkPermission('accessPacotes'), async (req, res) => {
     try {
         const { id } = req.params;
         const { forceUpdate, ...updateData } = req.body;
@@ -267,7 +268,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE /api/client-packages/:id - Excluir pacote
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', checkPermission('accessPacotes'), async (req, res) => {
     try {
         const { id } = req.params;
         const { forceDelete } = req.query;

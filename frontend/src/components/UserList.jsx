@@ -28,6 +28,7 @@ const UserList = () => {
     const [tierFormData, setTierFormData] = useState({
         name: '',
         accessDashboard: false,
+        accessPacotes: false,
         accessPedidos: false,
         accessClientes: false,
         accessLocutores: false,
@@ -143,6 +144,7 @@ const UserList = () => {
         setTierFormData({
             name: tier.name,
             accessDashboard: tier.accessDashboard,
+            accessPacotes: tier.accessPacotes,
             accessPedidos: tier.accessPedidos,
             accessClientes: tier.accessClientes,
             accessLocutores: tier.accessLocutores,
@@ -224,6 +226,7 @@ const UserList = () => {
                                 setTierFormData({
                                     name: '',
                                     accessDashboard: false,
+                                    accessPacotes: false,
                                     accessPedidos: false,
                                     accessClientes: false,
                                     accessLocutores: false,
@@ -521,6 +524,7 @@ const UserList = () => {
                                 <div className="grid grid-cols-2 gap-4">
                                     {[
                                         { key: 'accessDashboard', label: 'Dashboard' },
+                                        { key: 'accessPacotes', label: 'Pacotes' },
                                         { key: 'accessPedidos', label: 'Pedidos' },
                                         { key: 'accessClientes', label: 'Clientes' },
                                         { key: 'accessLocutores', label: 'Locutores' },
