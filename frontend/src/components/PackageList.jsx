@@ -234,48 +234,11 @@ const PackageList = ({ onAddNewOrder }) => {
                 </>
             )}
 
-            {/* Packages Tab - Stats Summary */}
+            {/* Packages Tab - Stats Summary (REMOVED) & Unified Toolbar */}
             {activeTab === 'packages' && (
-                <>
-                    <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/5 mb-4 w-fit">
-                        <button
-                            onClick={() => setViewMode('grid')}
-                            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-white'}`}
-                            title="Visualização em Grade"
-                        >
-                            <LayoutGrid size={18} />
-                        </button>
-                        <button
-                            onClick={() => setViewMode('list')}
-                            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-white'}`}
-                            title="Visualização em Lista"
-                        >
-                            <List size={18} />
-                        </button>
-                    </div>
-
-                    {/* Stats Summary */}
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                        {[
-                            { label: 'Total de Pacotes', value: packages.length, icon: <Package size={14} />, color: 'text-blue-400' },
-                            { label: 'Clientes Atendidos', value: new Set(packages.map(p => p.clientId)).size, icon: <Users size={14} />, color: 'text-purple-400' },
-                            { label: 'Áudios Consumidos', value: packages.reduce((acc, p) => acc + p.usedAudios, 0), icon: <ShoppingCart size={14} />, color: 'text-emerald-400' },
-                            { label: 'Capacidade Total', value: packages.reduce((acc, p) => acc + (p.audioLimit || 0), 0), icon: <BarChart3 size={14} />, color: 'text-amber-400' },
-                        ].map((stat, i) => (
-                            <div key={i} className="card-glass-dark p-3 rounded-xl border border-white/5 flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center ${stat.color}`}>
-                                    {stat.icon}
-                                </div>
-                                <div>
-                                    <p className="text-[9px] font-bold text-[#666666] uppercase tracking-wider">{stat.label}</p>
-                                    <p className="text-lg font-bold text-white">{stat.value}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Filters */}
-                    <div className="card-glass-dark p-3 rounded-2xl mb-4 border border-white/5 bg-card">
+                <div className="flex flex-col md:flex-row gap-4 mb-4">
+                    {/* Search */}
+                    <div className="card-glass-dark p-3 rounded-2xl border border-white/5 bg-card flex-1">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                             <input
@@ -286,13 +249,31 @@ const PackageList = ({ onAddNewOrder }) => {
                             />
                         </div>
                     </div>
-                </>
+
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/5 h-fit shrink-0">
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-3 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-white'}`}
+                            title="Visualização em Grade"
+                        >
+                            <LayoutGrid size={20} />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('list')}
+                            className={`p-3 rounded-lg transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-white'}`}
+                            title="Visualização em Lista"
+                        >
+                            <List size={20} />
+                        </button>
+                    </div>
+                </div>
             )}
 
             {/* Orders Tab - Universal List */}
             {activeTab === 'orders' && (
-                <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-0">
-                    <div className="flex-1 overflow-auto custom-scrollbar p-4">
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                    <div className="flex-1 overflow-auto custom-scrollbar pb-4">
                         {loadingAllOrders ? (
                             <div className="flex flex-col items-center justify-center h-full">
                                 <Loader2 size={32} className="text-primary animate-spin mb-4" />
@@ -487,8 +468,8 @@ const PackageList = ({ onAddNewOrder }) => {
 
             {/* Packages Tab - Content */}
             {activeTab === 'packages' && (
-                <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-0">
-                    <div className="flex-1 overflow-auto custom-scrollbar p-4">
+                <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+                    <div className="flex-1 overflow-auto custom-scrollbar pb-4">
                         {loading ? (
                             <div className="flex flex-col items-center justify-center h-full">
                                 <Loader2 size={32} className="text-primary animate-spin mb-4" />
@@ -899,9 +880,8 @@ const PackageList = ({ onAddNewOrder }) => {
                         </div>
                     </div>
                 </div>
-            )
-            }
-        </div >
+            )}
+        </div>
     );
 };
 
