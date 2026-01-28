@@ -15,12 +15,12 @@ import {
 } from 'lucide-react';
 import { orderAPI, locutorAPI, clientPackageAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
+import { showToast } from '../utils/toast';
 
 const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [loadingLocutores, setLoadingLocutores] = useState(true);
     const [locutores, setLocutores] = useState([]);
-    const [message, setMessage] = useState({ type: '', text: '' });
 
     const [formData, setFormData] = useState({
         clientId: pkg.clientId,
@@ -137,7 +137,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.title || !formData.locutorId) {
-            setMessage({ type: 'error', text: 'Preencha o título e selecione um locutor' });
+            showToast.error('Preencha o título e selecione um locutor');
             return;
         }
 
@@ -157,13 +157,13 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
             };
 
             await orderAPI.create(orderData);
-            setMessage({ type: 'success', text: 'Pedido de pacote realizado com sucesso!' });
+            showToast.success('Pedido de pacote realizado com sucesso!');
             setTimeout(() => {
                 onSuccess();
                 onClose();
             }, 1500);
         } catch (error) {
-            setMessage({ type: 'error', text: error.message });
+            showToast.error(error);
             setLoading(false);
         }
     };
@@ -191,13 +191,6 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
                 </div>
 
                 <div className="flex-1 overflow-y-auto custom-scrollbar p-8">
-                    {message.text && (
-                        <div className={`mb-6 p-4 rounded-2xl flex items-center gap-3 animate-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'
-                            }`}>
-                            {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                            <p className="text-sm font-bold">{message.text}</p>
-                        </div>
-                    )}
 
                     <form id="packageOrderForm" onSubmit={handleSubmit} className="space-y-6">
                         {/* Package & Billing Info */}

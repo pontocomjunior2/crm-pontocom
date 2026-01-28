@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { clientPackageAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
+import { showToast } from '../utils/toast';
 
 const PackageList = ({ onAddNewOrder }) => {
     const [packages, setPackages] = useState([]);
@@ -36,6 +37,7 @@ const PackageList = ({ onAddNewOrder }) => {
             setPackages(data || []);
         } catch (error) {
             console.error('Error fetching all packages:', error);
+            showToast.error('Falha ao carregar pacotes.');
         } finally {
             setLoading(false);
         }
@@ -50,8 +52,10 @@ const PackageList = ({ onAddNewOrder }) => {
             await clientPackageAPI.update(pkgId, { clientCode: tempCode });
             setPackages(packages.map(p => p.id === pkgId ? { ...p, clientCode: tempCode } : p));
             setEditingCode(null);
+            showToast.success('Código do cliente atualizado!');
         } catch (error) {
             console.error('Error saving client code:', error);
+            showToast.error(error);
         }
     };
 

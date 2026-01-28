@@ -3,6 +3,7 @@ import * as API from '../services/api';
 const { userAPI, tierAPI } = API;
 import { Plus, Trash2, Edit2, Shield, User as UserIcon, Mail, Loader2, X, Check, Search, Database } from 'lucide-react';
 import BackupSettings from './BackupSettings';
+import { showToast } from '../utils/toast';
 
 const UserList = () => {
     const [users, setUsers] = useState([]);
@@ -73,13 +74,14 @@ const UserList = () => {
                 await userAPI.update(editingUser.id, formData);
             } else {
                 await userAPI.create(formData);
+                showToast.success('Usuário criado com sucesso!');
             }
             setModalOpen(false);
             loadUsers();
             setFormData({ name: '', email: '', password: '', role: 'USER', tierId: '' });
             setEditingUser(null);
         } catch (error) {
-            alert(error.message);
+            showToast.error(error);
         }
     };
 
@@ -88,8 +90,9 @@ const UserList = () => {
             try {
                 await userAPI.delete(id);
                 loadUsers();
+                showToast.success('Usuário excluído!');
             } catch (error) {
-                alert(error.message);
+                showToast.error(error);
             }
         }
     };
@@ -113,12 +116,13 @@ const UserList = () => {
                 await tierAPI.update(editingTier.id, tierFormData);
             } else {
                 await tierAPI.create(tierFormData);
+                showToast.success('Tier criado com sucesso!');
             }
             setTierModalOpen(false);
             loadTiers();
             setEditingTier(null);
         } catch (error) {
-            alert(error.message);
+            showToast.error(error);
         }
     };
 
@@ -127,8 +131,9 @@ const UserList = () => {
             try {
                 await tierAPI.delete(id);
                 loadTiers();
+                showToast.success('Tier excluído!');
             } catch (error) {
-                alert(error.message);
+                showToast.error(error);
             }
         }
     };

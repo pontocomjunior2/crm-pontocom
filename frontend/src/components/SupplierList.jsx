@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Package, Calendar, DollarSign, History, Building2 } from 'lucide-react';
 import { supplierAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
+import { showToast } from '../utils/toast';
 
 const SupplierList = () => {
     const [suppliers, setSuppliers] = useState([]);
@@ -29,6 +30,7 @@ const SupplierList = () => {
             setSuppliers(data);
         } catch (error) {
             console.error('Error fetching suppliers:', error);
+            showToast.error('Erro ao carregar fornecedores.');
         } finally {
             setLoading(false);
         }
@@ -41,9 +43,10 @@ const SupplierList = () => {
             setNewSupplierName('');
             setShowNewSupplierModal(false);
             fetchSuppliers();
+            showToast.success('Fornecedor criado!');
         } catch (error) {
             console.error('Error creating supplier:', error);
-            alert('Erro ao criar fornecedor');
+            showToast.error(error);
         }
     };
 
@@ -59,9 +62,10 @@ const SupplierList = () => {
                 purchaseDate: new Date().toISOString().substring(0, 10)
             });
             fetchSuppliers();
+            showToast.success('Pacote de créditos adicionado!');
         } catch (error) {
             console.error('Error adding package:', error);
-            alert('Erro ao adicionar pacote');
+            showToast.error(error);
         }
     };
 

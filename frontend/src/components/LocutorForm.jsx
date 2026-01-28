@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { locutorAPI, supplierAPI } from '../services/api';
 import { formatCurrency, formatPhone } from '../utils/formatters';
+import { showToast } from '../utils/toast';
 
 const LocutorForm = ({ locutor, onClose, onSave }) => {
     const isEditing = !!locutor;
@@ -26,6 +27,7 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
                 setSuppliers(data);
             } catch (error) {
                 console.error('Error loading suppliers:', error);
+                showToast.error('Erro ao carregar lista de estúdios');
             }
         };
         loadSuppliers();
@@ -74,11 +76,12 @@ const LocutorForm = ({ locutor, onClose, onSave }) => {
             } else {
                 await locutorAPI.create(formData);
             }
+            showToast.success(isEditing ? 'Locutor atualizado com sucesso!' : 'Locutor cadastrado com sucesso!');
             onSave();
             onClose();
         } catch (error) {
             console.error('Error saving locutor:', error);
-            alert('Erro ao salvar locutor: ' + error.message);
+            showToast.error(error);
         } finally {
             setLoading(false);
         }

@@ -46,6 +46,7 @@ import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { dashboardAPI, STORAGE_URL } from './services/api';
+import { Toaster } from 'react-hot-toast';
 import { formatCurrency } from './utils/formatters';
 
 const CRM = () => {
@@ -100,11 +101,11 @@ const CRM = () => {
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} />, permission: 'accessDashboard' },
     { id: 'pedidos', label: 'Pedidos', icon: <ShoppingCart size={20} />, permission: 'accessPedidos' },
+    { id: 'pacotes', label: 'Pacotes', icon: <Package size={20} />, permission: 'accessPacotes' },
     { id: 'clientes', label: 'Clientes', icon: <Users size={20} />, permission: 'accessClientes' },
     { id: 'locutores', label: 'Locutores', icon: <Headphones size={20} />, permission: 'accessLocutores' },
     { id: 'fornecedores', label: 'Fornecedores', icon: <Building2 size={20} />, permission: 'accessFornecedores' },
     { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, permission: 'accessFaturamento' },
-    { id: 'pacotes', label: 'Pacotes', icon: <Package size={20} />, permission: 'accessPacotes' },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} />, permission: 'accessRelatorios' },
     { id: 'usuarios', label: 'Usuários', icon: <Shield size={20} />, permission: 'accessUsuarios' },
     { id: 'backup', label: 'Backup (GD)', icon: <Database size={20} />, adminOnly: true },
@@ -606,6 +607,7 @@ const CRM = () => {
       {showOrderForm && <OrderForm order={selectedOrder} initialStatus={initialOrderStatus} initialClient={selectedClient} onClose={() => { setShowOrderForm(false); setSelectedOrder(null); setSelectedClient(null); }} onSuccess={() => { setShowOrderForm(false); setSelectedOrder(null); setSelectedClient(null); setRefreshTrigger(prev => prev + 1); }} />}
       {showPackageOrderForm && <PackageOrderForm pkg={selectedPackage} onClose={() => { setShowPackageOrderForm(false); setSelectedPackage(null); }} onSuccess={() => { setShowPackageOrderForm(false); setSelectedPackage(null); setRefreshTrigger(prev => prev + 1); }} />}
       {showLocutorForm && <LocutorForm locutor={selectedLocutor} onClose={() => { setShowLocutorForm(false); setSelectedLocutor(null); }} onSave={() => { setShowLocutorForm(false); setSelectedLocutor(null); setRefreshTrigger(prev => prev + 1); }} />}
+      <Toaster position="top-right" />
     </div >
   );
 };

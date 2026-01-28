@@ -84,6 +84,7 @@ router.get('/', async (req, res) => {
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         const where = {};
+        const andConditions = [];
 
         // Client filter
         if (clientId) {
@@ -102,27 +103,29 @@ router.get('/', async (req, res) => {
             if (dateTo) where.date.lte = new Date(dateTo);
         }
 
-        // Specific filters
+        // Specific filters - now added to AND conditions
         if (clientName) {
-            where.client = {
-                name: { contains: clientName, mode: 'insensitive' }
-            };
+            andConditions.push({
+                client: {
+                    name: { contains: clientName, mode: 'insensitive' }
+                }
+            });
         }
 
         if (numeroVenda) {
             const numVenda = parseInt(numeroVenda);
             if (!isNaN(numVenda)) {
-                where.numeroVenda = numVenda;
+                andConditions.push({ numeroVenda: numVenda });
             }
         }
 
         if (title) {
-            where.title = { contains: title, mode: 'insensitive' };
+            andConditions.push({ title: { contains: title, mode: 'insensitive' } });
         }
 
-        // Search filter (global)
-        if (search) {
-            where.OR = [
+        // Search filter (global) - only applied if no specific filters are active
+        if (search && !clientName && !numeroVenda && !title) {
+            const searchConditions = [
                 { title: { contains: search, mode: 'insensitive' } },
                 { locutor: { contains: search, mode: 'insensitive' } },
                 { comentarios: { contains: search, mode: 'insensitive' } },
@@ -132,9 +135,16 @@ router.get('/', async (req, res) => {
             // If search is a number, also search by numeroVenda or sequentialId
             const searchNum = parseInt(search);
             if (!isNaN(searchNum)) {
-                where.OR.push({ numeroVenda: searchNum });
-                where.OR.push({ sequentialId: searchNum });
+                searchConditions.push({ numeroVenda: searchNum });
+                searchConditions.push({ sequentialId: searchNum });
             }
+
+            andConditions.push({ OR: searchConditions });
+        }
+
+        // Apply AND conditions if any exist
+        if (andConditions.length > 0) {
+            where.AND = andConditions;
         }
 
         // Faturado filter (explicit)
@@ -328,9 +338,10 @@ router.post('/', async (req, res) => {
             creditsConsumed,
             costPerCreditSnapshot = null,
             cachePago = false,
-            packageId = null,
             isBonus = false
         } = req.body;
+
+        let packageId = req.body.packageId || null;
 
         // Calculate Cache if Supplier Linked
         let finalCacheValor = cacheValor ? parseFloat(cacheValor) : 0;

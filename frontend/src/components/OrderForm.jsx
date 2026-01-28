@@ -3,6 +3,7 @@ import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calcul
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
 import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI } from '../services/api';
+import { showToast } from '../utils/toast';
 
 const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = null, onClose, onSuccess }) => {
     const [clients, setClients] = useState([]);
@@ -98,7 +99,6 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
     const [attachments, setAttachments] = useState([]);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
-    const [message, setMessage] = useState({ type: '', text: '' });
     const [calculations, setCalculations] = useState({
         imposto: '0.00',
         comissao: '0.00',
@@ -188,7 +188,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             setClients(data || []);
         } catch (error) {
             console.error('Error loading clients:', error);
-            setMessage({ type: 'error', text: 'Erro ao carregar clientes' });
+            showToast.error('Erro ao carregar clientes');
         } finally {
             setLoadingClients(false);
         }
@@ -225,7 +225,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         if (existing) {
             setFormData(prev => ({ ...prev, serviceType: normalized }));
             setShowServiceDropdown(false);
-            setMessage({ type: 'info', text: 'Esse serviço já existe na lista.' });
+            showToast.info('Esse serviço já existe na lista.');
             return;
         }
 
@@ -235,9 +235,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             setServiceTypes(prev => [...prev, newType].sort((a, b) => a.name.localeCompare(b.name)));
             setFormData(prev => ({ ...prev, serviceType: normalized }));
             setShowServiceDropdown(false);
-            setMessage({ type: 'success', text: 'Novo serviço adicionado com sucesso!' });
+            showToast.success('Novo serviço adicionado com sucesso!');
         } catch (error) {
-            setMessage({ type: 'error', text: error.message });
+            showToast.error(error);
         } finally {
             setLoading(false);
         }
@@ -324,7 +324,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 const file = item.getAsFile();
                 if (file) {
                     setAttachments(prev => [...prev, file]);
-                    setMessage({ type: 'success', text: 'Imagem colada com sucesso!' });
+                    showToast.success('Imagem colada com sucesso!');
                 }
             }
         }
@@ -372,10 +372,10 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 setFormData(prev => ({ ...prev, arquivoOS: null, numeroOS: '' }));
                 setOsFile(null);
                 setCustomFilename('');
-                setMessage({ type: 'success', text: 'Documento removido com sucesso!' });
+                showToast.success('Documento removido com sucesso!');
             } catch (error) {
                 console.error('Error removing OS:', error);
-                setMessage({ type: 'error', text: 'Falha ao remover documento.' });
+                showToast.error('Falha ao remover documento.');
             }
         }
     };
@@ -387,14 +387,15 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             setLoading(true);
             try {
                 await orderAPI.delete(order.id);
-                setMessage({ type: 'success', text: 'Lançamento excluído com sucesso!' });
+                showToast.success('Lançamento excluído com sucesso!');
                 setTimeout(() => {
                     if (onSuccess) onSuccess();
                     if (onClose) onClose();
                 }, 1000);
             } catch (error) {
                 console.error('Error deleting order:', error);
-                setMessage({ type: 'error', text: 'Falha ao excluir lançamento: ' + error.message });
+                showToast.error('Falha ao excluir lançamento: ' + error.message);
+            } finally {
                 setLoading(false);
             }
         }
@@ -404,12 +405,11 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         e.preventDefault();
 
         if (!validate()) {
-            setMessage({ type: 'error', text: 'Por favor, corrija os erros no formulário' });
+            showToast.error('Por favor, corrija os erros no formulário');
             return;
         }
 
         setLoading(true);
-        setMessage({ type: '', text: '' });
 
         try {
             const dataToSend = {
@@ -425,10 +425,10 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             let savedOrder = null;
             if (order) {
                 savedOrder = await orderAPI.update(order.id, dataToSend);
-                setMessage({ type: 'success', text: 'Pedido atualizado com sucesso!' });
+                showToast.success('Pedido atualizado com sucesso!');
             } else {
                 savedOrder = await orderAPI.create(dataToSend);
-                setMessage({ type: 'success', text: 'Pedido cadastrado com sucesso!' });
+                showToast.success('Pedido cadastrado com sucesso!');
             }
 
             // Handle OS/PP file upload if selected
@@ -447,7 +447,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 if (onClose) onClose();
             }, 1500);
         } catch (error) {
-            setMessage({ type: 'error', text: error.message });
+            showToast.error(error.message);
         } finally {
             setLoading(false);
         }
@@ -494,19 +494,6 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                         <X size={24} />
                     </button>
                 </div>
-
-                {/* Message Alert */}
-                {message.text && (
-                    <div className="flex-none px-6 mt-4">
-                        <div className={`p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
-                            ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-                            : 'bg-red-500/10 border border-red-500/30 text-red-400'
-                            }`}>
-                            {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                            <span className="text-sm font-medium">{message.text}</span>
-                        </div>
-                    </div>
-                )}
 
                 {/* Form */}
                 <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 custom-scrollbar min-h-0" onPaste={handlePaste}>

@@ -44,6 +44,7 @@ import {
 } from 'recharts';
 import { analyticsAPI, orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
+import { showToast } from '../utils/toast';
 
 const Relatorios = () => {
     const [loading, setLoading] = useState(true);
@@ -87,6 +88,7 @@ const Relatorios = () => {
             setMetrics(metricsData);
         } catch (error) {
             console.error('Error fetching reports data:', error);
+            showToast.error('Erro ao carregar dados dos relatórios.');
         } finally {
             setLoading(false);
         }
@@ -99,6 +101,7 @@ const Relatorios = () => {
             setCacheData(data);
         } catch (error) {
             console.error('Error fetching cache report:', error);
+            showToast.error('Erro ao buscar relatório de cachês.');
         } finally {
             setLoadingCaches(false);
         }
@@ -109,8 +112,10 @@ const Relatorios = () => {
             await orderAPI.update(orderId, { cachePago: true });
             // Refresh local state or re-fetch
             fetchCacheData();
+            showToast.success('Cachê marcado como pago!');
         } catch (error) {
             console.error('Error marking cache as paid:', error);
+            showToast.error(error);
         }
     };
 

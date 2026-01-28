@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Search, Loader2, CheckCircle2, AlertCircle, Building2, Mail, Phone, MapPin, Music, Plus, Calendar, Flame, Clock, Pencil, Trash2 } from 'lucide-react';
 import { formatCNPJ, formatPhone, formatCEP, removeMask, validateCNPJ, validateEmail, formatCurrency, parseCurrency } from '../utils/formatters';
 import { lookupCNPJ, lookupCEP, clientAPI, clientPackageAPI } from '../services/api';
+import { showToast } from '../utils/toast';
 
 const ClientForm = ({ client = null, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
@@ -40,7 +41,6 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
     const [lookingUpCNPJ, setLookingUpCNPJ] = useState(false);
     const [lookingUpCEP, setLookingUpCEP] = useState(false);
     const [errors, setErrors] = useState({});
-    const [message, setMessage] = useState({ type: '', text: '' });
 
     // Package states
     const [activeTab, setActiveTab] = useState('dados'); // 'dados' or 'pacotes'
@@ -71,7 +71,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
             const data = await clientPackageAPI.list(client.id);
             setPackages(data);
         } catch (error) {
-            setMessage({ type: 'error', text: 'Erro ao buscar pacotes' });
+            showToast.error('Erro ao buscar pacotes');
         } finally {
             setFetchingPackages(false);
         }
@@ -261,11 +261,11 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
             };
 
             if (editingPackage) {
-                await clientPackageAPI.update(editingPackage.id, data);
-                setMessage({ type: 'success', text: 'Pacote atualizado com sucesso!' });
+                await clientPackageAPI.update(editingPackage.id, packageFormData);
+                showToast.success('Pacote atualizado com sucesso!');
             } else {
-                await clientPackageAPI.create(data);
-                setMessage({ type: 'success', text: 'Pacote criado com sucesso!' });
+                await clientPackageAPI.create({ ...packageFormData, clientId: client.id });
+                showToast.success('Pacote criado com sucesso!');
             }
 
             setShowPackageForm(false);
@@ -282,7 +282,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     return handleSavePackage(true);
                 }
             } else {
-                setMessage({ type: 'error', text: error.message });
+                showToast.error(error);
             }
         } finally {
             setLoading(false);
@@ -451,21 +451,21 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
 
     const handleCNPJLookup = async () => {
         const cleanCNPJ = removeMask(formData.cnpj_cpf);
+        const digitsOnly = cleanCNPJ.replace(/\D/g, '');
 
         if (isInternational) return; // Skip lookup for international
 
-        if (!cleanCNPJ || cleanCNPJ.length < 11) {
-            setMessage({ type: 'error', text: 'Digite um CNPJ/CPF válido' });
+        if (digitsOnly.length !== 14 && digitsOnly.length !== 11) {
+            showToast.error('Digite um CNPJ/CPF válido');
             return;
         }
 
-        if (cleanCNPJ.length === 14 && !validateCNPJ(formData.cnpj_cpf)) {
-            setMessage({ type: 'error', text: 'CNPJ inválido' });
+        if (digitsOnly.length === 14 && !validateCNPJ(digitsOnly)) {
+            showToast.error('CNPJ inválido');
             return;
         }
 
         setLookingUpCNPJ(true);
-        setMessage({ type: '', text: '' });
 
         try {
             const data = await lookupCNPJ(formData.cnpj_cpf);
@@ -484,9 +484,9 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 cidade: data.cidade || prev.cidade,
                 estado: data.estado || prev.estado,
             }));
-            setMessage({ type: 'success', text: 'Dados preenchidos automaticamente!' });
+            showToast.success('Dados preenchidos automaticamente!');
         } catch (error) {
-            setMessage({ type: 'error', text: error.message });
+            showToast.error(error.message);
         } finally {
             setLookingUpCNPJ(false);
         }
@@ -496,14 +496,14 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         if (isInternational) return; // Skip lookup for international
 
         const cleanCEP = removeMask(formData.cep);
+        const digitsOnly = cleanCEP.replace(/\D/g, '');
 
-        if (!cleanCEP || cleanCEP.length !== 8) {
-            setMessage({ type: 'error', text: 'Digite um CEP válido' });
+        if (digitsOnly.length !== 8) {
+            showToast.error('Digite um CEP válido');
             return;
         }
 
         setLookingUpCEP(true);
-        setMessage({ type: '', text: '' });
 
         try {
             const data = await lookupCEP(formData.cep);
@@ -515,9 +515,9 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 estado: data.estado || prev.estado,
                 complemento: data.complemento || prev.complemento,
             }));
-            setMessage({ type: 'success', text: 'Endereço preenchido!' });
+            showToast.success('Endereço preenchido!');
         } catch (error) {
-            setMessage({ type: 'error', text: error.message });
+            showToast.error(error);
         } finally {
             setLookingUpCEP(false);
         }
@@ -557,12 +557,11 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         e.preventDefault();
 
         if (!validate()) {
-            setMessage({ type: 'error', text: 'Por favor, corrija os erros no formulário' });
+            showToast.error('Por favor, corrija os erros no formulário');
             return;
         }
 
         setLoading(true);
-        setMessage({ type: '', text: '' });
 
         try {
             const dataToSend = {
@@ -573,12 +572,12 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 isInternational
             };
 
-            if (client) {
+            if (client?.id) {
                 await clientAPI.update(client.id, dataToSend);
-                setMessage({ type: 'success', text: 'Cliente atualizado com sucesso!' });
+                showToast.success('Cliente atualizado com sucesso!');
             } else {
                 await clientAPI.create(dataToSend);
-                setMessage({ type: 'success', text: 'Cliente cadastrado com sucesso!' });
+                showToast.success('Cliente cadastrado com sucesso!');
             }
 
             setTimeout(() => {
@@ -586,7 +585,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                 if (onClose) onClose();
             }, 1500);
         } catch (error) {
-            setMessage({ type: 'error', text: error.message });
+            showToast.error(error);
         } finally {
             setLoading(false);
         }
@@ -631,18 +630,6 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                     </div>
                 )}
 
-                {/* Message Alert */}
-                {message.text && (
-                    <div className={`mx-6 mt-4 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success'
-                        ? 'bg-green-500/10 border border-green-500/30 text-green-400'
-                        : 'bg-red-500/10 border border-red-500/30 text-red-400'
-                        }`}>
-                        {message.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
-                        <span className="text-sm font-medium">{message.text}</span>
-                    </div>
-                )}
-
-                {/* Content Area */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar">
                     {activeTab === 'dados' && (
                         <form onSubmit={handleSubmit} className="p-6">
