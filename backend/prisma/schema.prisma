@@ -64,6 +64,7 @@ model Order {
 
   cacheValor       Decimal  @db.Decimal(10, 2)
   vendaValor       Decimal  @db.Decimal(10, 2)
+  isBonus          Boolean  @default(false)
   comentarios      String?  @db.Text
   
   status           String   @default("PEDIDO") // PEDIDO, VENDA

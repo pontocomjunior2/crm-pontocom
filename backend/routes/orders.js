@@ -328,7 +328,8 @@ router.post('/', async (req, res) => {
             creditsConsumed,
             costPerCreditSnapshot = null,
             cachePago = false,
-            packageId = null
+            packageId = null,
+            isBonus = false
         } = req.body;
 
         // Calculate Cache if Supplier Linked
@@ -368,8 +369,13 @@ router.post('/', async (req, res) => {
         // --- Lógica de Pacote Mensal ---
         let finalVendaValor = vendaValor !== undefined ? parseFloat(vendaValor) : 0;
 
+        // Se for bonificação, força valor 0 e ignora pacote
+        if (isBonus) {
+            packageId = null;
+            finalVendaValor = 0;
+        }
         // Se o usuário informou um valor maior que 0, trata como pedido avulso (ignora pacote)
-        if (finalVendaValor > 0 && packageId) {
+        else if (finalVendaValor > 0 && packageId) {
             packageId = null; // Remove vínculo com pacote
         }
         else if (packageId) {
@@ -481,7 +487,8 @@ router.post('/', async (req, res) => {
                 creditsConsumed: creditsToConsume,
                 costPerCreditSnapshot: costPerCreditVal,
                 cachePago: cachePago || false,
-                packageId: packageId || null
+                packageId: packageId || null,
+                isBonus: isBonus
             },
             include: {
                 client: {
@@ -534,7 +541,8 @@ router.put('/:id', async (req, res) => {
             supplierId,
             cachePago,
             creditsConsumed,
-            costPerCreditSnapshot
+            costPerCreditSnapshot,
+            isBonus
         } = req.body;
 
         // Check if order exists
@@ -581,8 +589,28 @@ router.put('/:id', async (req, res) => {
             existingValor: existing.vendaValor
         });
 
-        // Se tinha pacote E agora está definindo um valor > 0 (virando avulso)
-        if (existing.packageId && newVendaValor > 0) {
+        const newIsBonus = isBonus !== undefined ? isBonus : existing.isBonus;
+
+        // Se virou bonificação agora ou se já era e está sendo atualizado
+        if (newIsBonus) {
+            // Se estava consumindo pacote antes (vendaValor era 0 e tinha packageId), estorna
+            if (existing.packageId && Number(existing.vendaValor) === 0 && !existing.isBonus) {
+                const pkg = await prisma.clientPackage.findUnique({
+                    where: { id: existing.packageId }
+                });
+                if (pkg) {
+                    await prisma.clientPackage.update({
+                        where: { id: pkg.id },
+                        data: { usedAudios: { decrement: 1 } }
+                    });
+                }
+            }
+            // Força valores de bonificação
+            req.body.packageId = null;
+            req.body.vendaValor = 0;
+        }
+        // Se NÃO é bonificação, mas virou Avulso ou Pacote
+        else if (existing.packageId && newVendaValor > 0) {
             // Só executa o estorno se o valor anterior era 0 (era consumo de pacote)
             if (Number(existing.vendaValor) === 0) {
                 const pkg = await prisma.clientPackage.findUnique({
@@ -597,12 +625,13 @@ router.put('/:id', async (req, res) => {
             }
             // Forçar desvinculação do pacote na atualização
             req.body.packageId = null;
-        } else if (newVendaValor === 0) {
-            // Lógica inversa: Se virar Pacote (valor 0)
-            // Verifica se estava consumindo antes
+        } else if (newVendaValor === 0 && !newIsBonus) {
+            // Lógica inversa: Se virar Pacote (valor 0) e NÃO for bônus
+            // Verifica se estava consumindo antes (ou se era bônus)
             const wasConsuming = existing.packageId && Number(existing.vendaValor) === 0;
+            const wasBonus = existing.isBonus;
 
-            if (!wasConsuming) {
+            if (!wasConsuming || wasBonus) {
                 let pkgToDebitId = req.body.packageId;
 
                 // Se não veio ID do pacote, buscar ativo no banco
@@ -667,7 +696,8 @@ router.put('/:id', async (req, res) => {
                 packageId: req.body.packageId, // Allow explicit packageId update
                 cachePago: cachePago !== undefined ? cachePago : undefined,
                 creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
-                costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined
+                costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
+                isBonus: isBonus !== undefined ? isBonus : undefined
             },
             include: {
                 client: {

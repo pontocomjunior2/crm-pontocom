@@ -44,7 +44,8 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         costPerCreditSnapshot: order?.costPerCreditSnapshot || null,
         supplierId: order?.supplierId || '',
         cachePago: order?.cachePago || false,
-        packageId: order?.packageId || null
+        packageId: order?.packageId || null,
+        isBonus: order?.isBonus || false
     });
 
     const [activePackage, setActivePackage] = useState(null);
@@ -246,7 +247,16 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         const { name, value, type, checked } = e.target;
 
         if (type === 'checkbox') {
-            setFormData(prev => ({ ...prev, [name]: checked }));
+            if (name === 'isBonus') {
+                setFormData(prev => ({
+                    ...prev,
+                    isBonus: checked,
+                    vendaValor: checked ? 0 : prev.vendaValor,
+                    packageId: checked ? null : prev.packageId
+                }));
+            } else {
+                setFormData(prev => ({ ...prev, [name]: checked }));
+            }
         } else if (name === 'locutorId') {
             const selectedLocutor = locutores.find(l => l.id === value);
             if (selectedLocutor) {
@@ -344,9 +354,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             newErrors.supplierId = 'Selecione o fornecedor para este locutor';
         }
 
-        // Se tiver pacote ativo, valor pode ser 0. Se não, deve ser > 0
-        if (!activePackage && formData.vendaValor <= 0) {
-            newErrors.vendaValor = 'Valor da venda deve ser maior que zero';
+        // Se tiver pacote ativo ou for bônus, valor pode ser 0. Se não, deve ser > 0
+        if (!activePackage && formData.vendaValor <= 0 && !formData.isBonus) {
+            newErrors.vendaValor = 'Valor deve ser maior que zero ou marque Cortesia';
         }
 
         setErrors(newErrors);
@@ -977,12 +987,37 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                         Valor definido: Será lançado como PEDIDO AVULSO (não desconta do pacote)
                                     </p>
                                 )}
-                                {activePackage && formData.vendaValor <= 0 && (
+                                {activePackage && formData.vendaValor <= 0 && !formData.isBonus && (
                                     <p className="text-emerald-400 text-xs mt-1 flex items-center gap-1">
                                         <CheckCircle2 size={10} />
                                         Valor zero: Será descontado do saldo do pacote
                                     </p>
                                 )}
+                                {formData.isBonus && (
+                                    <p className="text-cyan-400 text-xs mt-1 flex items-center gap-1 font-bold">
+                                        <CheckCircle2 size={10} />
+                                        PEDIDO DE CORTESIA: Não consome créditos
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex items-end pb-3">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            name="isBonus"
+                                            checked={formData.isBonus}
+                                            onChange={handleChange}
+                                            className="sr-only"
+                                        />
+                                        <div className={`w-10 h-5 rounded-full transition-all duration-300 ${formData.isBonus ? 'bg-cyan-500' : 'bg-white/10'}`}></div>
+                                        <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 ${formData.isBonus ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                    </div>
+                                    <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${formData.isBonus ? 'text-cyan-400' : 'text-muted-foreground group-hover:text-white'}`}>
+                                        Bonificação / Cortesia
+                                    </span>
+                                </label>
                             </div>
                         </div>
 

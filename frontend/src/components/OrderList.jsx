@@ -377,6 +377,11 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                             URGENTE
                                                         </span>
                                                     )}
+                                                    {order.isBonus && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-cyan-500 text-white uppercase tracking-wider shadow-[0_0_8px_rgba(6,182,212,0.4)]">
+                                                            CORTESIA
+                                                        </span>
+                                                    )}
                                                     {order.urgency === 'ALTA' && (
                                                         <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 uppercase tracking-wider">
                                                             ALTA
@@ -444,7 +449,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                         </td>
                                         <td className="px-4 py-2 text-right align-top">
                                             <div className="flex flex-col mt-1">
-                                                <span className="text-foreground font-bold text-sm leading-none">
+                                                <span className={`${order.isBonus ? 'text-cyan-400' : 'text-foreground'} font-bold text-sm leading-none`}>
                                                     {formatCurrency(Number(order.vendaValor))}
                                                 </span>
                                                 <div className="flex items-center justify-end gap-2 mt-1">
