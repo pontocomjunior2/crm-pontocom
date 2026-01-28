@@ -122,6 +122,14 @@ export const clientPackageAPI = {
             method: 'DELETE',
         });
     },
+
+    getOrders: async (packageId) => {
+        return fetchAPI(`/client-packages/${packageId}/orders`);
+    },
+
+    getAllOrders: async () => {
+        return fetchAPI('/client-packages/all/orders');
+    },
 };
 
 // Order API calls

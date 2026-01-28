@@ -26,6 +26,57 @@ router.get('/', async (req, res) => {
     }
 });
 
+// GET /api/client-packages/all/orders - Listar TODOS os pedidos de pacotes (lista universal)
+router.get('/all/orders', async (req, res) => {
+    try {
+        // Buscar todos os pedidos que estão vinculados a pacotes
+        const orders = await prisma.order.findMany({
+            where: {
+                packageId: { not: null },
+                status: { not: 'CANCELADO' }
+            },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                },
+                package: {
+                    select: {
+                        id: true,
+                        name: true,
+                        clientCode: true
+                    }
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        res.json({
+            orders: orders.map(order => ({
+                id: order.id,
+                sequentialId: order.sequentialId,
+                numeroVenda: order.numeroVenda,
+                title: order.title,
+                locutor: order.locutor,
+                date: order.date,
+                status: order.status,
+                entrega: order.entrega,
+                creditsConsumed: order.creditsConsumed || 1,
+                vendaValor: order.vendaValor,
+                comentarios: order.comentarios,
+                client: order.client,
+                package: order.package,
+                packageId: order.packageId
+            }))
+        });
+    } catch (error) {
+        console.error('Erro ao buscar todos os pedidos de pacotes:', error);
+        res.status(500).json({ error: 'Erro no Backend: Falha ao buscar pedidos de pacotes' });
+    }
+});
+
 // GET /api/client-packages/:clientId - Listar pacotes de um cliente
 router.get('/:clientId', async (req, res) => {
     try {
@@ -256,6 +307,61 @@ router.delete('/:id', async (req, res) => {
     } catch (error) {
         console.error('Erro ao excluir pacote:', error);
         res.status(500).json({ error: 'Falha ao excluir pacote' });
+    }
+});
+
+// GET /api/client-packages/:id/orders - Listar pedidos vinculados a um pacote
+router.get('/:id/orders', async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Buscar o pacote para validar
+        const packageExists = await prisma.clientPackage.findUnique({
+            where: { id },
+            select: { id: true, name: true, clientId: true }
+        });
+
+        if (!packageExists) {
+            return res.status(404).json({ error: 'Pacote não encontrado' });
+        }
+
+        // Buscar pedidos vinculados ao pacote
+        const orders = await prisma.order.findMany({
+            where: {
+                packageId: id,
+                status: { not: 'CANCELADO' } // Excluir cancelados
+            },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true
+                    }
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        res.json({
+            package: packageExists,
+            orders: orders.map(order => ({
+                id: order.id,
+                sequentialId: order.sequentialId,
+                numeroVenda: order.numeroVenda,
+                title: order.title,
+                locutor: order.locutor,
+                date: order.date,
+                status: order.status,
+                entrega: order.entrega,
+                creditsConsumed: order.creditsConsumed || 1,
+                vendaValor: order.vendaValor,
+                comentarios: order.comentarios,
+                client: order.client
+            }))
+        });
+    } catch (error) {
+        console.error('Erro ao buscar pedidos do pacote:', error);
+        res.status(500).json({ error: 'Erro no Backend: Falha ao buscar pedidos do pacote' });
     }
 });
 
