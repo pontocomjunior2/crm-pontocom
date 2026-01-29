@@ -26,9 +26,10 @@ import {
     ArrowUp,
     ArrowDown
 } from 'lucide-react';
-import { clientPackageAPI } from '../services/api';
+import { clientPackageAPI, orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 import { showToast } from '../utils/toast';
+import PackageOrderForm from './PackageOrderForm';
 
 const PackageList = ({ onAddNewOrder }) => {
     // Tab system
@@ -40,6 +41,8 @@ const PackageList = ({ onAddNewOrder }) => {
     const [ordersSearchTerm, setOrdersSearchTerm] = useState('');
     const [ordersDeliveryFilter, setOrdersDeliveryFilter] = useState('all'); // 'all', 'delivered', 'pending'
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // 'asc' or 'desc'
+    const [editingUniversalOrder, setEditingUniversalOrder] = useState(null);
+    const [editingUniversalOrderPackage, setEditingUniversalOrderPackage] = useState(null);
 
     // Packages management
     const [packages, setPackages] = useState([]);
@@ -148,6 +151,57 @@ const PackageList = ({ onAddNewOrder }) => {
     const getUsagePercent = (pkg) => {
         if (pkg.audioLimit === 0) return 0;
         return Math.min(100, (pkg.usedAudios / pkg.audioLimit) * 100);
+    };
+
+    // Universal Actions for Order Management
+    const handleToggleDelivery = async (e, order) => {
+        e.stopPropagation();
+        try {
+            const newStatus = !order.entrega;
+            // The backend update is simple: just sending { entrega: true/false }
+            // If status also needs update:
+            const updatePayload = { entrega: newStatus };
+            if (newStatus && order.status !== 'ENTREGUE') updatePayload.status = 'ENTREGUE';
+            if (!newStatus && order.status === 'ENTREGUE') updatePayload.status = 'VENDA'; // Revert to VENDA/PEDIDO? Assuming VENDA default.
+
+            await orderAPI.update(order.id, updatePayload);
+            showToast.success(`Pedido marcado como ${newStatus ? 'Entregue' : 'Pendente'}`);
+            loadAllOrders(); // Refresh table
+        } catch (error) {
+            console.error(error);
+            showToast.error('Erro ao atualizar entrega');
+        }
+    };
+
+    const handleDeleteUniversal = async (id) => {
+        if (!window.confirm('Tem certeza que deseja excluir este pedido de pacote?')) return;
+        try {
+            await orderAPI.delete(id);
+            showToast.success('Pedido excluído');
+            loadAllOrders();
+        } catch (error) {
+            showToast.error('Erro ao excluir pedido');
+        }
+    };
+
+    const handleEditUniversal = (order) => {
+        // We need the Full Package Object for the Form
+        // We rely on backend returning package info in /all/orders
+        if (!order.package) {
+            showToast.error('Erro: Informações do pacote não disponíveis');
+            return;
+        }
+        setEditingUniversalOrderPackage(order.package);
+        setEditingUniversalOrder(order);
+    };
+
+    const handleCloseUniversalEdit = () => {
+        setEditingUniversalOrder(null);
+        setEditingUniversalOrderPackage(null);
+    };
+
+    const handleSuccessUniversalEdit = () => {
+        loadAllOrders();
     };
 
     return (
@@ -316,8 +370,8 @@ const PackageList = ({ onAddNewOrder }) => {
                                             <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('package')}>
                                                 <div className="flex items-center">Pacote {getSortIcon('package')}</div>
                                             </th>
-                                            <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('title')}>
-                                                <div className="flex items-center">Título {getSortIcon('title')}</div>
+                                            <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('fileName')}>
+                                                <div className="flex items-center">Nome do Arquivo {getSortIcon('fileName')}</div>
                                             </th>
                                             <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('locutor')}>
                                                 <div className="flex items-center">Locutor {getSortIcon('locutor')}</div>
@@ -331,6 +385,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                             <th className="px-4 py-3 text-center cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('delivery')}>
                                                 <div className="flex items-center justify-center">Entrega {getSortIcon('delivery')}</div>
                                             </th>
+                                            <th className="px-4 py-3 text-center">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-sm">
@@ -369,6 +424,10 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     case 'package':
                                                         valA = a.package?.name || '';
                                                         valB = b.package?.name || '';
+                                                        break;
+                                                    case 'fileName':
+                                                        valA = a.fileName || a.title || '';
+                                                        valB = b.fileName || b.title || '';
                                                         break;
                                                     case 'title':
                                                         valA = a.title || '';
@@ -421,9 +480,12 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     </td>
                                                     <td className="px-4 py-3">
                                                         <div className="max-w-xs">
-                                                            <p className="text-foreground font-medium truncate">{order.title}</p>
+                                                            <p className="text-foreground font-medium truncate text-xs font-mono">{order.fileName || order.title}</p>
+                                                            {order.title && order.fileName && order.title !== order.fileName && (
+                                                                <p className="text-[10px] text-muted-foreground truncate">{order.title}</p>
+                                                            )}
                                                             {order.comentarios && (
-                                                                <p className="text-xs text-muted-foreground truncate">{order.comentarios}</p>
+                                                                <p className="text-[10px] text-muted-foreground truncate">{order.comentarios}</p>
                                                             )}
                                                         </div>
                                                     </td>
@@ -455,6 +517,31 @@ const PackageList = ({ onAddNewOrder }) => {
                                                                 <span className="text-xs font-bold">Pendente</span>
                                                             </div>
                                                         )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <button
+                                                                onClick={(e) => handleToggleDelivery(e, order)}
+                                                                className={`p-2 rounded-lg transition-all ${order.entrega ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' : 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'}`}
+                                                                title={order.entrega ? 'Marcar como Pendente' : 'Marcar como Entregue'}
+                                                            >
+                                                                {order.entrega ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleEditUniversal(order)}
+                                                                className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-all"
+                                                                title="Editar Pedido"
+                                                            >
+                                                                <Edit2 size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDeleteUniversal(order.id)}
+                                                                className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-all"
+                                                                title="Excluir Pedido"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))}
@@ -716,7 +803,17 @@ const PackageList = ({ onAddNewOrder }) => {
                 </div>
             )}
 
-            {/* Modal de Pedidos do Pacote */}
+            {/* Universal Edit Modal */}
+            {editingUniversalOrder && editingUniversalOrderPackage && (
+                <PackageOrderForm
+                    pkg={editingUniversalOrderPackage}
+                    orderToEdit={editingUniversalOrder}
+                    onClose={handleCloseUniversalEdit}
+                    onSuccess={handleSuccessUniversalEdit}
+                />
+            )}
+
+            {/* Modal de Pedidos (View Orders for a Package) */}
             {selectedPackage && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
                     <div className="bg-card border border-border rounded-2xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl shadow-black/50 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">

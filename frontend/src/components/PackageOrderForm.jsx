@@ -17,7 +17,7 @@ import { orderAPI, locutorAPI, clientPackageAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 
-const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
+const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
     const [loading, setLoading] = useState(false);
     const [loadingLocutores, setLoadingLocutores] = useState(true);
     const [locutores, setLocutores] = useState([]);
@@ -25,16 +25,16 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
     const [formData, setFormData] = useState({
         clientId: pkg.clientId,
         packageId: pkg.id,
-        title: '',
-        fileName: '',
-        locutorId: '',
-        locutor: '',
-        tipo: 'OFF',
-        creditsToDebit: 1,
+        title: orderToEdit?.title || '',
+        fileName: orderToEdit?.fileName || '',
+        locutorId: orderToEdit?.locutorId || '',
+        locutor: orderToEdit?.locutor || '',
+        tipo: orderToEdit?.tipo || 'OFF',
+        creditsToDebit: orderToEdit?.creditsConsumed || 1,
         clientCode: pkg.clientCode || '',
-        cacheValor: 0,
-        supplierId: '',
-        status: 'VENDA' // Package orders are usually directly sales
+        cacheValor: orderToEdit ? parseFloat(orderToEdit.cacheValor) : 0,
+        supplierId: orderToEdit?.supplierId || '',
+        status: orderToEdit?.status || 'VENDA'
     });
 
     useEffect(() => {
@@ -42,9 +42,39 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
     }, []);
 
     // Auto-update filename
+    // Only auto-update if NOT editing OR if user changes relevant fields explicitly
+    // For simplicity, we maintain auto-update logic but maybe we should respect existing filename if specific fields didn't change?
+    // Let's keep autosync reactive to formData changes. If editing, formData starts with existing values.
+    // However, if we just load the form, this useEffect will run and might regenerate the fileName.
+    // To prevent overwriting custom filenames on load, we check if changes actually happened relative to initial load?
+    // Simplified approach: regenerate based on current formData fields.
     useEffect(() => {
-        const startNumber = pkg.usedAudios + 1;
+        // If editing and no changes yet, keep original filename (handled by inputs producing changes)
+        // But here inputs ARE the dependencies.
+
+        const startNumber = pkg.usedAudios + (orderToEdit ? 0 : 1); // If editing, don't increment next slot, assume current slot (simplified)
+        // Actually for editing, calculating "startNumber" is hard because we don't know the "position" of this order just from order data.
+        // It's safer to ONLY auto-generate if NOT editing, OR if user wants to recalculate.
+        // But the user might want to edit the title and have the filename update.
+
+        // Let's restrict auto-generation:
+        if (orderToEdit && formData.fileName === orderToEdit.fileName) {
+            // If filename hasn't changed from DB manually, allows update IF title/locutor changed?
+            // Complex. Let's stick to standard logic but be careful about startNumber.
+        }
+
         const totalCredits = parseInt(formData.creditsToDebit) || 1;
+        // Use existing numbering logic, but for editing it might be weird to assume "next number".
+        // If editing, we probably shouldn't auto-update the number part, only the Title/Locutor part.
+
+        const codePart = formData.clientCode ? `${formData.clientCode} ` : '';
+
+        // Only update logic if NOT editing, or accept that editing might reset numbering to "end of queue".
+        // Better strategy for EDIT: Do NOT auto-update fileName completely, or allow manual edit.
+        // But the requirement says "Nome do Arquivo (Auto-gerado)".
+
+        // For now, let's allow auto-update only for new orders. For edit, we trust what's there unless title changes?
+        if (orderToEdit) return; // Disable auto-gen for edits to avoid breaking history numbers
 
         let numbering = '';
         if (totalCredits === 1) {
@@ -57,7 +87,6 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
             numbering = sequence.join(', ');
         }
 
-        const codePart = formData.clientCode ? `${formData.clientCode} ` : '';
         const limitPart = pkg.audioLimit ? ` de ${pkg.audioLimit}` : '';
         const creditPart = `${numbering}${limitPart} `;
 
@@ -68,7 +97,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
             ...prev,
             fileName: `${codePart}${creditPart}${detailPart}`.trim()
         }));
-    }, [formData.title, formData.locutorId, formData.creditsToDebit, formData.clientCode, locutores, pkg.usedAudios, pkg.audioLimit]);
+    }, [formData.title, formData.locutorId, formData.creditsToDebit, formData.clientCode, locutores, pkg.usedAudios, pkg.audioLimit, orderToEdit]);
 
     const loadLocutores = async () => {
         try {
@@ -87,6 +116,8 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
         if (name === 'locutorId') {
             const selectedLocutor = locutores.find(l => l.id === value);
             if (selectedLocutor) {
+                // Keep existing cache if editing and not changing type logic? 
+                // If editing, logic should still apply if I change locutor.
                 const cache = selectedLocutor.valorFixoMensal > 0 ? 0 : (formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
                 let newSupplierId = '';
                 if (selectedLocutor.suppliers?.length === 1) {
@@ -114,6 +145,9 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
 
     // Calculate Cache based on Supplier Credits (if supplier has credits)
     useEffect(() => {
+        // If editing, maybe we don't want to re-calc cache unless fields change?
+        // But existing useEffect dependency array handles that.
+
         if (formData.locutorId && formData.supplierId && locutores.length > 0) {
             const locutor = locutores.find(l => l.id === formData.locutorId);
             const supplier = locutor?.suppliers?.find(s => s.id === formData.supplierId);
@@ -125,7 +159,9 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
                 const newCache = cost * credits;
 
                 setFormData(prev => {
-                    if (prev.cacheValor !== newCache) {
+                    if (parseFloat(prev.cacheValor) !== newCache) {
+                        // Only update if significantly different to assume reactive change
+                        // Or just Always update if supplier package exists logic prevails
                         return { ...prev, cacheValor: newCache };
                     }
                     return prev;
@@ -148,20 +184,26 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
                 await clientPackageAPI.update(pkg.id, { clientCode: formData.clientCode });
             }
 
-            // Create the order
+            // Create or Update
             const orderData = {
                 ...formData,
-                vendaValor: 0, // Package orders have 0 sale value (already paid or fixed)
+                vendaValor: 0, // Package orders have 0 sale value
                 creditsConsumed: parseInt(formData.creditsToDebit),
                 serviceType: 'PACOTE DE AUDIOS'
             };
 
-            await orderAPI.create(orderData);
-            showToast.success('Pedido de pacote realizado com sucesso!');
+            if (orderToEdit) {
+                await orderAPI.update(orderToEdit.id, orderData);
+                showToast.success('Pedido atualizado com sucesso!');
+            } else {
+                await orderAPI.create(orderData);
+                showToast.success('Pedido de pacote realizado com sucesso!');
+            }
+
             setTimeout(() => {
                 onSuccess();
                 onClose();
-            }, 1500);
+            }, 1000);
         } catch (error) {
             showToast.error(error);
             setLoading(false);
@@ -178,7 +220,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
                             <ShoppingCart size={24} />
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white leading-tight">Lançar Pedido de Pacote</h2>
+                            <h2 className="text-xl font-bold text-white leading-tight">{orderToEdit ? 'Editar Pedido' : 'Lançar Pedido de Pacote'}</h2>
                             <p className="text-[11px] text-muted-foreground uppercase tracking-widest font-black mt-0.5">{pkg.client?.name}</p>
                         </div>
                     </div>
@@ -324,7 +366,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess }) => {
                         ) : (
                             <>
                                 <Save size={20} />
-                                <span className="font-black tracking-tight">LANÇAR PEDIDO</span>
+                                <span className="font-black tracking-tight">{orderToEdit ? 'ATUALIZAR' : 'LANÇAR PEDIDO'}</span>
                             </>
                         )}
                     </button>

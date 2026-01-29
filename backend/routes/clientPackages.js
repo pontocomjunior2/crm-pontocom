@@ -47,7 +47,10 @@ router.get('/all/orders', checkPermission('accessPacotes'), async (req, res) => 
                     select: {
                         id: true,
                         name: true,
-                        clientCode: true
+                        clientCode: true,
+                        usedAudios: true,
+                        audioLimit: true,
+                        clientId: true
                     }
                 }
             },
@@ -60,7 +63,10 @@ router.get('/all/orders', checkPermission('accessPacotes'), async (req, res) => 
                 sequentialId: order.sequentialId,
                 numeroVenda: order.numeroVenda,
                 title: order.title,
+                fileName: order.fileName, // Field requested
                 locutor: order.locutor,
+                locutorId: order.locutorId, // Needed for edit form
+                supplierId: order.supplierId, // Needed for edit form
                 date: order.date,
                 status: order.status,
                 entrega: order.entrega,
