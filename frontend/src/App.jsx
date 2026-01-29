@@ -51,7 +51,9 @@ import { formatCurrency } from './utils/formatters';
 
 const CRM = () => {
   const { user, logout, isAdmin, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('crm_activeTab') || 'dashboard';
+  });
   const [showClientForm, setShowClientForm] = useState(false);
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [showLocutorForm, setShowLocutorForm] = useState(false);
@@ -70,6 +72,8 @@ const CRM = () => {
   useEffect(() => {
     // Close mobile menu when tab changes
     setMobileMenuOpen(false);
+    // Persist active tab
+    localStorage.setItem('crm_activeTab', activeTab);
   }, [activeTab]);
 
   // Date Filter State
