@@ -138,20 +138,35 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
     useEffect(() => {
         if (activePackage && !order) {
             let suggestedVenda = 0;
+            const credits = parseInt(formData.creditsConsumed) || 1;
+            const usageBefore = Number(activePackage.usedAudios) || 0;
+            const usageAfter = usageBefore + credits;
+            const limit = Number(activePackage.audioLimit) || 0;
+
             if (activePackage.type === 'FIXO_ILIMITADO') {
                 suggestedVenda = 0;
-            } else if (activePackage.type === 'FIXO_COM_LIMITE' || activePackage.type === 'FIXO_COM_LIMITE_VENCIMENTO') {
-                if (activePackage.usedAudios < activePackage.audioLimit) {
-                    suggestedVenda = 0;
-                } else {
-                    suggestedVenda = activePackage.extraAudioFee;
-                }
             } else if (activePackage.type === 'FIXO_SOB_DEMANDA') {
-                suggestedVenda = activePackage.extraAudioFee;
+                if (usageAfter > limit) {
+                    const extras = Math.max(0, usageAfter - Math.max(limit, usageBefore));
+                    suggestedVenda = extras * Number(activePackage.extraAudioFee);
+                } else {
+                    suggestedVenda = 0;
+                }
+            } else {
+                // Fixo com limite
+                suggestedVenda = 0; // Bloqueio tratado na validação se usageAfter > limit
             }
-            setFormData(prev => ({ ...prev, vendaValor: suggestedVenda }));
+
+            // Só atualiza se o usuário não tiver alterado manualmente para algo > 0 (vendedor pode querer cobrar diferente)
+            // Se for novo pedido ou se estava em 0, sugerimos o valor
+            setFormData(prev => {
+                if (prev.vendaValor === 0 || !order) {
+                    return { ...prev, vendaValor: suggestedVenda };
+                }
+                return prev;
+            });
         }
-    }, [activePackage, order]);
+    }, [activePackage, order, formData.creditsConsumed]);
 
     // Recalculate margins when values change
     useEffect(() => {
@@ -367,7 +382,34 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             newErrors.supplierId = 'Selecione o fornecedor para este locutor';
         }
 
-        // Se tiver pacote ativo ou for bônus, valor pode ser 0. Se não, deve ser > 0
+        // Validação de Pacotes
+        if (activePackage && formData.packageId && formData.vendaValor === 0 && !formData.isBonus) {
+            const now = new Date();
+            const start = new Date(activePackage.startDate);
+            const end = new Date(activePackage.endDate);
+
+            // 1. Validação de Data
+            if (now < start || now > end) {
+                const dataFormatada = end.toLocaleDateString('pt-BR');
+                const errorMsg = `Erro no Pacote: O plano do cliente expirou em ${dataFormatada}. Para prosseguir, defina um valor de venda (Pedido Avulso) ou atualize o pacote do cliente.`;
+                showToast.error(errorMsg);
+                newErrors.packageId = 'Pacote Expirado';
+                return false;
+            }
+
+            // 2. Validação de Limite
+            if (activePackage.type !== 'FIXO_ILIMITADO' && activePackage.type !== 'FIXO_SOB_DEMANDA') {
+                const credits = parseInt(formData.creditsConsumed) || 1;
+                if ((activePackage.usedAudios + credits) > activePackage.audioLimit) {
+                    const errorMsg = `Erro no Pacote: O limite de créditos (${activePackage.audioLimit}) foi atingido. Para prosseguir, defina um valor de venda (Pedido Avulso) ou altere o plano para Sob Demanda.`;
+                    showToast.error(errorMsg);
+                    newErrors.packageId = 'Saldo Insuficiente';
+                    return false;
+                }
+            }
+        }
+
+        // Se não tiver pacote ativo ou for bônus, valor pode ser 0. Se não, deve ser > 0
         if (!activePackage && formData.vendaValor <= 0 && !formData.isBonus) {
             newErrors.vendaValor = 'Valor deve ser maior que zero ou marque Cortesia';
         }

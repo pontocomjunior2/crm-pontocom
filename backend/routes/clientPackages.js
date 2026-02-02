@@ -107,9 +107,7 @@ router.get('/active/:clientId', async (req, res) => {
         const activePackage = await prisma.clientPackage.findFirst({
             where: {
                 clientId,
-                active: true,
-                startDate: { lte: now },
-                endDate: { gte: now }
+                active: true
             },
             orderBy: { createdAt: 'desc' }
         });

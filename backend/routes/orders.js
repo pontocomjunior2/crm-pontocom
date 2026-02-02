@@ -389,26 +389,44 @@ router.post('/', async (req, res) => {
 
             if (pkg && pkg.active) {
                 const now = new Date();
-                // Verificar se está dentro da validade
-                if (now >= pkg.startDate && now <= pkg.endDate) {
-                    const usage = pkg.usedAudios + creditsToConsume;
+                const creditsToUse = creditsToConsume || 1;
 
-                    // Se for sob demanda e exceder o limite, cobra taxa extra
-                    if (pkg.type === 'FIXO_SOB_DEMANDA' && usage > pkg.audioLimit) {
-                        finalVendaValor = parseFloat(pkg.extraAudioFee);
-                    } else if (pkg.type === 'FIXO_ILIMITADO') {
-                        finalVendaValor = 0;
-                    } else if (usage <= pkg.audioLimit) {
-                        // Dentro da cota de qualquer plano com limite
-                        finalVendaValor = 0;
-                    }
-
-                    // Incrementar uso no pacote
-                    await prisma.clientPackage.update({
-                        where: { id: packageId },
-                        data: { usedAudios: usage }
+                // 1. Verificar Validade (Regra 2 e 4)
+                if (now < pkg.startDate || now > pkg.endDate) {
+                    const dataFormatada = new Date(pkg.endDate).toLocaleDateString('pt-BR');
+                    return res.status(400).json({
+                        error: 'PACKAGE_EXPIRED',
+                        message: `Erro no Pacote: O plano do cliente expirou em ${dataFormatada}. Para prosseguir, defina um valor de venda (Pedido Avulso) ou atualize o pacote do cliente.`
                     });
                 }
+
+                const usageAfter = pkg.usedAudios + creditsToUse;
+
+                // 2. Verificar Limites (Regra 3)
+                if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA') {
+                    if (usageAfter > pkg.audioLimit) {
+                        return res.status(400).json({
+                            error: 'PACKAGE_LIMIT_REACHED',
+                            message: `Erro no Pacote: O limite de créditos (${pkg.audioLimit}) foi atingido. Para prosseguir, defina um valor de venda (Pedido Avulso) ou altere o plano para Sob Demanda.`
+                        });
+                    }
+                }
+
+                // 3. Cálculo de Valor Extra (Regra 1)
+                if (pkg.type === 'FIXO_SOB_DEMANDA' && usageAfter > pkg.audioLimit) {
+                    const usageBefore = pkg.usedAudios;
+                    const extras = Math.max(0, usageAfter - Math.max(pkg.audioLimit, usageBefore));
+                    finalVendaValor = extras * parseFloat(pkg.extraAudioFee);
+                } else {
+                    // Planos ilimitados ou dentro do limite
+                    finalVendaValor = 0;
+                }
+
+                // Incrementar uso no pacote
+                await prisma.clientPackage.update({
+                    where: { id: packageId },
+                    data: { usedAudios: usageAfter }
+                });
             }
         }
 
@@ -603,9 +621,10 @@ router.put('/:id', async (req, res) => {
                     where: { id: existing.packageId }
                 });
                 if (pkg) {
+                    const creditsToRefund = existing.creditsConsumed || 1;
                     await prisma.clientPackage.update({
                         where: { id: pkg.id },
-                        data: { usedAudios: { decrement: 1 } }
+                        data: { usedAudios: { decrement: creditsToRefund } }
                     });
                 }
             }
@@ -621,9 +640,10 @@ router.put('/:id', async (req, res) => {
                     where: { id: existing.packageId }
                 });
                 if (pkg) {
+                    const creditsToRefund = existing.creditsConsumed || 1;
                     await prisma.clientPackage.update({
                         where: { id: pkg.id },
-                        data: { usedAudios: { decrement: 1 } }
+                        data: { usedAudios: { decrement: creditsToRefund } }
                     });
                 }
             }
@@ -637,6 +657,7 @@ router.put('/:id', async (req, res) => {
 
             if (!wasConsuming || wasBonus) {
                 let pkgToDebitId = req.body.packageId;
+                const creditsToDebit = (creditsConsumed !== undefined ? parseInt(creditsConsumed) : existing.creditsConsumed) || 1;
 
                 // Se não veio ID do pacote, buscar ativo no banco
                 if (!pkgToDebitId) {
@@ -654,15 +675,36 @@ router.put('/:id', async (req, res) => {
 
                 if (pkgToDebitId) {
                     try {
-                        await prisma.clientPackage.update({
-                            where: { id: pkgToDebitId },
-                            data: { usedAudios: { increment: 1 } }
-                        });
-                        // Garantir que o vínculo seja salvo no pedido
-                        req.body.packageId = pkgToDebitId;
+                        const pkg = await prisma.clientPackage.findUnique({ where: { id: pkgToDebitId } });
+                        if (pkg) {
+                            // Validar se pode debitar (limite/validade)
+                            const now = new Date();
+                            if (now < pkg.startDate || now > pkg.endDate) {
+                                return res.status(400).json({ error: 'PACKAGE_EXPIRED', message: 'Erro: Pacote expirado.' });
+                            }
+                            if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA' && (pkg.usedAudios + creditsToDebit > pkg.audioLimit)) {
+                                return res.status(400).json({ error: 'PACKAGE_LIMIT_REACHED', message: 'Erro: Limite de créditos excedido.' });
+                            }
+
+                            await prisma.clientPackage.update({
+                                where: { id: pkgToDebitId },
+                                data: { usedAudios: { increment: creditsToDebit } }
+                            });
+                            // Garantir que o vínculo seja salvo no pedido
+                            req.body.packageId = pkgToDebitId;
+
+                            // Tratar valor extra para SOB_DEMANDA na edição
+                            if (pkg.type === 'FIXO_SOB_DEMANDA' && (pkg.usedAudios + creditsToDebit > pkg.audioLimit)) {
+                                const usageBefore = pkg.usedAudios;
+                                const usageAfter = usageBefore + creditsToDebit;
+                                const extras = Math.max(0, usageAfter - Math.max(pkg.audioLimit, usageBefore));
+                                req.body.vendaValor = extras * parseFloat(pkg.extraAudioFee);
+                            } else {
+                                req.body.vendaValor = 0;
+                            }
+                        }
                     } catch (e) {
                         console.error('Falha ao debitar pacote na edição:', e);
-                        // Se falhou (ex: erro de banco), garantimos que não fica vinculado incorretamente
                         req.body.packageId = null;
                     }
                 }
