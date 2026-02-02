@@ -83,7 +83,9 @@ router.get('/', async (req, res) => {
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
-        const where = {};
+        const where = {
+            packageId: null
+        };
         const andConditions = [];
 
         // Client filter

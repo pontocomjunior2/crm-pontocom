@@ -307,7 +307,20 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         // Convert to float (cents to currency)
         const floatValue = parseFloat(numericValue) / 100;
 
-        setFormData(prev => ({ ...prev, [name]: floatValue }));
+        setFormData(prev => {
+            const newData = { ...prev, [name]: floatValue };
+
+            // Se estiver editando o valor de venda e houver um pacote ativo
+            // Caso o valor seja > 0, limpamos o packageId para torná-lo AVULSO
+            if (name === 'vendaValor' && floatValue > 0 && activePackage) {
+                newData.packageId = null;
+            } else if (name === 'vendaValor' && floatValue === 0 && activePackage) {
+                // Se voltar para zero, re-vincula ao pacote
+                newData.packageId = activePackage.id;
+            }
+
+            return newData;
+        });
     };
 
     const handleFileChange = (e) => {
@@ -969,9 +982,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                 />
                                 {errors.vendaValor && <p className="text-red-400 text-xs mt-1">{errors.vendaValor}</p>}
                                 {activePackage && formData.vendaValor > 0 && (
-                                    <p className="text-orange-400 text-xs mt-1 flex items-center gap-1">
+                                    <p className="text-orange-400 text-xs mt-1 flex items-center gap-1 font-bold animate-in fade-in slide-in-from-top-1">
                                         <AlertCircle size={10} />
-                                        Valor definido: Será lançado como PEDIDO AVULSO (não desconta do pacote)
+                                        Pedido AVULSO: Não consome créditos e aparecerá em "PEDIDOS"
                                     </p>
                                 )}
                                 {activePackage && formData.vendaValor <= 0 && !formData.isBonus && (
