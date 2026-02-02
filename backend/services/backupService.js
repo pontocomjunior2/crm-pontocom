@@ -133,24 +133,52 @@ class BackupService {
 
         // List and delete remote backups
         try {
-            const query = `name contains 'backup-' and name contains '.dump' ${this.config.folderId ? `and '${this.config.folderId}' in parents` : ''}`;
-            const response = await this.drive.files.list({
-                q: query,
-                fields: 'files(id, name, createdTime)',
-                orderBy: 'createdTime desc',
-                supportsAllDrives: true,
-                includeItemsFromAllDrives: true
-            });
+            console.log(`[Rotation] Starting rotation (keeping last ${keepDays} days)...`);
+            const query = `name contains 'backup-' and name contains '.dump' and trashed = false ${this.config.folderId ? `and '${this.config.folderId}' in parents` : ''}`;
 
-            if (response.data.files) {
-                for (const file of response.data.files) {
+            let pageToken = null;
+            let deletedCount = 0;
+            let totalFound = 0;
+
+            do {
+                const response = await this.drive.files.list({
+                    q: query,
+                    fields: 'nextPageToken, files(id, name, createdTime)',
+                    orderBy: 'createdTime asc', // Oldest first
+                    pageSize: 100,
+                    pageToken: pageToken,
+                    supportsAllDrives: true,
+                    includeItemsFromAllDrives: true
+                });
+
+                const files = response.data.files || [];
+                totalFound += files.length;
+
+                for (const file of files) {
                     const createdTime = new Date(file.createdTime);
                     if (createdTime < expirationDate) {
-                        console.log(`Deleting expired Drive backup: ${file.name}`);
-                        await this.drive.files.delete({ fileId: file.id });
+                        try {
+                            console.log(`[Rotation] Deleting expired Drive backup: ${file.name} (ID: ${file.id})`);
+                            await this.drive.files.delete({
+                                fileId: file.id,
+                                supportsAllDrives: true
+                            });
+                            deletedCount++;
+                        } catch (delError) {
+                            console.error(`[Rotation] Failed to delete file ${file.name}:`, delError.message);
+                        }
+                    } else {
+                        // Como os arquivos vêm ordenados por data ASC, se chegamos no primeiro que NÃO expirou,
+                        // os próximos também não expiraram.
+                        pageToken = null; // Encerra o loop da página
+                        break;
                     }
                 }
-            }
+
+                pageToken = response.data.nextPageToken;
+            } while (pageToken);
+
+            console.log(`[Rotation] Remote rotation finished. Found: ${totalFound}, Deleted: ${deletedCount}`);
         } catch (error) {
             console.error('Rotation error (Google Drive):', error);
         }
