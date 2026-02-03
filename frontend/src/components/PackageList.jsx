@@ -24,7 +24,8 @@ import {
     Settings,
     ArrowUpDown,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    RotateCcw
 } from 'lucide-react';
 import { clientPackageAPI, orderAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -452,9 +453,6 @@ const PackageList = ({ onAddNewOrder }) => {
                                             <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('client')}>
                                                 <div className="flex items-center">Cliente {getSortIcon('client')}</div>
                                             </th>
-                                            <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('package')}>
-                                                <div className="flex items-center">Pacote {getSortIcon('package')}</div>
-                                            </th>
                                             <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('fileName')}>
                                                 <div className="flex items-center">Nome do Arquivo {getSortIcon('fileName')}</div>
                                             </th>
@@ -463,12 +461,6 @@ const PackageList = ({ onAddNewOrder }) => {
                                             </th>
                                             <th className="px-4 py-3 text-center cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('credits')}>
                                                 <div className="flex items-center justify-center">Créditos {getSortIcon('credits')}</div>
-                                            </th>
-                                            <th className="px-4 py-3 text-center cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('status')}>
-                                                <div className="flex items-center justify-center">Status {getSortIcon('status')}</div>
-                                            </th>
-                                            <th className="px-4 py-3 text-center cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('delivery')}>
-                                                <div className="flex items-center justify-center">Entrega {getSortIcon('delivery')}</div>
                                             </th>
                                             <th className="px-4 py-3 text-center">Ações</th>
                                         </tr>
@@ -556,15 +548,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                         {order.client?.name || '-'}
                                                     </td>
                                                     <td className="px-4 py-3">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm text-foreground font-medium">{order.package?.name || '-'}</span>
-                                                            {order.package?.clientCode && (
-                                                                <span className="text-xs text-muted-foreground font-mono">#{order.package.clientCode}</span>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-3">
-                                                        <div className="max-w-xs">
+                                                        <div className="max-w-xs" title={order.package ? `Pacote: ${order.package.name}${order.package.clientCode ? ` (#${order.package.clientCode})` : ''}` : 'Sem pacote'}>
                                                             <p className="text-foreground font-medium truncate text-xs font-mono">{order.fileName || order.title}</p>
                                                             {order.title && order.fileName && order.title !== order.fileName && (
                                                                 <p className="text-[10px] text-muted-foreground truncate">{order.title}</p>
@@ -583,35 +567,19 @@ const PackageList = ({ onAddNewOrder }) => {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
-                                                        <span className={`px-2 py-1 rounded-lg text-xs font-bold ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-400' :
-                                                            order.status === 'PEDIDO' ? 'bg-blue-500/10 text-blue-400' :
-                                                                'bg-gray-500/10 text-gray-400'
-                                                            }`}>
-                                                            {order.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        {order.entrega ? (
-                                                            <div className="flex items-center justify-center gap-1.5 text-green-400">
-                                                                <Truck size={16} />
-                                                                <span className="text-xs font-bold">Entregue</span>
-                                                            </div>
-                                                        ) : (
-                                                            <div className="flex items-center justify-center gap-1.5 text-orange-400">
-                                                                <Clock size={16} />
-                                                                <span className="text-xs font-bold">Pendente</span>
-                                                            </div>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
                                                         <div className="flex items-center justify-center gap-2">
                                                             <button
                                                                 onClick={(e) => handleToggleDelivery(e, order)}
-                                                                className={`p-2 rounded-lg transition-all ${order.entrega ? 'bg-green-500/10 text-green-400 hover:bg-green-500/20' : 'bg-orange-500/10 text-orange-400 hover:bg-orange-500/20'}`}
-                                                                title={order.entrega ? 'Marcar como Pendente' : 'Marcar como Entregue'}
+                                                                className={`p-2 rounded-lg transition-all ${order.entrega ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'}`}
+                                                                title={order.entrega ? 'Reverter para Pedido' : 'Confirmar Entrega e Transformar em Venda'}
                                                             >
-                                                                {order.entrega ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+                                                                {order.entrega ? <RotateCcw size={16} /> : <CheckCircle2 size={16} />}
                                                             </button>
+                                                            {order.entrega && (
+                                                                <div className="flex items-center gap-1 text-green-400" title="Já entregue">
+                                                                    <Truck size={14} />
+                                                                </div>
+                                                            )}
                                                             <button
                                                                 onClick={() => handleEditUniversal(order)}
                                                                 className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-all"
