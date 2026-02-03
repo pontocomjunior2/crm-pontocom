@@ -224,10 +224,11 @@ const CRM = () => {
 
   // Dashboard Metrics
   const stats = dashboardData ? [
+    // Line 1: Revenues + Growth
     {
       title: 'Receita Total',
       value: formatCurrency(dashboardData.metrics.totalRevenue),
-      trend: '+0%',
+      trend: '+0%', // To be implemented: real growth
       sub: 'acumulado total',
       icon: <DollarSign size={20} />,
       color: 'from-amber-400 to-amber-600',
@@ -255,15 +256,17 @@ const CRM = () => {
       textColor: 'text-emerald-500'
     },
     {
-      title: 'Pedidos Ativos',
-      value: dashboardData.metrics.activeOrders.toString(),
-      trend: 'ESTÁVEL',
-      sub: 'em produção',
-      icon: <FileText size={20} />,
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-500/10',
-      textColor: 'text-blue-500'
+      title: 'Clientes Ativos',
+      value: dashboardData.metrics.activeClients.toString(),
+      trend: '+1',
+      sub: 'clientes totais',
+      icon: <Users size={20} />,
+      color: 'from-green-500 to-green-600',
+      bgColor: 'bg-green-500/10',
+      textColor: 'text-green-500'
     },
+
+    // Line 2: Costs + Operations
     {
       title: 'Custos com Cachê',
       value: formatCurrency(dashboardData.metrics.totalCache),
@@ -275,14 +278,34 @@ const CRM = () => {
       textColor: 'text-purple-500'
     },
     {
-      title: 'Clientes Ativos',
-      value: dashboardData.metrics.activeClients.toString(),
-      trend: '+1',
-      sub: 'clientes totais',
-      icon: <Users size={20} />,
-      color: 'from-green-500 to-green-600',
-      bgColor: 'bg-green-500/10',
-      textColor: 'text-green-500'
+      title: 'Custo Pacotes',
+      value: formatCurrency(dashboardData.metrics.packageCache || 0),
+      trend: `${Math.round((dashboardData.metrics.packageCache / dashboardData.metrics.packageRevenue) * 100 || 0)}%`,
+      sub: 'da rec. pacotes',
+      icon: <Package size={20} />,
+      color: 'from-pink-500 to-pink-600',
+      bgColor: 'bg-pink-500/10',
+      textColor: 'text-pink-500'
+    },
+    {
+      title: 'Custo Avulsos',
+      value: formatCurrency(dashboardData.metrics.orderCache || 0),
+      trend: `${Math.round((dashboardData.metrics.orderCache / dashboardData.metrics.orderRevenue) * 100 || 0)}%`,
+      sub: 'da rec. avulsa',
+      icon: <Mic2 size={20} />,
+      color: 'from-rose-500 to-rose-600',
+      bgColor: 'bg-rose-500/10',
+      textColor: 'text-rose-500'
+    },
+    {
+      title: 'Pedidos Ativos',
+      value: dashboardData.metrics.activeOrders.toString(),
+      trend: 'ESTÁVEL',
+      sub: 'em produção',
+      icon: <FileText size={20} />,
+      color: 'from-blue-500 to-blue-600',
+      bgColor: 'bg-blue-500/10',
+      textColor: 'text-blue-500'
     },
   ] : [];
 

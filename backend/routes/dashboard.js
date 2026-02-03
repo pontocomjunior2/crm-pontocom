@@ -64,11 +64,14 @@ router.get('/', async (req, res) => {
             }
         });
 
-        // Calculate Package Revenue
+        // Calculate Package Revenue & Cache
         // 1. Orders that are package fees (billingOrder)
         // 2. Orders that are consumptions with extra cost (packageId is not null)
-        const packageRevenueSum = await prisma.order.aggregate({
-            _sum: { vendaValor: true },
+        const packageMetricsSum = await prisma.order.aggregate({
+            _sum: {
+                vendaValor: true,
+                cacheValor: true
+            },
             where: {
                 ...dateFilter,
                 status: 'VENDA',
@@ -79,7 +82,7 @@ router.get('/', async (req, res) => {
             }
         });
 
-        const packageRevenue = Number(packageRevenueSum._sum.vendaValor || 0);
+        const packageRevenue = Number(packageMetricsSum._sum.vendaValor || 0);
         const totalRevenue = Number(revenueSums._sum.vendaValor || 0);
         const orderRevenue = totalRevenue - packageRevenue;
 
@@ -98,7 +101,14 @@ router.get('/', async (req, res) => {
         });
 
         const totalFixedFees = locutoresWithOrders.reduce((sum, loc) => sum + Number(loc.valorFixoMensal), 0);
-        const adjustedTotalCache = Number(revenueSums._sum.cacheValor || 0) + totalFixedFees;
+
+        // Cache Calculations
+        const totalVariableCache = Number(revenueSums._sum.cacheValor || 0);
+        const packageVariableCache = Number(packageMetricsSum._sum.cacheValor || 0);
+
+        const packageCache = packageVariableCache + totalFixedFees;
+        const orderCache = totalVariableCache - packageVariableCache;
+        const adjustedTotalCache = totalVariableCache + totalFixedFees;
 
         // 2. Recent Orders (Last 5 within filter or global if no filter?)
         // Usually "Recent" implies global recent, but if filtering by "Last Year", we might want top 5 of that year?
@@ -159,6 +169,8 @@ router.get('/', async (req, res) => {
                 orderRevenue,
                 activeOrders: activeOrdersCount,
                 totalCache: adjustedTotalCache,
+                packageCache,
+                orderCache,
                 activeClients: totalClientsCount,
                 totalOrders: totalOrdersCount
             },
