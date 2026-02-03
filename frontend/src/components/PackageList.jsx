@@ -559,8 +559,13 @@ const PackageList = ({ onAddNewOrder }) => {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-3 text-sm text-foreground">
-                                                        {order.locutor || '-'}
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm text-foreground">{order.locutor || '-'}</span>
+                                                            <span className="text-[10px] text-muted-foreground">
+                                                                Cachê: {formatCurrency(Number(order.cacheValor))}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
                                                         <span className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold">
