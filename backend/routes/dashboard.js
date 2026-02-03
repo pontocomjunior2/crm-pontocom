@@ -64,6 +64,25 @@ router.get('/', async (req, res) => {
             }
         });
 
+        // Calculate Package Revenue
+        // 1. Orders that are package fees (billingOrder)
+        // 2. Orders that are consumptions with extra cost (packageId is not null)
+        const packageRevenueSum = await prisma.order.aggregate({
+            _sum: { vendaValor: true },
+            where: {
+                ...dateFilter,
+                status: 'VENDA',
+                OR: [
+                    { packageId: { not: null } },
+                    { packageBilling: { isNot: null } }
+                ]
+            }
+        });
+
+        const packageRevenue = Number(packageRevenueSum._sum.vendaValor || 0);
+        const totalRevenue = Number(revenueSums._sum.vendaValor || 0);
+        const orderRevenue = totalRevenue - packageRevenue;
+
         // 1.1 Calculate total fixed fees for locutores who have orders IN THIS PERIOD
         const locutoresWithOrders = await prisma.locutor.findMany({
             where: {
@@ -135,7 +154,9 @@ router.get('/', async (req, res) => {
 
         res.json({
             metrics: {
-                totalRevenue: Number(revenueSums._sum.vendaValor || 0),
+                totalRevenue,
+                packageRevenue,
+                orderRevenue,
                 activeOrders: activeOrdersCount,
                 totalCache: adjustedTotalCache,
                 activeClients: totalClientsCount,

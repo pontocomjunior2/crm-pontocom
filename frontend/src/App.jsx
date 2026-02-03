@@ -235,11 +235,31 @@ const CRM = () => {
       textColor: 'text-amber-500'
     },
     {
+      title: 'Receita de Pacotes',
+      value: formatCurrency(dashboardData.metrics.packageRevenue || 0),
+      trend: `${Math.round((dashboardData.metrics.packageRevenue / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
+      sub: 'do total',
+      icon: <Package size={20} />,
+      color: 'from-cyan-500 to-cyan-600',
+      bgColor: 'bg-cyan-500/10',
+      textColor: 'text-cyan-500'
+    },
+    {
+      title: 'Receita de Avulsos',
+      value: formatCurrency(dashboardData.metrics.orderRevenue || 0),
+      trend: `${Math.round((dashboardData.metrics.orderRevenue / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
+      sub: 'avulsos',
+      icon: <ShoppingCart size={20} />,
+      color: 'from-emerald-500 to-emerald-600',
+      bgColor: 'bg-emerald-500/10',
+      textColor: 'text-emerald-500'
+    },
+    {
       title: 'Pedidos Ativos',
       value: dashboardData.metrics.activeOrders.toString(),
       trend: 'ESTÁVEL',
       sub: 'em produção',
-      icon: <Package size={20} />,
+      icon: <FileText size={20} />,
       color: 'from-blue-500 to-blue-600',
       bgColor: 'bg-blue-500/10',
       textColor: 'text-blue-500'
