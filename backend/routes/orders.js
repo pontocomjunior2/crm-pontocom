@@ -393,11 +393,11 @@ router.post('/', async (req, res) => {
             });
 
             if (pkg && pkg.active) {
-                const now = new Date();
+                const competenceDate = req.body.date ? new Date(req.body.date) : new Date();
                 const creditsToUse = creditsToConsume || 1;
 
                 // 1. Verificar Validade (Regra 2 e 4)
-                if (now < pkg.startDate || now > pkg.endDate) {
+                if (competenceDate < pkg.startDate || competenceDate > pkg.endDate) {
                     const dataFormatada = new Date(pkg.endDate).toLocaleDateString('pt-BR');
                     return res.status(400).json({
                         error: 'PACKAGE_EXPIRED',
@@ -669,13 +669,13 @@ router.put('/:id', async (req, res) => {
 
                 // Se não veio ID do pacote, buscar ativo no banco
                 if (!pkgToDebitId) {
-                    const now = new Date();
+                    const competenceDate = req.body.date ? new Date(req.body.date) : new Date();
                     const activePkg = await prisma.clientPackage.findFirst({
                         where: {
                             clientId: clientId || existing.clientId,
                             active: true,
-                            startDate: { lte: now },
-                            endDate: { gte: now }
+                            startDate: { lte: competenceDate },
+                            endDate: { gte: competenceDate }
                         }
                     });
                     if (activePkg) pkgToDebitId = activePkg.id;
@@ -686,8 +686,8 @@ router.put('/:id', async (req, res) => {
                         const pkg = await prisma.clientPackage.findUnique({ where: { id: pkgToDebitId } });
                         if (pkg) {
                             // Validar se pode debitar (limite/validade)
-                            const now = new Date();
-                            if (now < pkg.startDate || now > pkg.endDate) {
+                            const competenceDate = req.body.date ? new Date(req.body.date) : new Date();
+                            if (competenceDate < pkg.startDate || competenceDate > pkg.endDate) {
                                 return res.status(400).json({ error: 'PACKAGE_EXPIRED', message: 'Erro: Pacote expirado.' });
                             }
                             if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA' && (pkg.usedAudios + creditsToDebit > pkg.audioLimit)) {

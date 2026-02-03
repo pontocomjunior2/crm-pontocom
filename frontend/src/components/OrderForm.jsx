@@ -385,12 +385,12 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
 
         // Validação de Pacotes
         if (activePackage && formData.packageId && formData.vendaValor === 0 && !formData.isBonus) {
-            const now = new Date();
+            const competenceDate = formData.date ? new Date(formData.date + 'T12:00:00') : new Date();
             const start = new Date(activePackage.startDate);
             const end = new Date(activePackage.endDate);
 
             // 1. Validação de Data
-            if (now < start || now > end) {
+            if (competenceDate < start || competenceDate > end) {
                 const dataFormatada = end.toLocaleDateString('pt-BR');
                 const errorMsg = `Erro no Pacote: O plano do cliente expirou em ${dataFormatada}. Para prosseguir, defina um valor de venda (Pedido Avulso) ou atualize o pacote do cliente.`;
                 showToast.error(errorMsg);
