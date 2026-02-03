@@ -230,15 +230,21 @@ const PackageList = ({ onAddNewOrder }) => {
         e.stopPropagation();
         try {
             const newStatus = !order.entrega;
-            // The backend update is simple: just sending { entrega: true/false }
-            // If status also needs update:
-            const updatePayload = { entrega: newStatus };
+            // The backend expects 'entregue' field (database column name)
+            const updatePayload = { entregue: newStatus };
             if (newStatus && order.status !== 'ENTREGUE') updatePayload.status = 'ENTREGUE';
-            if (!newStatus && order.status === 'ENTREGUE') updatePayload.status = 'VENDA'; // Revert to VENDA/PEDIDO? Assuming VENDA default.
+            if (!newStatus && order.status === 'ENTREGUE') updatePayload.status = 'VENDA';
 
             await orderAPI.update(order.id, updatePayload);
             showToast.success(`Pedido marcado como ${newStatus ? 'Entregue' : 'Pendente'}`);
-            fetchAllOrders(); // Refresh table
+
+            // Refresh both lists
+            fetchAllOrders(); // Refresh universal table
+
+            // If viewing a specific package's orders, refresh that too
+            if (selectedPackage) {
+                handleViewOrders(selectedPackage);
+            }
         } catch (error) {
             console.error(error);
             showToast.error('Erro ao atualizar entrega');
