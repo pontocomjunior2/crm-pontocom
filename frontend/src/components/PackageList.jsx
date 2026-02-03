@@ -55,6 +55,8 @@ const PackageList = ({ onAddNewOrder }) => {
     const [packageOrders, setPackageOrders] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
     const [orderFilter, setOrderFilter] = useState('all'); // 'all', 'delivered', 'pending'
+    const [packageStatusFilter, setPackageStatusFilter] = useState('all'); // 'all', 'active', 'expired', 'limit'
+    const [packageSortConfig, setPackageSortConfig] = useState({ key: 'clientCode', direction: 'asc' });
 
     const fetchAllOrders = async () => {
         setLoadingAllOrders(true);
@@ -134,11 +136,17 @@ const PackageList = ({ onAddNewOrder }) => {
         setOrderFilter('all');
     };
 
-    const filteredPackages = packages.filter(pkg =>
-        pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pkg.client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pkg.clientCode?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const isExpired = (pkg) => {
+        if (!pkg.endDate) return false;
+        const end = new Date(pkg.endDate);
+        const now = new Date();
+        now.setHours(0, 0, 0, 0); // Consider only date part
+        return now > end;
+    };
+
+    const isLimitReached = (pkg) => {
+        return pkg.audioLimit > 0 && pkg.usedAudios >= pkg.audioLimit;
+    };
 
     const getUsageColor = (pkg) => {
         if (pkg.audioLimit === 0) return 'text-primary';
@@ -153,6 +161,69 @@ const PackageList = ({ onAddNewOrder }) => {
         return Math.min(100, (pkg.usedAudios / pkg.audioLimit) * 100);
     };
 
+    const filteredPackages = packages.filter(pkg => {
+        const matchesSearch = pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            pkg.client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            pkg.clientCode?.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const expired = isExpired(pkg);
+        const limit = isLimitReached(pkg);
+
+        if (packageStatusFilter === 'active') return matchesSearch && !expired && !limit && pkg.active;
+        if (packageStatusFilter === 'expired') return matchesSearch && expired;
+        if (packageStatusFilter === 'limit') return matchesSearch && limit;
+
+        return matchesSearch;
+    }).sort((a, b) => {
+        if (!packageSortConfig.key) return 0;
+
+        let valA, valB;
+        switch (packageSortConfig.key) {
+            case 'clientCode':
+                valA = a.clientCode || '';
+                valB = b.clientCode || '';
+                break;
+            case 'name':
+                valA = a.name || '';
+                valB = b.name || '';
+                break;
+            case 'client':
+                valA = a.client?.name || '';
+                valB = b.client?.name || '';
+                break;
+            case 'consumption':
+                valA = getUsagePercent(a);
+                valB = getUsagePercent(b);
+                break;
+            case 'expiry':
+                valA = new Date(a.endDate).getTime();
+                valB = new Date(b.endDate).getTime();
+                break;
+            default:
+                return 0;
+        }
+
+        if (valA < valB) return packageSortConfig.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return packageSortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+    });
+
+    const handlePackageSort = (key) => {
+        let direction = 'asc';
+        if (packageSortConfig.key === key && packageSortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setPackageSortConfig({ key, direction });
+    };
+
+    const getPackageSortIcon = (columnKey) => {
+        if (packageSortConfig.key !== columnKey) return <ArrowUpDown size={12} className="ml-1 opacity-20" />;
+        return packageSortConfig.direction === 'asc'
+            ? <ArrowUp size={12} className="ml-1 text-primary" />
+            : <ArrowDown size={12} className="ml-1 text-primary" />;
+    };
+
+
     // Universal Actions for Order Management
     const handleToggleDelivery = async (e, order) => {
         e.stopPropagation();
@@ -166,7 +237,7 @@ const PackageList = ({ onAddNewOrder }) => {
 
             await orderAPI.update(order.id, updatePayload);
             showToast.success(`Pedido marcado como ${newStatus ? 'Entregue' : 'Pendente'}`);
-            loadAllOrders(); // Refresh table
+            fetchAllOrders(); // Refresh table
         } catch (error) {
             console.error(error);
             showToast.error('Erro ao atualizar entrega');
@@ -306,7 +377,19 @@ const PackageList = ({ onAddNewOrder }) => {
                         </div>
                     </div>
 
-                    {/* View Mode Toggle */}
+                    {/* Status Filter */}
+                    <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/5 h-fit shrink-0">
+                        <select
+                            value={packageStatusFilter}
+                            onChange={(e) => setPackageStatusFilter(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-white px-3 py-2 outline-none cursor-pointer"
+                        >
+                            <option value="all" className="bg-card">Todos Status</option>
+                            <option value="active" className="bg-card">Apenas Ativos</option>
+                            <option value="expired" className="bg-card">Apenas Vencidos</option>
+                            <option value="limit" className="bg-card">Apenas Esgotados</option>
+                        </select>
+                    </div>
                     <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/5 h-fit shrink-0">
                         <button
                             onClick={() => setViewMode('grid')}
@@ -573,13 +656,16 @@ const PackageList = ({ onAddNewOrder }) => {
                         ) : viewMode === 'grid' ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {filteredPackages.map((pkg) => (
-                                    <div key={pkg.id} className="card-dark p-5 group flex flex-col border border-white/5 hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5">
+                                    <div key={pkg.id} className={`card-dark p-5 group flex flex-col border ${isExpired(pkg) ? 'border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.1)]' : 'border-white/5'} hover:border-primary/30 transition-all hover:shadow-lg hover:shadow-primary/5`}>
                                         <div className="flex justify-between items-start mb-4">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-primary/20 text-primary uppercase tracking-widest">{pkg.type}</span>
-                                                    {pkg.usedAudios >= pkg.audioLimit && pkg.audioLimit > 0 && (
-                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-500 text-white uppercase tracking-widest animate-pulse">LIMITE ATINGIDO</span>
+                                                    {isExpired(pkg) && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-red-600 text-white uppercase tracking-widest animate-pulse shadow-[0_0_10px_rgba(220,38,38,0.5)]">VENCIDO</span>
+                                                    )}
+                                                    {isLimitReached(pkg) && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-orange-600 text-white uppercase tracking-widest">LIMITADO</span>
                                                     )}
                                                 </div>
                                                 <h3 className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{pkg.name}</h3>
@@ -645,7 +731,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                 </div>
                                                 <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
                                                     <div
-                                                        className={`h-full rounded-full transition-all duration-1000 bg-gradient-to-r ${getUsagePercent(pkg) >= 90 ? 'from-red-500 to-orange-500' : 'from-primary to-emerald-500'}`}
+                                                        className={`h-full rounded-full transition-all duration-1000 bg-gradient-to-r ${getUsagePercent(pkg) >= 90 || isExpired(pkg) ? 'from-red-500 to-orange-500' : 'from-primary to-emerald-500'}`}
                                                         style={{ width: `${pkg.audioLimit > 0 ? getUsagePercent(pkg) : 100}%` }}
                                                     />
                                                 </div>
@@ -667,9 +753,10 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     <Calendar size={12} className="text-primary" />
                                                     {new Date(pkg.startDate).toLocaleDateString()}
                                                 </div>
-                                                <div className="flex items-center gap-1.5 text-muted-foreground">
-                                                    <Clock size={12} className="text-primary" />
-                                                    Até {new Date(pkg.endDate).toLocaleDateString()}
+                                                <div className={`flex items-center gap-1.5 ${isExpired(pkg) ? 'text-red-400 font-bold' : 'text-muted-foreground'}`}>
+                                                    <Clock size={12} className={isExpired(pkg) ? 'text-red-500' : 'text-primary'} />
+                                                    {isExpired(pkg) ? 'Expirou em' : 'Até'} {new Date(pkg.endDate).toLocaleDateString()}
+                                                    {isExpired(pkg) && <AlertCircle size={12} className="animate-bounce" />}
                                                 </div>
                                             </div>
                                         </div>
@@ -699,24 +786,24 @@ const PackageList = ({ onAddNewOrder }) => {
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-white/5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-white/5">
                                         <tr>
-                                            <th className="px-6 py-4">Cliente / Pacote</th>
-                                            <th className="px-6 py-4">Cód. Cliente</th>
-                                            <th className="px-6 py-4 text-center">Consumo</th>
-                                            <th className="px-6 py-4">Status / Validade</th>
+                                            <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors" onClick={() => handlePackageSort('clientCode')}>
+                                                <div className="flex items-center">Cód. Cliente {getPackageSortIcon('clientCode')}</div>
+                                            </th>
+                                            <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors" onClick={() => handlePackageSort('client')}>
+                                                <div className="flex items-center">Cliente / Pacote {getPackageSortIcon('client')}</div>
+                                            </th>
+                                            <th className="px-6 py-4 text-center cursor-pointer hover:text-foreground transition-colors" onClick={() => handlePackageSort('consumption')}>
+                                                <div className="flex items-center justify-center">Consumo {getPackageSortIcon('consumption')}</div>
+                                            </th>
+                                            <th className="px-6 py-4 cursor-pointer hover:text-foreground transition-colors" onClick={() => handlePackageSort('expiry')}>
+                                                <div className="flex items-center">Status / Validade {getPackageSortIcon('expiry')}</div>
+                                            </th>
                                             <th className="px-6 py-4 text-right">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
                                         {filteredPackages.map(pkg => (
                                             <tr key={pkg.id} className="hover:bg-white/[0.02] transition-colors group">
-                                                <td className="px-6 py-4">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">{pkg.name}</span>
-                                                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
-                                                            <Users size={10} /> {pkg.client?.name}
-                                                        </span>
-                                                    </div>
-                                                </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex items-center gap-2 group/code-list">
                                                         {editingCode === pkg.id ? (
@@ -751,6 +838,14 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-xs font-bold text-white group-hover:text-primary transition-colors">{pkg.name}</span>
+                                                        <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-1 mt-0.5">
+                                                            <Users size={10} /> {pkg.client?.name}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4">
                                                     <div className="flex flex-col items-center gap-1.5 min-w-[120px]">
                                                         <div className="flex justify-between w-full text-[9px] font-black uppercase tracking-tighter">
                                                             <span className={getUsageColor(pkg)}>
@@ -768,12 +863,12 @@ const PackageList = ({ onAddNewOrder }) => {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div className="flex flex-col">
-                                                        <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                                            <Calendar size={10} className="text-primary" />
-                                                            Expira em {new Date(pkg.endDate).toLocaleDateString()}
+                                                        <div className={`flex items-center gap-1.5 text-[10px] ${isExpired(pkg) ? 'text-red-400 font-bold' : 'text-muted-foreground'}`}>
+                                                            {isExpired(pkg) ? <AlertCircle size={10} className="text-red-500" /> : <Calendar size={10} className="text-primary" />}
+                                                            {isExpired(pkg) ? 'Expirado em' : 'Expira em'} {new Date(pkg.endDate).toLocaleDateString()}
                                                         </div>
-                                                        <span className={`text-[9px] font-black mt-1 uppercase ${pkg.active ? 'text-emerald-400' : 'text-red-400'}`}>
-                                                            {pkg.active ? 'PACOTE ATIVO' : 'PACOTE INATIVO'}
+                                                        <span className={`text-[9px] font-black mt-1 uppercase ${!pkg.active || isExpired(pkg) ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                            {!pkg.active ? 'PACOTE INATIVO' : isExpired(pkg) ? 'VALIDADE VENCIDA' : 'PACOTE ATIVO'}
                                                         </span>
                                                     </div>
                                                 </td>
