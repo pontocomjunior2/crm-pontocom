@@ -515,7 +515,10 @@ router.post('/', async (req, res) => {
                 costPerCreditSnapshot: costPerCreditVal,
                 cachePago: cachePago || false,
                 packageId: packageId || null,
-                isBonus: isBonus
+                isBonus: isBonus,
+                // Custom Date Logic: Use provided date or default to now() (handled by Prisma default or backend logic if needed, but Prisma has @default(now()))
+                // However, we want to ensure explicit dates are respected.
+                ...(req.body.date ? { date: new Date(req.body.date) } : {})
             },
             include: {
                 client: {
@@ -748,7 +751,10 @@ router.put('/:id', async (req, res) => {
                 cachePago: cachePago !== undefined ? cachePago : undefined,
                 creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
-                isBonus: isBonus !== undefined ? isBonus : undefined
+                creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
+                costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
+                isBonus: isBonus !== undefined ? isBonus : undefined,
+                date: req.body.date ? new Date(req.body.date) : undefined
             },
             include: {
                 client: {

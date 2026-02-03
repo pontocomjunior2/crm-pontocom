@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2 } from 'lucide-react';
+import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2, Calendar } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
 import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI } from '../services/api';
@@ -46,7 +46,8 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         supplierId: order?.supplierId || '',
         cachePago: order?.cachePago || false,
         packageId: order?.packageId || null,
-        isBonus: order?.isBonus || false
+        isBonus: order?.isBonus || false,
+        date: order?.date ? new Date(order.date).toISOString().split('T')[0] : ''
     });
 
     const [activePackage, setActivePackage] = useState(null);
@@ -473,7 +474,13 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 vendaValor: parseFloat(formData.vendaValor) || 0,
                 dataFaturar: formData.dataFaturar || null,
                 vencimento: formData.vencimento || null,
+                date: formData.date || null // Send null/empty if not set, backend handles defaulting if creating, or ignores if updating? 
+                // Correction: Backend expects date object or undefined. If created, backend logic: req.body.date ? ... : {}.
+                // So sending null/empty string might be interpreted as "use provided empty value" if not careful.
+                // Let's send only if truthy.
             };
+
+            if (formData.date) dataToSend.date = formData.date;
 
             // Note: File upload would need to be handled separately with FormData
             // For now, we'll just save the order data
@@ -723,6 +730,24 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                 placeholder={initialStatus === 'VENDA' ? "Ex: Mensalidade Janeiro" : "Ex: Spot Black Friday 30s"}
                             />
                             {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
+                        </div>
+
+                        {/* Date Field */}
+                        <div>
+                            <label className="block text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                                <Calendar size={16} />
+                                Data de Competência
+                            </label>
+                            <input
+                                type="date"
+                                name="date"
+                                value={formData.date}
+                                onChange={handleChange}
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-medium"
+                            />
+                            <p className="text-[10px] text-muted-foreground mt-1 ml-1">
+                                * Deixe em branco para usar a data de hoje.
+                            </p>
                         </div>
 
                         {initialStatus === 'VENDA' ? (

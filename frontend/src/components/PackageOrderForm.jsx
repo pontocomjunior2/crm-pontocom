@@ -34,7 +34,8 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         clientCode: pkg.clientCode || '',
         cacheValor: orderToEdit ? parseFloat(orderToEdit.cacheValor) : 0,
         supplierId: orderToEdit?.supplierId || '',
-        status: orderToEdit?.status || 'VENDA'
+        status: orderToEdit?.status || 'VENDA',
+        date: orderToEdit?.date ? new Date(orderToEdit.date).toISOString().split('T')[0] : ''
     });
 
     useEffect(() => {
@@ -189,7 +190,8 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                 ...formData,
                 vendaValor: 0, // Package orders have 0 sale value
                 creditsConsumed: parseInt(formData.creditsToDebit),
-                serviceType: 'PACOTE DE AUDIOS'
+                serviceType: 'PACOTE DE AUDIOS',
+                date: formData.date || null
             };
 
             if (orderToEdit) {
@@ -267,6 +269,20 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                                     onChange={handleChange}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all shadow-sm"
                                     placeholder="Ex: Ofertas da Semana - Supermercado X"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-[#666666] uppercase tracking-wider mb-2 flex items-center gap-2">
+                                    <Calendar size={14} className="text-primary" />
+                                    Data de Competência
+                                </label>
+                                <input
+                                    type="date"
+                                    name="date"
+                                    value={formData.date}
+                                    onChange={handleChange}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all"
                                 />
                             </div>
 
