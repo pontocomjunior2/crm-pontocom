@@ -64,6 +64,28 @@ router.get('/', async (req, res) => {
             }
         });
 
+        // Calculate Package Revenue & Cache
+        // 1. Orders that are package fees (billingOrder)
+        // 2. Orders that are consumptions with extra cost (packageId is not null)
+        const packageMetricsSum = await prisma.order.aggregate({
+            _sum: {
+                vendaValor: true,
+                cacheValor: true
+            },
+            where: {
+                ...dateFilter,
+                status: 'VENDA',
+                OR: [
+                    { packageId: { not: null } },
+                    { packageBilling: { isNot: null } }
+                ]
+            }
+        });
+
+        const packageRevenue = Number(packageMetricsSum._sum.vendaValor || 0);
+        const totalRevenue = Number(revenueSums._sum.vendaValor || 0);
+        const orderRevenue = totalRevenue - packageRevenue;
+
         // 1.1 Calculate total fixed fees for locutores who have orders IN THIS PERIOD
         const locutoresWithOrders = await prisma.locutor.findMany({
             where: {
@@ -79,7 +101,14 @@ router.get('/', async (req, res) => {
         });
 
         const totalFixedFees = locutoresWithOrders.reduce((sum, loc) => sum + Number(loc.valorFixoMensal), 0);
-        const adjustedTotalCache = Number(revenueSums._sum.cacheValor || 0) + totalFixedFees;
+
+        // Cache Calculations
+        const totalVariableCache = Number(revenueSums._sum.cacheValor || 0);
+        const packageVariableCache = Number(packageMetricsSum._sum.cacheValor || 0);
+
+        const packageCache = packageVariableCache + totalFixedFees;
+        const orderCache = totalVariableCache - packageVariableCache;
+        const adjustedTotalCache = totalVariableCache + totalFixedFees;
 
         // 2. Recent Orders (Last 5 within filter or global if no filter?)
         // Usually "Recent" implies global recent, but if filtering by "Last Year", we might want top 5 of that year?
@@ -135,9 +164,13 @@ router.get('/', async (req, res) => {
 
         res.json({
             metrics: {
-                totalRevenue: Number(revenueSums._sum.vendaValor || 0),
+                totalRevenue,
+                packageRevenue,
+                orderRevenue,
                 activeOrders: activeOrdersCount,
                 totalCache: adjustedTotalCache,
+                packageCache,
+                orderCache,
                 activeClients: totalClientsCount,
                 totalOrders: totalOrdersCount
             },
