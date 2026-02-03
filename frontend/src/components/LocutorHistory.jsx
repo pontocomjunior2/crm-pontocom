@@ -15,7 +15,7 @@ import {
     ChevronRight
 } from 'lucide-react';
 import { locutorAPI } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 
 const LocutorHistory = ({ locutor, onBack }) => {
     const [orders, setOrders] = useState([]);
@@ -254,7 +254,7 @@ const LocutorHistory = ({ locutor, onBack }) => {
                                         <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                 <span className="text-sm text-foreground font-medium">
-                                                    {new Date(order.date).toLocaleDateString('pt-BR')}
+                                                    {formatDisplayDate(order.date)}
                                                 </span>
                                                 <span className="text-[10px] text-muted-foreground uppercase font-black">
                                                     {new Date(order.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}

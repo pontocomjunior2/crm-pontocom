@@ -26,7 +26,7 @@ import {
     ChevronRight
 } from 'lucide-react';
 import { orderAPI, STORAGE_URL } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 
 const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
     const [orders, setOrders] = useState([]);
@@ -475,7 +475,7 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                         <td className="px-4 py-2">
                                             <div className="flex flex-col">
                                                 <span className="text-sm text-muted-foreground font-medium">
-                                                    {new Date(order.updatedAt || order.date).toLocaleDateString()}
+                                                    {formatDisplayDate(order.updatedAt || order.date)}
                                                 </span>
                                                 <span className="text-[10px] text-muted-foreground/70">
                                                     {new Date(order.updatedAt || order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -582,11 +582,11 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                             <div className="flex flex-col">
                                                 <div className="flex items-center gap-1.5 text-[11px] font-bold text-foreground">
                                                     <Calendar size={12} className="text-primary" />
-                                                    {order.dataFaturar ? new Date(order.dataFaturar).toLocaleDateString() : '---'}
+                                                    {formatDisplayDate(order.dataFaturar)}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-0.5">
                                                     <Clock size={12} />
-                                                    Vence: {order.vencimento ? new Date(order.vencimento).toLocaleDateString() : '---'}
+                                                    Vence: {formatDisplayDate(order.vencimento)}
                                                 </div>
                                             </div>
                                         </td>

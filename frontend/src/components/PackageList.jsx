@@ -28,7 +28,7 @@ import {
     RotateCcw
 } from 'lucide-react';
 import { clientPackageAPI, orderAPI } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 import PackageOrderForm from './PackageOrderForm';
 
@@ -543,7 +543,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-xs text-muted-foreground">
-                                                        {new Date(order.date).toLocaleDateString('pt-BR')}
+                                                        {formatDisplayDate(order.date)}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-foreground">
                                                         {order.client?.name || '-'}
@@ -728,11 +728,11 @@ const PackageList = ({ onAddNewOrder }) => {
                                             <div className="flex items-center gap-4 text-[10px]">
                                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                                     <Calendar size={12} className="text-primary" />
-                                                    {new Date(pkg.startDate).toLocaleDateString()}
+                                                    {formatDisplayDate(pkg.startDate)}
                                                 </div>
                                                 <div className={`flex items-center gap-1.5 ${isExpired(pkg) ? 'text-red-400 font-bold' : 'text-muted-foreground'}`}>
                                                     <Clock size={12} className={isExpired(pkg) ? 'text-red-500' : 'text-primary'} />
-                                                    {isExpired(pkg) ? 'Expirou em' : 'Até'} {new Date(pkg.endDate).toLocaleDateString()}
+                                                    {isExpired(pkg) ? 'Expirou em' : 'Até'} {formatDisplayDate(pkg.endDate)}
                                                     {isExpired(pkg) && <AlertCircle size={12} className="animate-bounce" />}
                                                 </div>
                                             </div>
@@ -842,7 +842,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     <div className="flex flex-col">
                                                         <div className={`flex items-center gap-1.5 text-[10px] ${isExpired(pkg) ? 'text-red-400 font-bold' : 'text-muted-foreground'}`}>
                                                             {isExpired(pkg) ? <AlertCircle size={10} className="text-red-500" /> : <Calendar size={10} className="text-primary" />}
-                                                            {isExpired(pkg) ? 'Expirado em' : 'Expira em'} {new Date(pkg.endDate).toLocaleDateString()}
+                                                            {isExpired(pkg) ? 'Expirado em' : 'Expira em'} {formatDisplayDate(pkg.endDate)}
                                                         </div>
                                                         <span className={`text-[9px] font-black mt-1 uppercase ${!pkg.active || isExpired(pkg) ? 'text-red-400' : 'text-emerald-400'}`}>
                                                             {!pkg.active ? 'PACOTE INATIVO' : isExpired(pkg) ? 'VALIDADE VENCIDA' : (pkg.usedAudios > pkg.audioLimit && pkg.audioLimit > 0) ? 'EM COTA EXTRA' : 'PACOTE ATIVO'}
@@ -989,7 +989,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-xs text-muted-foreground">
-                                                            {new Date(order.date).toLocaleDateString('pt-BR')}
+                                                            {formatDisplayDate(order.date)}
                                                         </td>
                                                         <td className="px-4 py-3">
                                                             <div className="max-w-xs" title={order.packageName ? `Pacote: ${order.packageName}` : 'Sem pacote'}>

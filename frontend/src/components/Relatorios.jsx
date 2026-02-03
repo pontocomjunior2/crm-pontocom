@@ -43,7 +43,7 @@ import {
     Bar
 } from 'recharts';
 import { analyticsAPI, orderAPI } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 
 const Relatorios = () => {
@@ -588,7 +588,7 @@ const Relatorios = () => {
                                             <div className="flex-1 min-w-0 pr-4">
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <Calendar size={12} className="text-muted-foreground" />
-                                                    <span className="text-[10px] text-muted-foreground">{new Date(order.date).toLocaleDateString('pt-BR')}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{formatDisplayDate(order.date)}</span>
                                                 </div>
                                                 <h4 className="text-sm font-bold text-foreground truncate">
                                                     {order.numeroVenda ? `${order.numeroVenda} - ` : ''}{order.title.toUpperCase()} ({formatCurrency(order.value)})

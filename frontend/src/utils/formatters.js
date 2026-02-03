@@ -177,6 +177,16 @@ export const validateEmail = (email) => {
     return regex.test(email);
 };
 
+export const formatDisplayDate = (value) => {
+    if (!value) return '-';
+    const date = new Date(value);
+    // Se a data vier apenas como YYYY-MM-DD, o new Date() interpreta como UTC Meia-noite.
+    // Ao converter para string local em fusos negativos (Brasil), ele subtrai horas e cai no dia anterior.
+    // Ajustamos somando o offset do timezone para garantir que mostre o dia correto do calendário.
+    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    return adjustedDate.toLocaleDateString('pt-BR');
+};
+
 export const removeMask = (value) => {
     return value ? value.replace(/\D/g, '') : '';
 };

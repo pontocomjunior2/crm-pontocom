@@ -27,7 +27,7 @@ import {
     FileText
 } from 'lucide-react';
 import { orderAPI, STORAGE_URL } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 
 const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
     const [orders, setOrders] = useState([]);
@@ -351,7 +351,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                         <td className="px-4 py-2 align-top">
                                             <div className="flex flex-col mt-1.5">
                                                 <span className="text-[11px] text-[#999999] font-mono leading-none">
-                                                    {new Date(order.date).toLocaleDateString('pt-BR')}
+                                                    {formatDisplayDate(order.date)}
                                                 </span>
                                                 <span className="text-[9px] text-[#666666] mt-1">
                                                     {order.id.substring(0, 6).toUpperCase()}
