@@ -62,16 +62,18 @@ router.get('/all/orders', checkPermission('accessPacotes'), async (req, res) => 
                 id: order.id,
                 sequentialId: order.sequentialId,
                 numeroVenda: order.numeroVenda,
+                consumptionId: order.consumptionId,
                 title: order.title,
-                fileName: order.fileName, // Field requested
+                fileName: order.fileName,
                 locutor: order.locutor,
-                locutorId: order.locutorId, // Needed for edit form
-                supplierId: order.supplierId, // Needed for edit form
+                locutorId: order.locutorId,
+                supplierId: order.supplierId,
                 date: order.date,
                 status: order.status,
                 entrega: order.entrega,
                 creditsConsumed: order.creditsConsumed || 1,
                 vendaValor: order.vendaValor,
+                cacheValor: order.cacheValor,
                 comentarios: order.comentarios,
                 client: order.client,
                 package: order.package,
@@ -353,6 +355,7 @@ router.get('/:id/orders', async (req, res) => {
                 id: order.id,
                 sequentialId: order.sequentialId,
                 numeroVenda: order.numeroVenda,
+                consumptionId: order.consumptionId,
                 title: order.title,
                 locutor: order.locutor,
                 date: order.date,
@@ -360,6 +363,7 @@ router.get('/:id/orders', async (req, res) => {
                 entrega: order.entrega,
                 creditsConsumed: order.creditsConsumed || 1,
                 vendaValor: order.vendaValor,
+                cacheValor: order.cacheValor,
                 comentarios: order.comentarios,
                 client: order.client
             }))

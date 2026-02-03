@@ -275,7 +275,7 @@ const PackageList = ({ onAddNewOrder }) => {
     };
 
     const handleSuccessUniversalEdit = () => {
-        loadAllOrders();
+        fetchAllOrders();
     };
 
     return (
@@ -577,7 +577,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                             <button
                                                                 onClick={(e) => handleToggleDelivery(e, order)}
                                                                 className={`p-2 rounded-lg transition-all ${order.entrega ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'}`}
-                                                                title={order.entrega ? 'Reverter para Pedido' : 'Confirmar Entrega e Transformar em Venda'}
+                                                                title={order.entrega ? 'Reverter para Pedido' : 'Confirmar Entrega'}
                                                             >
                                                                 {order.entrega ? <RotateCcw size={16} /> : <CheckCircle2 size={16} />}
                                                             </button>
@@ -640,6 +640,9 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     )}
                                                     {isLimitReached(pkg) && (
                                                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-orange-600 text-white uppercase tracking-widest">LIMITADO</span>
+                                                    )}
+                                                    {pkg.usedAudios > pkg.audioLimit && pkg.audioLimit > 0 && (
+                                                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-500 text-black uppercase tracking-widest animate-pulse">EM COTA EXTRA</span>
                                                     )}
                                                 </div>
                                                 <h3 className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{pkg.name}</h3>
@@ -842,7 +845,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                             {isExpired(pkg) ? 'Expirado em' : 'Expira em'} {new Date(pkg.endDate).toLocaleDateString()}
                                                         </div>
                                                         <span className={`text-[9px] font-black mt-1 uppercase ${!pkg.active || isExpired(pkg) ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                            {!pkg.active ? 'PACOTE INATIVO' : isExpired(pkg) ? 'VALIDADE VENCIDA' : 'PACOTE ATIVO'}
+                                                            {!pkg.active ? 'PACOTE INATIVO' : isExpired(pkg) ? 'VALIDADE VENCIDA' : (pkg.usedAudios > pkg.audioLimit && pkg.audioLimit > 0) ? 'EM COTA EXTRA' : 'PACOTE ATIVO'}
                                                         </span>
                                                     </div>
                                                 </td>
@@ -965,11 +968,10 @@ const PackageList = ({ onAddNewOrder }) => {
                                             <tr>
                                                 <th className="px-4 py-3">ID</th>
                                                 <th className="px-4 py-3">Data</th>
-                                                <th className="px-4 py-3">Título</th>
+                                                <th className="px-4 py-3">Áudio / Arquivo</th>
                                                 <th className="px-4 py-3">Locutor</th>
                                                 <th className="px-4 py-3 text-center">Créditos</th>
-                                                <th className="px-4 py-3 text-center">Status</th>
-                                                <th className="px-4 py-3 text-center">Entrega</th>
+                                                <th className="px-4 py-3 text-center">Ações</th>
                                             </tr>
                                         </thead>
                                         <tbody className="text-sm">
@@ -983,22 +985,30 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     <tr key={order.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                                         <td className="px-4 py-3">
                                                             <span className="font-mono text-xs text-primary">
-                                                                #{order.numeroVenda || order.sequentialId}
+                                                                {order.consumptionId ? order.consumptionId : `#${order.numeroVenda || order.sequentialId}`}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-xs text-muted-foreground">
                                                             {new Date(order.date).toLocaleDateString('pt-BR')}
                                                         </td>
                                                         <td className="px-4 py-3">
-                                                            <div className="max-w-xs">
-                                                                <p className="text-foreground font-medium truncate">{order.title}</p>
+                                                            <div className="max-w-xs" title={order.packageName ? `Pacote: ${order.packageName}` : 'Sem pacote'}>
+                                                                <p className="text-foreground font-medium truncate text-xs font-mono">{order.fileName || order.title}</p>
+                                                                {order.title && order.fileName && order.title !== order.fileName && (
+                                                                    <p className="text-[10px] text-muted-foreground truncate">{order.title}</p>
+                                                                )}
                                                                 {order.comentarios && (
-                                                                    <p className="text-xs text-muted-foreground truncate">{order.comentarios}</p>
+                                                                    <p className="text-[10px] text-muted-foreground truncate">{order.comentarios}</p>
                                                                 )}
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-foreground">
-                                                            {order.locutor || '-'}
+                                                        <td className="px-4 py-3">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm text-foreground">{order.locutor || '-'}</span>
+                                                                <span className="text-[10px] text-muted-foreground">
+                                                                    Cachê: {formatCurrency(Number(order.cacheValor))}
+                                                                </span>
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-3 text-center">
                                                             <span className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-bold">
@@ -1006,25 +1016,34 @@ const PackageList = ({ onAddNewOrder }) => {
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-center">
-                                                            <span className={`px-2 py-1 rounded-lg text-xs font-bold ${order.status === 'VENDA' ? 'bg-green-500/10 text-green-400' :
-                                                                order.status === 'PEDIDO' ? 'bg-blue-500/10 text-blue-400' :
-                                                                    'bg-gray-500/10 text-gray-400'
-                                                                }`}>
-                                                                {order.status}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-4 py-3 text-center">
-                                                            {order.entrega ? (
-                                                                <div className="flex items-center justify-center gap-1.5 text-green-400">
-                                                                    <Truck size={16} />
-                                                                    <span className="text-xs font-bold">Entregue</span>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex items-center justify-center gap-1.5 text-orange-400">
-                                                                    <Clock size={16} />
-                                                                    <span className="text-xs font-bold">Pendente</span>
-                                                                </div>
-                                                            )}
+                                                            <div className="flex items-center justify-center gap-2">
+                                                                <button
+                                                                    onClick={(e) => handleToggleDelivery(e, order)}
+                                                                    className={`p-2 rounded-lg transition-all ${order.entrega ? 'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20' : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'}`}
+                                                                    title={order.entrega ? 'Reverter para Pedido' : 'Confirmar Entrega'}
+                                                                >
+                                                                    {order.entrega ? <RotateCcw size={16} /> : <CheckCircle2 size={16} />}
+                                                                </button>
+                                                                {order.entrega && (
+                                                                    <div className="flex items-center gap-1 text-green-400" title="Já entregue">
+                                                                        <Truck size={14} />
+                                                                    </div>
+                                                                )}
+                                                                <button
+                                                                    onClick={() => handleEditUniversal(order)}
+                                                                    className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-all"
+                                                                    title="Editar Pedido"
+                                                                >
+                                                                    <Edit2 size={16} />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteUniversal(order.id)}
+                                                                    className="p-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 transition-all"
+                                                                    title="Excluir Pedido"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 ))}

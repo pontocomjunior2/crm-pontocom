@@ -417,15 +417,75 @@ router.post('/', async (req, res) => {
                     }
                 }
 
-                // 3. Cálculo de Valor Extra (Regra 1)
+                // 3. Cálculo de Valor Extra e Consolidação no Faturamento (billingOrder)
                 if (pkg.type === 'FIXO_SOB_DEMANDA' && usageAfter > pkg.audioLimit) {
                     const usageBefore = pkg.usedAudios;
                     const extras = Math.max(0, usageAfter - Math.max(pkg.audioLimit, usageBefore));
-                    finalVendaValor = extras * parseFloat(pkg.extraAudioFee);
-                } else {
-                    // Planos ilimitados ou dentro do limite
-                    finalVendaValor = 0;
+                    const extraValue = extras * parseFloat(pkg.extraAudioFee);
+
+                    // Se não existe um pedido de faturamento vinculado ao pacote (ex: valor fixo era 0)
+                    if (!pkg.billingOrderId && extraValue > 0) {
+                        try {
+                            const lastSale = await prisma.order.findFirst({
+                                where: { numeroVenda: { not: null } },
+                                orderBy: { numeroVenda: 'desc' }
+                            });
+                            const lastId = lastSale?.numeroVenda || 42531;
+                            const nextNumeroVenda = lastId + 1;
+
+                            const billingOrder = await prisma.order.create({
+                                data: {
+                                    clientId: pkg.clientId,
+                                    title: pkg.name,
+                                    locutor: 'Sistema',
+                                    tipo: 'PRODUZIDO',
+                                    serviceType: 'PLANO MENSAL',
+                                    vendaValor: 0,
+                                    cacheValor: 0,
+                                    status: 'VENDA',
+                                    faturado: false,
+                                    date: new Date(),
+                                    numeroVenda: nextNumeroVenda,
+                                    comentarios: `Faturamento consolidado: ${pkg.name}`
+                                }
+                            });
+
+                            await prisma.clientPackage.update({
+                                where: { id: pkg.id },
+                                data: { billingOrderId: billingOrder.id }
+                            });
+                            pkg.billingOrderId = billingOrder.id;
+                        } catch (createError) {
+                            console.error('Erro ao criar faturamento dinâmico:', createError);
+                        }
+                    }
+
+                    if (pkg.billingOrderId && extraValue > 0) {
+                        try {
+                            const currentBilling = await prisma.order.findUnique({
+                                where: { id: pkg.billingOrderId }
+                            });
+
+                            if (currentBilling) {
+                                const newVendaValor = parseFloat(currentBilling.vendaValor) + extraValue;
+                                const totalExtras = usageAfter - pkg.audioLimit;
+
+                                await prisma.order.update({
+                                    where: { id: pkg.billingOrderId },
+                                    data: {
+                                        vendaValor: newVendaValor,
+                                        comentarios: `Lançamento automático referente ao pacote: ${pkg.name}. Áudios extras: ${totalExtras}.`
+                                    }
+                                });
+                            }
+                        } catch (billError) {
+                            console.error('Erro ao consolidar extra no faturamento:', billError);
+                        }
+                    }
                 }
+
+                // O pedido individual de consumo SEMPRE terá valor 0 para faturamento
+                finalVendaValor = 0;
 
                 // Incrementar uso no pacote
                 await prisma.clientPackage.update({
