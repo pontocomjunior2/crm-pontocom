@@ -178,8 +178,10 @@ const PackageList = ({ onAddNewOrder }) => {
         try {
             await orderAPI.delete(id);
             showToast.success('Pedido excluído');
-            loadAllOrders();
+            fetchAllOrders();
+            fetchPackages();
         } catch (error) {
+            console.error('Erro ao excluir:', error);
             showToast.error('Erro ao excluir pedido');
         }
     };

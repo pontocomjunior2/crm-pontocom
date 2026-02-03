@@ -969,11 +969,12 @@ router.delete('/:id', async (req, res) => {
                 where: { id: order.packageId }
             });
             if (pkg) {
+                const creditsToRefund = order.creditsConsumed || 1;
                 // Decrement use, ensuring it doesn't go below 0 handled by logic or db check
                 // Using decrement is safer for concurrency
                 await prisma.clientPackage.update({
                     where: { id: pkg.id },
-                    data: { usedAudios: { decrement: 1 } }
+                    data: { usedAudios: { decrement: creditsToRefund } }
                 });
             }
         }
