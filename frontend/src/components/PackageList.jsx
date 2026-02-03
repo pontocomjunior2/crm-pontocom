@@ -472,6 +472,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     order.title?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
                                                     order.client?.name?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
                                                     order.package?.name?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
+                                                    order.consumptionId?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
                                                     order.locutor?.toLowerCase().includes(ordersSearchTerm.toLowerCase());
 
                                                 const matchesDelivery = ordersDeliveryFilter === 'all' ||
@@ -487,8 +488,8 @@ const PackageList = ({ onAddNewOrder }) => {
 
                                                 switch (sortConfig.key) {
                                                     case 'id':
-                                                        valA = a.numeroVenda || a.sequentialId;
-                                                        valB = b.numeroVenda || b.sequentialId;
+                                                        valA = a.consumptionId || a.numeroVenda || a.sequentialId;
+                                                        valB = b.consumptionId || b.numeroVenda || b.sequentialId;
                                                         break;
                                                     case 'date':
                                                         valA = new Date(a.date).getTime();
@@ -538,7 +539,7 @@ const PackageList = ({ onAddNewOrder }) => {
                                                 <tr key={order.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                                                     <td className="px-4 py-3">
                                                         <span className="font-mono text-xs text-primary">
-                                                            #{order.numeroVenda || order.sequentialId}
+                                                            {order.consumptionId ? order.consumptionId : `#${order.numeroVenda || order.sequentialId}`}
                                                         </span>
                                                     </td>
                                                     <td className="px-4 py-3 text-xs text-muted-foreground">

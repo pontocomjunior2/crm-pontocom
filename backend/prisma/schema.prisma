@@ -94,6 +94,9 @@ model Order {
   creditsConsumed     Int      @default(0) // Default 0 for normal orders, 1+ for Supplier orders
   costPerCreditSnapshot Decimal? @db.Decimal(10, 2) // Snapshot of the cost at the time of order
 
+  packageName      String?  // Nome do pacote no momento do pedido
+  consumptionId    String?  // ID de consumo de pacote (ex: PC-0001)
+
   packageId        String?
   package          ClientPackage? @relation("PackageOrders", fields: [packageId], references: [id])
   

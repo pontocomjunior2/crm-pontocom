@@ -432,6 +432,28 @@ router.post('/', async (req, res) => {
                     where: { id: packageId },
                     data: { usedAudios: usageAfter }
                 });
+
+                // --- GERAÇÃO DO CONSUMPTION ID (PC-XXXX) ---
+                let consumptionId = null;
+                const lastPackageOrder = await prisma.order.findFirst({
+                    where: {
+                        consumptionId: { startsWith: 'PC-' }
+                    },
+                    orderBy: {
+                        consumptionId: 'desc'
+                    }
+                });
+
+                let nextSeq = 1;
+                if (lastPackageOrder && lastPackageOrder.consumptionId) {
+                    const lastNum = parseInt(lastPackageOrder.consumptionId.replace('PC-', ''));
+                    if (!isNaN(lastNum)) nextSeq = lastNum + 1;
+                }
+                consumptionId = `PC-${nextSeq.toString().padStart(4, '0')}`;
+
+                // Adicionar campos extras ao escopo do pedido
+                req.consumptionId = consumptionId;
+                req.packageName = pkg.name;
             }
         }
 
@@ -511,10 +533,12 @@ router.post('/', async (req, res) => {
                 arquivoOS: arquivoOS || null,
                 serviceType: serviceType || null,
                 supplierId: supplierId || null,
-                creditsConsumed: creditsToConsume,
-                costPerCreditSnapshot: costPerCreditVal,
+                creditsConsumed: parseInt(creditsToConsume) || 0,
+                costPerCreditSnapshot: costPerCreditVal ? parseFloat(costPerCreditVal) : null,
                 cachePago: cachePago || false,
                 packageId: packageId || null,
+                packageName: req.packageName || null,
+                consumptionId: req.consumptionId || null,
                 isBonus: isBonus,
                 // Custom Date Logic: Use provided date or default to now() (handled by Prisma default or backend logic if needed, but Prisma has @default(now()))
                 // However, we want to ensure explicit dates are respected.
