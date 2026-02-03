@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../db');
 
 
-// List Suppliers
+// List Suppliers with Credit Balance
 router.get('/', async (req, res) => {
     try {
         const suppliers = await prisma.supplier.findMany({
@@ -19,10 +19,42 @@ router.get('/', async (req, res) => {
             orderBy: { name: 'asc' }
         });
 
-        // Enrich with calculated stats (total credits bought vs consumed) - simplified for now
-        // Advanced logic would require summing up all orders linked to locutores from this supplier
+        // Calculate balances dynamically
+        // Optimized: Fetch aggregated sums for all packages and orders in single queries
+        const [packagesAgg, ordersAgg] = await Promise.all([
+            prisma.creditPackage.groupBy({
+                by: ['supplierId'],
+                _sum: { credits: true }
+            }),
+            prisma.order.groupBy({
+                by: ['supplierId'],
+                _sum: { creditsConsumed: true },
+                where: { supplierId: { not: null } }
+            })
+        ]);
 
-        res.json(suppliers);
+        // Map aggregations for quick lookup
+        const purchasedMap = {};
+        packagesAgg.forEach(p => { checked = p.supplierId; purchasedMap[p.supplierId] = p._sum.credits || 0; });
+
+        const consumedMap = {};
+        ordersAgg.forEach(o => { consumedMap[o.supplierId] = o._sum.creditsConsumed || 0; });
+
+        const enrichedSuppliers = suppliers.map(s => {
+            const purchased = purchasedMap[s.id] || 0;
+            const consumed = consumedMap[s.id] || 0;
+
+            return {
+                ...s,
+                stats: {
+                    totalPurchased: purchased,
+                    totalConsumed: consumed,
+                    balance: purchased - consumed
+                }
+            };
+        });
+
+        res.json(enrichedSuppliers);
     } catch (error) {
         console.error('Error listing suppliers:', error);
         res.status(500).json({ error: 'Failed to list suppliers' });

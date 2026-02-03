@@ -350,7 +350,7 @@ router.post('/', async (req, res) => {
                         include: {
                             packages: {
                                 orderBy: { purchaseDate: 'desc' },
-                                take: 1
+                                // take: 1 -- We need to inspect more to find a valid commercial package
                             }
                         }
                     }
@@ -360,8 +360,13 @@ router.post('/', async (req, res) => {
             const selectedSupplier = locutor?.suppliers.find(s => s.id === supplierId);
 
             if (selectedSupplier && selectedSupplier.packages.length > 0) {
-                const latestPackage = selectedSupplier.packages[0];
-                costPerCreditVal = latestPackage.costPerCredit;
+                // Find first package that is NOT an adjustment (price > 0)
+                const latestCommercialPackage = selectedSupplier.packages.find(p => Number(p.price) > 0);
+
+                // Fallback to latest package if no commercial package found (shouldn't happen in normal flow but safe to have)
+                const refPackage = latestCommercialPackage || selectedSupplier.packages[0];
+
+                costPerCreditVal = refPackage.costPerCredit;
 
                 // If cache is 0 (auto-calc) and we have credits to consume
                 if (finalCacheValor === 0 && creditsToConsume > 0) {

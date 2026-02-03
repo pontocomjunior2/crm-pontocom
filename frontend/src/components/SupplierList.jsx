@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, Calendar, DollarSign, History, Building2 } from 'lucide-react';
+import { Plus, Package, Calendar, DollarSign, History, Building2, Settings } from 'lucide-react';
 import { supplierAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
 import { showToast } from '../utils/toast';
@@ -123,20 +123,59 @@ const SupplierList = () => {
                                             {supplier.locutores.length} locutores vinculados
                                         </p>
                                     </div>
-                                    <button
-                                        onClick={() => openPackageModal(supplier)}
-                                        className="btn-secondary px-4 py-2 text-xs font-bold flex items-center gap-2 rounded-lg"
-                                    >
-                                        <Plus size={14} />
-                                        Novo Pacote
-                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setSelectedSupplier(supplier);
+                                                setPackageForm(prev => ({
+                                                    ...prev,
+                                                    price: '0', // Adjust mode trigger
+                                                    name: '',
+                                                    credits: '',
+                                                }));
+                                                setShowNewPackageModal(true);
+                                            }}
+                                            className="px-3 py-2 text-xs font-bold flex items-center gap-2 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors"
+                                        >
+                                            <Settings size={14} />
+                                            Ajuste
+                                        </button>
+                                        <button
+                                            onClick={() => openPackageModal(supplier)}
+                                            className="btn-secondary px-4 py-2 text-xs font-bold flex items-center gap-2 rounded-lg"
+                                        >
+                                            <Plus size={14} />
+                                            Novo Pacote
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Balance Logic */}
+                                <div className="mb-4 p-4 rounded-xl bg-gradient-to-br from-input-background to-card border border-border">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Saldo de Créditos</span>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className={`text-2xl font-black ${(supplier.stats?.balance || 0) < 0 ? 'text-red-500' :
+                                                    (supplier.stats?.balance || 0) < 5 ? 'text-orange-500' : 'text-emerald-400'
+                                                    }`}>
+                                                    {supplier.stats?.balance !== undefined ? supplier.stats.balance : '-'}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">restantes</span>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Consumo Total</span>
+                                            <span className="text-sm font-bold text-foreground">{supplier.stats?.totalConsumed || 0}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Active Logic / Latest Package */}
                                 <div className="mb-6 p-4 rounded-xl bg-input-background border border-border">
                                     <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
                                         <Package size={14} />
-                                        Pacote Vigente (Base de Cálculo)
+                                        Pacote Ref. (Custo)
                                     </h4>
                                     {latestPackage ? (
                                         <div className="grid grid-cols-2 gap-4">
@@ -147,7 +186,7 @@ const SupplierList = () => {
                                                 </span>
                                             </div>
                                             <div>
-                                                <span className="text-xs text-muted-foreground block mb-1">Pacote Ref.</span>
+                                                <span className="text-xs text-muted-foreground block mb-1">Ult. Compra</span>
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-medium text-foreground">{latestPackage.name}</span>
                                                     <span className="text-xs text-muted-foreground">
@@ -233,49 +272,91 @@ const SupplierList = () => {
             {showNewPackageModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-border p-6 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
-                        <h3 className="text-xl font-bold text-foreground mb-1">Novo Pacote de Créditos</h3>
-                        <p className="text-sm text-muted-foreground mb-6">Adicionar pacote para {selectedSupplier?.name}</p>
+                        <h3 className="text-xl font-bold text-foreground mb-1">
+                            {Number(packageForm.price) === 0 ? 'Ajuste Manual de Saldo' : 'Novo Pacote de Créditos'}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-6">
+                            {Number(packageForm.price) === 0
+                                ? `Corrigir saldo de ${selectedSupplier?.name}`
+                                : `Adicionar pacote para ${selectedSupplier?.name}`}
+                        </p>
 
                         <form onSubmit={handleAddPackage} className="flex flex-col flex-1 overflow-hidden">
                             <div className="space-y-4 mb-6 flex-1 overflow-y-auto custom-scrollbar px-1">
+                                {Number(packageForm.price) !== 0 && (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-medium text-muted-foreground mb-1">Nome do Pacote</label>
+                                            <input
+                                                type="text"
+                                                value={packageForm.name}
+                                                onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+                                                className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all"
+                                                placeholder="Ex: Pacote Janeiro"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-medium text-muted-foreground mb-1">Valor Total (R$)</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={packageForm.price}
+                                                    onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
+                                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all"
+                                                    placeholder="0.00"
+                                                    required
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-medium text-muted-foreground mb-1">Total de Créditos</label>
+                                                <input
+                                                    type="number"
+                                                    value={packageForm.credits}
+                                                    onChange={(e) => setPackageForm({ ...packageForm, credits: e.target.value })}
+                                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all"
+                                                    placeholder="Ex: 50"
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {Number(packageForm.price) === 0 && (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-medium text-muted-foreground mb-1">Quantidade de Créditos (+ ou -)</label>
+                                            <input
+                                                type="number"
+                                                value={packageForm.credits}
+                                                onChange={(e) => setPackageForm({ ...packageForm, credits: e.target.value })}
+                                                className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all font-bold text-lg"
+                                                placeholder="Ex: 10 ou -5"
+                                                required
+                                                autoFocus
+                                            />
+                                            <p className="text-[10px] text-muted-foreground mt-1">
+                                                Use valores positivos para adicionar e negativos para remover. Se remover, o saldo será reduzido, mas o histórico de consumo original será mantido.
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-muted-foreground mb-1">Motivo do Ajuste</label>
+                                            <input
+                                                type="text"
+                                                value={packageForm.name}
+                                                onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
+                                                className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all"
+                                                placeholder="Ex: Cota inicial, Correção de erro..."
+                                                required
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
                                 <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Nome do Pacote</label>
-                                    <input
-                                        type="text"
-                                        value={packageForm.name}
-                                        onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })}
-                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all"
-                                        placeholder="Ex: Pacote Janeiro"
-                                        required
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Valor Total (R$)</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={packageForm.price}
-                                            onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })}
-                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all"
-                                            placeholder="0.00"
-                                            required
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1">Total de Créditos</label>
-                                        <input
-                                            type="number"
-                                            value={packageForm.credits}
-                                            onChange={(e) => setPackageForm({ ...packageForm, credits: e.target.value })}
-                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50 transition-all"
-                                            placeholder="Ex: 50"
-                                            required
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Data da Compra</label>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1">Data</label>
                                     <input
                                         type="date"
                                         value={packageForm.purchaseDate}
@@ -285,7 +366,7 @@ const SupplierList = () => {
                                     />
                                 </div>
 
-                                {packageForm.price && packageForm.credits && (
+                                {Number(packageForm.price) > 0 && packageForm.credits && (
                                     <div className="p-3 bg-primary/10 rounded-xl border border-primary/20 flex justify-between items-center animate-in fade-in">
                                         <span className="text-sm text-primary font-medium">Custo Unitário Calculado:</span>
                                         <span className="text-lg font-bold text-primary">
@@ -306,7 +387,7 @@ const SupplierList = () => {
                                     type="submit"
                                     className="btn-primary px-6 py-2"
                                 >
-                                    Adicionar Pacote
+                                    {Number(packageForm.price) === 0 ? 'Salvar Ajuste' : 'Adicionar Pacote'}
                                 </button>
                             </div>
                         </form>
