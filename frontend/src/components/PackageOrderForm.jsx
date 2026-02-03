@@ -11,7 +11,8 @@ import {
     Save,
     Calendar,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    Building2
 } from 'lucide-react';
 import { orderAPI, locutorAPI, clientPackageAPI } from '../services/api';
 import { formatCurrency } from '../utils/formatters';
@@ -142,6 +143,15 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
+    };
+
+    const handleCurrencyChange = (e) => {
+        const { name, value } = e.target;
+        // Remove all non-digits
+        const numericValue = value.replace(/\D/g, '');
+        // Convert to float (cents to currency)
+        const floatValue = parseFloat(numericValue) / 100;
+        setFormData(prev => ({ ...prev, [name]: floatValue }));
     };
 
     // Calculate Cache based on Supplier Credits (if supplier has credits)
@@ -335,6 +345,28 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                                 </select>
                             </div>
 
+                            {/* Supplier Selection Logic (Only if > 1 supplier) */}
+                            {locutores.find(l => l.id === formData.locutorId)?.suppliers?.length > 1 && (
+                                <div className="md:col-span-2 animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-[#666666] uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <Building2 size={14} className="text-primary" />
+                                        Fornecedor (Origem)
+                                    </label>
+                                    <select
+                                        name="supplierId"
+                                        required
+                                        value={formData.supplierId}
+                                        onChange={handleChange}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all"
+                                    >
+                                        <option value="" className="bg-[#1a1a1a]">Selecione o fornecedor...</option>
+                                        {locutores.find(l => l.id === formData.locutorId).suppliers.map(s => (
+                                            <option key={s.id} value={s.id} className="bg-[#1a1a1a]">{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
                             <div className="md:col-span-2">
                                 <label className="block text-xs font-bold text-[#666666] uppercase tracking-wider mb-2 flex items-center gap-2">
                                     <Hash size={14} className="text-primary" />
@@ -350,7 +382,14 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                                     <Calculator size={20} className="text-primary" />
                                     <div>
                                         <span className="text-[10px] text-primary/70 uppercase font-black block">Custo p/ Empresa (Cache)</span>
-                                        <span className="text-lg font-black text-white">{formatCurrency(formData.cacheValor)}</span>
+                                        <input
+                                            type="text"
+                                            name="cacheValor"
+                                            value={formatCurrency(formData.cacheValor)}
+                                            onChange={handleCurrencyChange}
+                                            className="bg-transparent border-none p-0 text-lg font-black text-white focus:ring-0 focus:outline-none w-32"
+                                            placeholder="R$ 0,00"
+                                        />
                                     </div>
                                 </div>
                                 <div className="text-right">
