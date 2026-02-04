@@ -54,3 +54,19 @@
 - `RecurringService` conecta-se ao `Client`.
 - Quando executado, gera uma entrada na tabela `Order` com `status="VENDA"`.
 - `RecurringServiceLog` mantém o rastreio da execução e o link para a `Order` gerada.
+---
+
+## 2026-02-04 - Diferenciação de Consumo (Venda vs Fornecedor)
+
+**Tabela Alvo:** `Order`
+
+**Mudança:**
+- Adicionada coluna `creditsConsumedSupplier` (Int, Default: 0).
+
+**Motivo:**
+- Permitir que um único pedido consuma quantidades diferentes de créditos do cliente (venda) e do pacote de créditos do fornecedor (custo).
+- Útil para casos onde a precificação/unidade de medida difere entre a negociação com o cliente e com o locutor/fornecedor.
+
+**Conexões:**
+- `creditsConsumed` continua sendo o valor debitado do `ClientPackage`.
+- `creditsConsumedSupplier` passa a ser a base para o cálculo de `cacheValor` automático e deduções de saldo de fornecedores (se implementado futuramente).

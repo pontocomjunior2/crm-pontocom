@@ -28,17 +28,17 @@ router.get('/', async (req, res) => {
             }),
             prisma.order.groupBy({
                 by: ['supplierId'],
-                _sum: { creditsConsumed: true },
+                _sum: { creditsConsumedSupplier: true },
                 where: { supplierId: { not: null } }
             })
         ]);
 
         // Map aggregations for quick lookup
         const purchasedMap = {};
-        packagesAgg.forEach(p => { checked = p.supplierId; purchasedMap[p.supplierId] = p._sum.credits || 0; });
+        packagesAgg.forEach(p => { purchasedMap[p.supplierId] = p._sum.credits || 0; });
 
         const consumedMap = {};
-        ordersAgg.forEach(o => { consumedMap[o.supplierId] = o._sum.creditsConsumed || 0; });
+        ordersAgg.forEach(o => { consumedMap[o.supplierId] = o._sum.creditsConsumedSupplier || 0; });
 
         const enrichedSuppliers = suppliers.map(s => {
             const purchased = purchasedMap[s.id] || 0;

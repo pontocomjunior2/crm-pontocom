@@ -10,7 +10,9 @@ import {
     Save,
     Loader2,
     AlertCircle,
-    FileAudio
+    FileAudio,
+    Hash,
+    ShoppingCart
 } from 'lucide-react';
 import { locutorAPI, orderAPI } from '../services/api';
 import { showToast } from '../utils/toast';
@@ -25,6 +27,8 @@ const PackageBatchUploadModal = ({ pkg, onClose, onSuccess }) => {
         locutor: '',
         supplierId: '',
         date: new Date().toISOString().split('T')[0],
+        creditsConsumed: 1,
+        creditsConsumedSupplier: 1,
     });
 
     const [files, setFiles] = useState([]);
@@ -122,6 +126,8 @@ const PackageBatchUploadModal = ({ pkg, onClose, onSuccess }) => {
                 locutorId: formData.locutorId,
                 supplierId: formData.supplierId,
                 date: formData.date,
+                creditsConsumed: parseInt(formData.creditsConsumed),
+                creditsConsumedSupplier: parseInt(formData.creditsConsumedSupplier),
                 items: files.map(f => ({
                     title: f.title,
                     fileName: f.fileName
@@ -217,6 +223,47 @@ const PackageBatchUploadModal = ({ pkg, onClose, onSuccess }) => {
                                     onChange={(e) => setFormData(p => ({ ...p, date: e.target.value }))}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all text-sm"
                                 />
+                            </div>
+
+                            <div className="md:col-span-3 h-px bg-white/5 my-2"></div>
+
+                            <div className="md:col-span-2">
+                                <label className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                    <ShoppingCart size={12} className="mr-2" />
+                                    Créditos Venda / Cliente (Por Áudio)
+                                </label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    value={formData.creditsConsumed}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFormData(p => {
+                                            const newState = { ...p, creditsConsumed: val };
+                                            if (p.creditsConsumed === p.creditsConsumedSupplier) {
+                                                newState.creditsConsumedSupplier = val;
+                                            }
+                                            return newState;
+                                        });
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-emerald-400 focus:outline-none focus:border-emerald-500/30 transition-all font-bold text-sm"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-2 leading-tight">Quantidade debitada por arquivo</p>
+                            </div>
+
+                            <div className="md:col-span-1">
+                                <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                    <Hash size={12} className="mr-2" />
+                                    Créditos Fornecedor
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={formData.creditsConsumedSupplier}
+                                    onChange={(e) => setFormData(p => ({ ...p, creditsConsumedSupplier: e.target.value }))}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all font-bold text-sm"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-2 leading-tight">Consumo do locutor</p>
                             </div>
                         </div>
 

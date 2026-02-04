@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2, Calendar } from 'lucide-react';
+import { X, Hash, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2, Calendar } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency } from '../utils/formatters';
 import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI } from '../services/api';
@@ -42,6 +42,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         serviceType: order?.serviceType || '',
         numeroVenda: order?.numeroVenda ? String(order.numeroVenda) : '',
         creditsConsumed: order?.creditsConsumed || 1,
+        creditsConsumedSupplier: order?.creditsConsumedSupplier || order?.creditsConsumed || 1,
         costPerCreditSnapshot: order?.costPerCreditSnapshot || null,
         supplierId: order?.supplierId || '',
         cachePago: order?.cachePago || false,
@@ -261,56 +262,58 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
+        const val = type === 'checkbox' ? checked : value;
 
-        if (type === 'checkbox') {
-            if (name === 'isBonus') {
-                setFormData(prev => ({
-                    ...prev,
-                    isBonus: checked,
-                    vendaValor: checked ? 0 : prev.vendaValor,
-                    packageId: checked ? null : prev.packageId
-                }));
-            } else {
-                setFormData(prev => ({ ...prev, [name]: checked }));
-            }
-        } else if (name === 'locutorId') {
-            const selectedLocutor = locutores.find(l => l.id === value);
-            if (selectedLocutor) {
-                const cache = selectedLocutor.valorFixoMensal > 0 ? 0 : (formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
+        // Atualização de estado centralizada
+        setFormData(prev => {
+            const newState = { ...prev, [name]: val };
 
-                // Supplier logic
-                let newSupplierId = '';
-                if (selectedLocutor.suppliers?.length === 1) {
-                    newSupplierId = selectedLocutor.suppliers[0].id;
+            // 1. Regra de Sincronização de Créditos (Venda -> Fornecedor)
+            if (name === 'creditsConsumed') {
+                const oldCredits = parseInt(prev.creditsConsumed) || 0;
+                const oldSupplierCredits = parseInt(prev.creditsConsumedSupplier) || 0;
+                // Se estavam iguais, mantém a sincronia
+                if (oldCredits === oldSupplierCredits) {
+                    newState.creditsConsumedSupplier = val;
                 }
-
-                setFormData(prev => ({
-                    ...prev,
-                    locutorId: value,
-                    locutor: selectedLocutor.name,
-                    cacheValor: cache,
-                    supplierId: newSupplierId
-                }));
-            } else {
-                setFormData(prev => ({ ...prev, locutorId: '', locutor: '', supplierId: '' }));
             }
-        } else if (name === 'tipo') {
-            const currentLocutor = locutores.find(l => l.id === formData.locutorId);
-            const isMonthly = currentLocutor?.valorFixoMensal > 0;
-            const newCache = isMonthly ? 0 : (currentLocutor
-                ? (value === 'OFF' ? currentLocutor.priceOff : currentLocutor.priceProduzido)
-                : formData.cacheValor);
 
-            setFormData(prev => ({
-                ...prev,
-                tipo: value,
-                cacheValor: newCache
-            }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
+            // 2. Lógica de Bonificação
+            if (name === 'isBonus' && checked) {
+                newState.vendaValor = 0;
+                newState.packageId = null;
+            }
 
-        // Clear error for this field
+            // 3. Lógica de Locutor (Auto-cache e Auto-Fornecedor)
+            if (name === 'locutorId') {
+                const selectedLocutor = locutores.find(l => l.id === value);
+                if (selectedLocutor) {
+                    newState.locutor = selectedLocutor.name;
+                    newState.cacheValor = selectedLocutor.valorFixoMensal > 0 ? 0 : (prev.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
+
+                    if (selectedLocutor.suppliers?.length === 1) {
+                        newState.supplierId = selectedLocutor.suppliers[0].id;
+                    }
+                } else {
+                    newState.locutorId = '';
+                    newState.locutor = '';
+                    newState.supplierId = '';
+                }
+            }
+
+            // 4. Lógica de Tipo (OFF/Produzido)
+            if (name === 'tipo') {
+                const currentLocutor = locutores.find(l => l.id === prev.locutorId);
+                const isMonthly = currentLocutor?.valorFixoMensal > 0;
+                newState.cacheValor = isMonthly ? 0 : (currentLocutor
+                    ? (value === 'OFF' ? currentLocutor.priceOff : currentLocutor.priceProduzido)
+                    : prev.cacheValor);
+            }
+
+            return newState;
+        });
+
+        // Limpar erro do campo
         if (errors[name]) {
             setErrors(prev => ({ ...prev, [name]: '' }));
         }
@@ -392,7 +395,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             // 1. Validação de Data
             if (competenceDate < start || competenceDate > end) {
                 const dataFormatada = end.toLocaleDateString('pt-BR');
-                const errorMsg = `Erro no Pacote: O plano do cliente expirou em ${dataFormatada}. Para prosseguir, defina um valor de venda (Pedido Avulso) ou atualize o pacote do cliente.`;
+                const errorMsg = `Erro no Pacote: O plano do cliente expirou em ${dataFormatada}. Para prosseguir, defina um valor de venda(Pedido Avulso) ou atualize o pacote do cliente.`;
                 showToast.error(errorMsg);
                 newErrors.packageId = 'Pacote Expirado';
                 return false;
@@ -402,7 +405,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
             if (activePackage.type !== 'FIXO_ILIMITADO' && activePackage.type !== 'FIXO_SOB_DEMANDA') {
                 const credits = parseInt(formData.creditsConsumed) || 1;
                 if ((activePackage.usedAudios + credits) > activePackage.audioLimit) {
-                    const errorMsg = `Erro no Pacote: O limite de créditos (${activePackage.audioLimit}) foi atingido. Para prosseguir, defina um valor de venda (Pedido Avulso) ou altere o plano para Sob Demanda.`;
+                    const errorMsg = `Erro no Pacote: O limite de créditos(${activePackage.audioLimit}) foi atingido.Para prosseguir, defina um valor de venda(Pedido Avulso) ou altere o plano para Sob Demanda.`;
                     showToast.error(errorMsg);
                     newErrors.packageId = 'Saldo Insuficiente';
                     return false;
@@ -608,9 +611,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                         Buscando informações do pacote...
                                     </div>
                                 ) : activePackage ? (
-                                    <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/10 border-red-500/30' : 'bg-primary/5 border-primary/20'}`}>
+                                    <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/10 border-red-500/30' : 'bg-primary/5 border-primary/20'} `}>
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'}`}>
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'} `}>
                                                 <TrendingUp size={20} />
                                             </div>
                                             <div>
@@ -888,26 +891,41 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                     </div>
                                 )}
 
-                                {/* Credits Input (Only if Supplier is Selected) */}
                                 {formData.supplierId && (
-                                    <div className="animate-in fade-in slide-in-from-top-2">
-                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                            Créditos Consumidos
-                                        </label>
-                                        <div className="flex items-center gap-3">
-                                            <input
-                                                type="number"
-                                                name="creditsConsumed"
-                                                value={formData.creditsConsumed}
-                                                onChange={handleChange}
-                                                min="1"
-                                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-bold"
-                                            />
-                                            <div className="text-xs text-muted-foreground whitespace-nowrap">
-                                                Custo do Crédito:
-                                                <span className="font-bold text-green-400 ml-1">
-                                                    R$ {parseFloat(locutores.find(l => l.id === formData.locutorId)?.suppliers?.find(s => s.id === formData.supplierId)?.packages[0]?.costPerCredit || 0).toFixed(2)}/un
-                                                </span>
+                                    <div className="animate-in fade-in slide-in-from-top-2 bg-primary/5 p-5 rounded-2xl border border-primary/20 shadow-inner">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            <div className="flex flex-col">
+                                                <label className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                                    <ShoppingCart size={12} className="mr-2" /> Créditos Venda (Cliente)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="creditsConsumed"
+                                                    value={formData.creditsConsumed}
+                                                    onChange={handleChange}
+                                                    min="1"
+                                                    className="w-full bg-input-background border border-green-500/20 rounded-xl px-4 py-3 text-green-400 focus:outline-none focus:border-green-500/50 transition-all font-bold text-sm"
+                                                />
+                                                <p className="text-[10px] text-muted-foreground mt-2 leading-tight">Quantidade debitada do pacote do cliente</p>
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                                    <Hash size={12} className="mr-2" /> Créditos Fornecedor (Custo)
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    name="creditsConsumedSupplier"
+                                                    value={formData.creditsConsumedSupplier}
+                                                    onChange={handleChange}
+                                                    min="0"
+                                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-bold text-sm"
+                                                />
+                                                <div className="flex justify-between items-start mt-2 gap-2">
+                                                    <p className="text-[10px] text-muted-foreground leading-tight">Base para custo e saldo do locutor</p>
+                                                    <div className="text-[10px] font-black text-primary/70 whitespace-nowrap text-right uppercase tracking-tighter">
+                                                        Custo: R$ {parseFloat(locutores.find(l => l.id === formData.locutorId)?.suppliers?.find(s => s.id === formData.supplierId)?.packages[0]?.costPerCredit || 0).toFixed(2)}/un
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -952,7 +970,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                 Nível de Urgência
                             </label>
                             <div className="flex gap-4">
-                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-foreground' : 'bg-input-background border-border text-muted-foreground'}`}>
+                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-foreground' : 'bg-input-background border-border text-muted-foreground'} `}>
                                     <input
                                         type="radio"
                                         name="urgency"
@@ -963,7 +981,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                     />
                                     <span className="text-sm font-bold">Normal</span>
                                 </label>
-                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-input-background border-border text-muted-foreground'}`}>
+                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-input-background border-border text-muted-foreground'} `}>
                                     <input
                                         type="radio"
                                         name="urgency"
@@ -975,7 +993,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                     <AlertCircle size={16} />
                                     <span className="text-sm font-bold">Alta</span>
                                 </label>
-                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-input-background border-border text-muted-foreground'}`}>
+                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-input-background border-border text-muted-foreground'} `}>
                                     <input
                                         type="radio"
                                         name="urgency"
@@ -1016,7 +1034,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                         name="cacheValor"
                                         value={formatCurrency(formData.cacheValor)}
                                         onChange={handleCurrencyChange}
-                                        className={`w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono ${locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 ? 'text-primary/70' : ''}`}
+                                        className={`w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono ${locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 ? 'text-primary/70' : ''} `}
                                         placeholder="R$ 0,00"
                                     />
                                     {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 && (
@@ -1027,7 +1045,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                     )}
                                     {locutores.find(l => l.id === formData.locutorId)?.supplier && (
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                            <span className="text-[10px] font-bold text-green-500/60 uppercase tracking-widest flex items-center gap-1">
+                                            <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
                                                 <Calculator size={10} /> Calculado (Créditos)
                                             </span>
                                         </div>
@@ -1078,10 +1096,10 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                             onChange={handleChange}
                                             className="sr-only"
                                         />
-                                        <div className={`w-10 h-5 rounded-full transition-all duration-300 ${formData.isBonus ? 'bg-cyan-500' : 'bg-white/10'}`}></div>
-                                        <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 ${formData.isBonus ? 'translate-x-5' : 'translate-x-0'}`}></div>
+                                        <div className={`w-10 h-5 rounded-full transition-all duration-300 ${formData.isBonus ? 'bg-cyan-500' : 'bg-white/10'} `}></div>
+                                        <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 ${formData.isBonus ? 'translate-x-5' : 'translate-x-0'} `}></div>
                                     </div>
-                                    <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${formData.isBonus ? 'text-cyan-400' : 'text-muted-foreground group-hover:text-white'}`}>
+                                    <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${formData.isBonus ? 'text-cyan-400' : 'text-muted-foreground group-hover:text-white'} `}>
                                         Bonificação / Cortesia
                                     </span>
                                 </label>
@@ -1106,14 +1124,14 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">Margem de Lucro</p>
-                                    <div className={`flex items-center gap-1 text-lg font-bold ${Number(calculations.margem) < 0 ? 'text-red-500' : 'text-[#03CC0B]'}`}>
+                                    <div className={`flex items-center gap-1 text-lg font-bold ${Number(calculations.margem) < 0 ? 'text-red-500' : 'text-[#03CC0B]'} `}>
                                         {Number(calculations.margem) < 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
                                         {displayCalc.margem}
                                     </div>
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground mb-1">Margem %</p>
-                                    <p className={`text-lg font-bold ${Number(calculations.margemPercentual) < 0 ? 'text-red-500' : 'text-primary'}`}>
+                                    <p className={`text-lg font-bold ${Number(calculations.margemPercentual) < 0 ? 'text-red-500' : 'text-primary'} `}>
                                         {displayCalc.margemPercentual}
                                     </p>
                                 </div>
@@ -1336,9 +1354,9 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                 </label>
                                 <div className="flex items-center gap-2">
                                     <label className="flex-1">
-                                        <div className={`cursor-pointer w-full flex items-center gap-2 px-4 py-2.5 rounded-xl border border-dashed transition-all ${osFile ? 'bg-blue-500/10 border-blue-500/50' : 'bg-input-background border-border hover:border-blue-500/30'}`}>
+                                        <div className={`cursor - pointer w - full flex items - center gap - 2 px - 4 py - 2.5 rounded - xl border border - dashed transition - all ${osFile ? 'bg-blue-500/10 border-blue-500/50' : 'bg-input-background border-border hover:border-blue-500/30'} `}>
                                             <Paperclip size={16} className={osFile ? 'text-blue-400' : 'text-muted-foreground'} />
-                                            <span className={`text-xs truncate ${osFile ? 'text-blue-400 font-medium' : 'text-muted-foreground'}`}>
+                                            <span className={`text - xs truncate ${osFile ? 'text-blue-400 font-medium' : 'text-muted-foreground'} `}>
                                                 {osFile ? osFile.name : formData.arquivoOS ? 'Documento anexado' : 'Selecionar PDF'}
                                             </span>
                                         </div>
@@ -1389,7 +1407,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                             <>
                                                 {formData.arquivoOS && (
                                                     <a
-                                                        href={`${STORAGE_URL}${formData.arquivoOS}`}
+                                                        href={`${STORAGE_URL}${formData.arquivoOS} `}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500/20 transition-all shrink-0"

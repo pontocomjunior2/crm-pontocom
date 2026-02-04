@@ -32,6 +32,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         locutor: orderToEdit?.locutor || '',
         tipo: orderToEdit?.tipo || 'OFF',
         creditsToDebit: orderToEdit?.creditsConsumed || 1,
+        creditsConsumedSupplier: orderToEdit?.creditsConsumedSupplier || orderToEdit?.creditsConsumed || 1,
         clientCode: pkg.clientCode || '',
         cacheValor: orderToEdit ? parseFloat(orderToEdit.cacheValor) : 0,
         supplierId: orderToEdit?.supplierId || '',
@@ -161,34 +162,42 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
 
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
+        const { name, value, type, checked } = e.target;
+        const val = type === 'checkbox' ? checked : value;
 
-        if (name === 'locutorId') {
-            const selectedLocutor = locutores.find(l => String(l.id) === String(value));
-            if (selectedLocutor) {
-                const cache = selectedLocutor.valorFixoMensal > 0 ? 0 : (formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
-                let newSupplierId = '';
-                if (selectedLocutor.suppliers?.length === 1) {
-                    newSupplierId = selectedLocutor.suppliers[0].id;
+        setFormData(prev => {
+            const newState = { ...prev, [name]: val };
+
+            // Regra de Sincronização de Créditos (Venda -> Fornecedor)
+            if (name === 'creditsToDebit') {
+                const oldCredits = parseInt(prev.creditsToDebit) || 0;
+                const oldSupplierCredits = parseInt(prev.creditsConsumedSupplier) || 0;
+                if (oldCredits === oldSupplierCredits) {
+                    newState.creditsConsumedSupplier = val;
                 }
-
-                setFormData(prev => ({
-                    ...prev,
-                    locutorId: value,
-                    locutor: selectedLocutor.name,
-                    cacheValor: cache,
-                    supplierId: newSupplierId
-                }));
-            } else {
-                setFormData(prev => ({ ...prev, locutorId: '', locutor: '', supplierId: '', cacheValor: 0 }));
             }
-        } else if (name === 'tipo') {
-            const locutor = locutores.find(l => String(l.id) === String(formData.locutorId));
-            const newCache = locutor ? (value === 'OFF' ? locutor.priceOff : locutor.priceProduzido) : 0;
-            setFormData(prev => ({ ...prev, tipo: value, cacheValor: newCache }));
-        } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
-        }
+
+            if (name === 'locutorId') {
+                const selectedLocutor = locutores.find(l => String(l.id) === String(value));
+                if (selectedLocutor) {
+                    newState.locutor = selectedLocutor.name;
+                    newState.cacheValor = selectedLocutor.valorFixoMensal > 0 ? 0 : (prev.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
+                    if (selectedLocutor.suppliers?.length === 1) {
+                        newState.supplierId = selectedLocutor.suppliers[0].id;
+                    }
+                } else {
+                    newState.locutorId = '';
+                    newState.locutor = '';
+                    newState.supplierId = '';
+                    newState.cacheValor = 0;
+                }
+            } else if (name === 'tipo') {
+                const locutor = locutores.find(l => String(l.id) === String(prev.locutorId));
+                newState.cacheValor = locutor ? (value === 'OFF' ? locutor.priceOff : locutor.priceProduzido) : 0;
+            }
+
+            return newState;
+        });
     };
 
     const handleCurrencyChange = (e) => {
@@ -246,8 +255,9 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                 ...formData,
                 vendaValor: 0, // Package orders have 0 sale value
                 creditsConsumed: parseInt(formData.creditsToDebit),
+                creditsConsumedSupplier: parseInt(formData.creditsConsumedSupplier),
                 serviceType: 'PACOTE DE AUDIOS',
-                date: formData.date || null
+                date: formData.date || new Date().toISOString()
             };
 
             if (orderToEdit) {
@@ -357,19 +367,39 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                                 />
                             </div>
 
-                            <div>
-                                <label className="block text-xs font-bold text-[#666666] uppercase tracking-wider mb-2 flex items-center gap-2">
-                                    <ShoppingCart size={14} className="text-primary" />
-                                    Créditos a Debitar
-                                </label>
-                                <input
-                                    type="number"
-                                    name="creditsToDebit"
-                                    min="1"
-                                    value={formData.creditsToDebit}
-                                    onChange={handleChange}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all"
-                                />
+                            <div className="md:col-span-2 bg-white/5 p-5 rounded-3xl border border-white/10 shadow-xl mb-2 animate-in fade-in slide-in-from-top-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="flex flex-col">
+                                        <label className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                            <ShoppingCart size={12} className="mr-2" />
+                                            Créditos Venda (Cliente)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="creditsToDebit"
+                                            min="1"
+                                            value={formData.creditsToDebit}
+                                            onChange={handleChange}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-emerald-400 focus:outline-none focus:border-emerald-500/30 transition-all font-bold text-sm"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground mt-2 leading-tight">Quantidade debitada do pacote do cliente</p>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                            <Hash size={12} className="mr-2" />
+                                            Créditos Fornecedor (Custo)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            name="creditsConsumedSupplier"
+                                            min="0"
+                                            value={formData.creditsConsumedSupplier}
+                                            onChange={handleChange}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all font-bold text-sm"
+                                        />
+                                        <p className="text-[10px] text-muted-foreground mt-2 leading-tight">Base para custo e saldo do locutor</p>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="md:col-span-2">

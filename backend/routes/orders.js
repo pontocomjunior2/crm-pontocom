@@ -361,6 +361,7 @@ router.post('/', async (req, res) => {
             serviceType = null,
             supplierId = null,
             creditsConsumed,
+            creditsConsumedSupplier = null,
             costPerCreditSnapshot = null,
             cachePago = false,
             isBonus = false
@@ -371,6 +372,7 @@ router.post('/', async (req, res) => {
         // Calculate Cache if Supplier Linked
         let finalCacheValor = cacheValor ? parseFloat(cacheValor) : 0;
         let creditsToConsume = (creditsConsumed !== undefined && creditsConsumed !== null) ? parseInt(creditsConsumed) : 0;
+        let creditsToConsumeSupplier = (creditsConsumedSupplier !== undefined && creditsConsumedSupplier !== null) ? parseInt(creditsConsumedSupplier) : creditsToConsume;
         let costPerCreditVal = null;
 
         if (locutorId && supplierId) {
@@ -401,8 +403,8 @@ router.post('/', async (req, res) => {
                 costPerCreditVal = refPackage.costPerCredit;
 
                 // If cache is 0 (auto-calc) and we have credits to consume
-                if (finalCacheValor === 0 && creditsToConsume > 0) {
-                    finalCacheValor = parseFloat(costPerCreditVal) * creditsToConsume;
+                if (finalCacheValor === 0 && creditsToConsumeSupplier > 0) {
+                    finalCacheValor = parseFloat(costPerCreditVal) * creditsToConsumeSupplier;
                 }
             }
         }
@@ -625,7 +627,8 @@ router.post('/', async (req, res) => {
                 arquivoOS: arquivoOS || null,
                 serviceType: serviceType || null,
                 supplierId: supplierId || null,
-                creditsConsumed: parseInt(creditsToConsume) || 0,
+                creditsConsumed: creditsToConsume,
+                creditsConsumedSupplier: creditsToConsumeSupplier,
                 costPerCreditSnapshot: costPerCreditVal ? parseFloat(costPerCreditVal) : null,
                 cachePago: cachePago || false,
                 packageId: packageId || null,
@@ -685,8 +688,8 @@ router.put('/:id', async (req, res) => {
             numeroOS,
             arquivoOS,
             supplierId,
-            cachePago,
             creditsConsumed,
+            creditsConsumedSupplier,
             costPerCreditSnapshot,
             isBonus
         } = req.body;
@@ -866,8 +869,7 @@ router.put('/:id', async (req, res) => {
                 packageId: req.body.packageId, // Allow explicit packageId update
                 cachePago: cachePago !== undefined ? cachePago : undefined,
                 creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
-                costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
-                creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
+                creditsConsumedSupplier: creditsConsumedSupplier !== undefined ? parseInt(creditsConsumedSupplier) : undefined,
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
                 isBonus: isBonus !== undefined ? isBonus : undefined,
                 date: req.body.date ? new Date(req.body.date) : undefined
@@ -1033,15 +1035,7 @@ router.post('/:id/clone', async (req, res) => {
 // POST /api/orders/batch-create - Create multiple package orders at once
 router.post('/batch-create', async (req, res) => {
     try {
-        const {
-            packageId,
-            clientId,
-            locutor,
-            locutorId,
-            supplierId,
-            date,
-            items // Array of { title, fileName }
-        } = req.body;
+        const { packageId, clientId, locutor, locutorId, supplierId, date, items, creditsConsumed = 1, creditsConsumedSupplier = null } = req.body;
 
         if (!items || !Array.isArray(items) || items.length === 0) {
             return res.status(400).json({ error: 'Items array is required and cannot be empty' });
@@ -1112,8 +1106,9 @@ router.post('/batch-create', async (req, res) => {
                     supplierId,
                     tipo: 'OFF', // Default for batch upload usually
                     date: competenceDate,
-                    creditsConsumed: 1,
-                    cacheValor: unitCacheValor,
+                    creditsConsumed: parseInt(creditsConsumed),
+                    creditsConsumedSupplier: creditsConsumedSupplier !== null ? parseInt(creditsConsumedSupplier) : parseInt(creditsConsumed),
+                    cacheValor: unitCacheValor * (creditsConsumedSupplier !== null ? parseInt(creditsConsumedSupplier) : parseInt(creditsConsumed)),
                     vendaValor: 0,
                     status: 'VENDA',
                     serviceType: 'PACOTE DE AUDIOS'

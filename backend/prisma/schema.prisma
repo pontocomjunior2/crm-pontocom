@@ -71,7 +71,8 @@ model Order {
   pendenciaMotivo       String?
   arquivoOS             String?
   costPerCreditSnapshot Decimal?       @db.Decimal(10, 2)
-  creditsConsumed       Int            @default(0)
+  creditsConsumed         Int            @default(0)
+  creditsConsumedSupplier Int            @default(0)
   numeroOS              String?
   serviceType           String?
   cachePago             Boolean        @default(false)
