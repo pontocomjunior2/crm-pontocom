@@ -457,3 +457,58 @@ export const scheduleAPI = {
         method: 'DELETE',
     }),
 };
+
+// Recurring Service API calls
+export const recurringServiceAPI = {
+    list: async (params = {}) => {
+        const queryString = new URLSearchParams(params).toString();
+        return fetchAPI(`/recurring-services${queryString ? `?${queryString}` : ''}`);
+    },
+
+    get: async (id) => {
+        return fetchAPI(`/recurring-services/${id}`);
+    },
+
+    create: async (data) => {
+        return fetchAPI('/recurring-services', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+
+    update: async (id, data) => {
+        return fetchAPI(`/recurring-services/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+
+    hardDelete: async (id) => {
+        return fetchAPI(`/recurring-services/${id}`, {
+            method: 'DELETE',
+        });
+    },
+
+    toggleActive: async (id, active) => {
+        return fetchAPI(`/recurring-services/${id}/toggle`, {
+            method: 'PATCH',
+            body: JSON.stringify({ active }),
+        });
+    },
+
+    getLogs: async (id) => {
+        return fetchAPI(`/recurring-services/${id}/logs`);
+    },
+
+    execute: async (id) => {
+        return fetchAPI(`/recurring-services/${id}/execute`, {
+            method: 'POST',
+        });
+    },
+
+    deleteLog: async (logId, deleteOrder = false) => {
+        return fetchAPI(`/recurring-services/logs/${logId}?deleteOrder=${deleteOrder}`, {
+            method: 'DELETE',
+        });
+    },
+};

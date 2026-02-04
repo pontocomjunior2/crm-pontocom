@@ -187,6 +187,8 @@ export const formatDisplayDate = (value) => {
     return adjustedDate.toLocaleDateString('pt-BR');
 };
 
+export const formatDate = formatDisplayDate;
+
 export const removeMask = (value) => {
     return value ? value.replace(/\D/g, '') : '';
 };

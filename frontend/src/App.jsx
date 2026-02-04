@@ -42,6 +42,7 @@ import UserList from './components/UserList';
 import Relatorios from './components/Relatorios';
 import PackageList from './components/PackageList';
 import PackageOrderForm from './components/PackageOrderForm';
+import RecurringServiceList from './components/RecurringServiceList';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -112,6 +113,7 @@ const CRM = () => {
     { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, permission: 'accessFaturamento' },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} />, permission: 'accessRelatorios' },
     { id: 'usuarios', label: 'Usuários', icon: <Shield size={20} />, permission: 'accessUsuarios' },
+    { id: 'servicos', label: 'Serviços Recorrentes', icon: <Clock size={20} />, adminOnly: true },
     { id: 'backup', label: 'Backup (GD)', icon: <Database size={20} />, adminOnly: true },
     { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} />, alwaysShow: true },
   ];
@@ -640,8 +642,14 @@ const CRM = () => {
             </div>
           )}
 
+          {activeTab === 'servicos' && isAdmin && (
+            <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
+              <RecurringServiceList />
+            </div>
+          )}
 
-          {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup', 'pacotes'].includes(activeTab) && (
+
+          {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup', 'pacotes', 'servicos'].includes(activeTab) && (
             <div className="p-20 text-center">
               <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
               <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>

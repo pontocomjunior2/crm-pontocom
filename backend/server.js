@@ -30,7 +30,9 @@ const analyticsRoutes = require('./routes/analytics');
 const tierRoutes = require('./routes/tiers');
 const backupRoutes = require('./routes/backups');
 const clientPackageRoutes = require('./routes/clientPackages');
+const recurringServicesRoutes = require('./routes/recurringServices');
 const backupService = require('./services/backupService');
+const recurringAutomationService = require('./services/recurringAutomation');
 const cron = require('node-cron');
 // const uploadRoutes = require('./routes/upload');
 
@@ -141,6 +143,7 @@ app.use('/api/analytics', authenticateToken, analyticsRoutes);
 app.use('/api/tiers', authenticateToken, tierRoutes);
 app.use('/api/backups', authenticateToken, backupRoutes);
 app.use('/api/client-packages', authenticateToken, clientPackageRoutes);
+app.use('/api/recurring-services', authenticateToken, recurringServicesRoutes);
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Health check
@@ -163,4 +166,7 @@ app.listen(PORT, async () => {
 
   // Initialize Backup Scheduler
   await backupService.initializeScheduler();
+
+  // Initialize Recurring Services Automation
+  await recurringAutomationService.initialize();
 });

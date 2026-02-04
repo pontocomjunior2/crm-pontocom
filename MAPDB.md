@@ -33,3 +33,24 @@
 
 **Conexões:**
 - Vinculado ao `packageId`. Somente pedidos com pacote terão este ID gerado automaticamente.
+
+---
+
+## 2026-02-04 - Sistema de Serviços Recorrentes e Automáticos
+
+**Tabelas Alvo:** `RecurringService`, `RecurringServiceLog`, `Client`
+
+**Mudança:**
+- Criada tabela `RecurringService` para armazenar contratos e serviços repetitivos.
+- Criada tabela `RecurringServiceLog` para histórico de execuções automáticas.
+- Adicionada relação `recurringServices` no modelo `Client`.
+- Enums adicionais: `ServiceRecurrence` (WEEKLY, MONTHLY, etc.).
+
+**Motivo:**
+- Permitir faturamento automático de serviços que não são necessariamente áudios (contratos, assinaturas, manutenção).
+- Configuração granular de comissão, faturamento automático e lançamento automático por serviço.
+
+**Conexões:**
+- `RecurringService` conecta-se ao `Client`.
+- Quando executado, gera uma entrada na tabela `Order` com `status="VENDA"`.
+- `RecurringServiceLog` mantém o rastreio da execução e o link para a `Order` gerada.

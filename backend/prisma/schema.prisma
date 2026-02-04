@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,99 +8,84 @@ datasource db {
 }
 
 model Client {
-  id               String   @id @default(uuid())
-  name             String
-  razaoSocial      String?
-  cnpj_cpf         String   @unique
-  dataCriacao      String?  // Armazenado como string para facilitar importação do XML
-  status           String   @default("ativado")
+  id                String          @id @default(uuid())
+  name              String
+  razaoSocial       String?
+  cnpj_cpf          String          @unique
+  dataCriacao       String?
+  status            String          @default("ativado")
   inscricaoEstadual String?
-  emailPrincipal   String?
+  emailPrincipal    String?
   telefonePrincipal String?
-  cep              String?
-  estado           String?
-  cidade           String?
-  endereco         String?
-  numero           String?
-  bairro           String?
-  complemento      String?
-  nomeContato      String?
-  emailContato     String?
-  dataAniversario  String?
-  observacoes      String?  @db.Text
-  
-  // Enriched fields from Sales data
-  totalVendas      Decimal? @db.Decimal(10, 2)
-  dataUltimaVenda  String?
-  salesCount       Int?     @default(0)
-
-  orders           Order[]
-  packages         ClientPackage[]
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  cep               String?
+  estado            String?
+  cidade            String?
+  endereco          String?
+  numero            String?
+  bairro            String?
+  complemento       String?
+  nomeContato       String?
+  emailContato      String?
+  dataAniversario   String?
+  observacoes       String?
+  totalVendas       Decimal?        @db.Decimal(10, 2)
+  dataUltimaVenda   String?
+  salesCount        Int?            @default(0)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  packages          ClientPackage[]
+  orders            Order[]
+  recurringServices RecurringService[]
 
   @@index([name])
   @@index([razaoSocial])
 }
 
 model Order {
-  id               String   @id @default(uuid())
-  sequentialId     Int      @unique @default(autoincrement())
-  date             DateTime @default(now())
-  clientId         String
-  client           Client   @relation(fields: [clientId], references: [id])
-  title            String   // Nome do áudio/arquivo
-  fileName         String?  // Nome técnico do arquivo (ex: spot_final.mp3)
-  locutor          String   // Nome do locutor (texto livre para histórico)
-  locutorId        String?  // Link opcional para o novo modelo de Locutor
-  locutorObj       Locutor? @relation(fields: [locutorId], references: [id])
-  tipo             String   // OFF or PRODUZIDO
-  
-  supplierId       String?
-  supplier         Supplier? @relation(fields: [supplierId], references: [id])
-
-  cacheValor       Decimal  @db.Decimal(10, 2)
-  vendaValor       Decimal  @db.Decimal(10, 2)
-  isBonus          Boolean  @default(false)
-  comentarios      String?  @db.Text
-  
-  status           String   @default("PEDIDO") // PEDIDO, VENDA
-  urgency          String   @default("NORMAL") // NORMAL, ALTA, URGENTE
-  numeroVenda      Int?     @unique // Rastreabilidade com o CSV/Sistema antigo - Código da VENDA
-  
-  faturado         Boolean  @default(false)
-  entregue         Boolean  @default(false)
-  cachePago        Boolean  @default(false)
-  
-  // Financeiro extra
-  dispensaNF       Boolean  @default(false)
-  emiteBoleto      Boolean  @default(false)
-  dataFaturar      DateTime?
-  vencimento       DateTime?
-  pago             Boolean  @default(false)
-  statusEnvio      String   @default("PENDENTE") // PENDENTE, ENVIADO
-  wasReopened      Boolean  @default(false) // Indica se foi faturado e depois reaberto
-
-  pendenciaFinanceiro Boolean @default(false)
-  pendenciaMotivo     String? @db.Text
-  numeroOS            String?
-  arquivoOS           String?
-  serviceType         String?  // PLANO MENSAL, PACOTE DE AUDIOS, STREAMING, etc.
-
-  // Supplier Credit System
-  creditsConsumed     Int      @default(0) // Default 0 for normal orders, 1+ for Supplier orders
-  costPerCreditSnapshot Decimal? @db.Decimal(10, 2) // Snapshot of the cost at the time of order
-
-  packageName      String?  // Nome do pacote no momento do pedido
-  consumptionId    String?  // ID de consumo de pacote (ex: PC-0001)
-
-  packageId        String?
-  package          ClientPackage? @relation("PackageOrders", fields: [packageId], references: [id])
-  
-  packageBilling   ClientPackage? @relation("PackageBilling")
-
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                    String         @id @default(uuid())
+  sequentialId          Int            @unique @default(autoincrement())
+  date                  DateTime       @default(now())
+  clientId              String
+  title                 String
+  fileName              String?
+  locutor               String
+  locutorId             String?
+  tipo                  String
+  cacheValor            Decimal        @db.Decimal(10, 2)
+  vendaValor            Decimal        @db.Decimal(10, 2)
+  comentarios           String?
+  status                String         @default("PEDIDO")
+  urgency               String         @default("NORMAL")
+  numeroVenda           Int?           @unique
+  faturado              Boolean        @default(false)
+  entregue              Boolean        @default(false)
+  dispensaNF            Boolean        @default(false)
+  emiteBoleto           Boolean        @default(false)
+  dataFaturar           DateTime?
+  vencimento            DateTime?
+  pago                  Boolean        @default(false)
+  statusEnvio           String         @default("PENDENTE")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  pendenciaFinanceiro   Boolean        @default(false)
+  pendenciaMotivo       String?
+  arquivoOS             String?
+  costPerCreditSnapshot Decimal?       @db.Decimal(10, 2)
+  creditsConsumed       Int            @default(0)
+  numeroOS              String?
+  serviceType           String?
+  cachePago             Boolean        @default(false)
+  supplierId            String?
+  packageId             String?
+  wasReopened           Boolean        @default(false)
+  isBonus               Boolean        @default(false)
+  consumptionId         String?
+  packageName           String?
+  packageBilling        ClientPackage? @relation("PackageBilling")
+  client                Client         @relation(fields: [clientId], references: [id])
+  locutorObj            Locutor?       @relation(fields: [locutorId], references: [id])
+  package               ClientPackage? @relation("PackageOrders", fields: [packageId], references: [id])
+  supplier              Supplier?      @relation(fields: [supplierId], references: [id])
 
   @@index([date])
   @@index([status])
@@ -112,26 +94,24 @@ model Order {
 }
 
 model Locutor {
-  id              String   @id @default(uuid())
+  id              String     @id @default(uuid())
   name            String
   realName        String?
   phone           String?
   email           String?
-  status          String   @default("DISPONIVEL") // DISPONIVEL, INDISPONIVEL, FERIAS
+  status          String     @default("DISPONIVEL")
   reelsUrl        String?
-  priceOff        Decimal  @db.Decimal(10, 2) @default(0)
-  priceProduzido  Decimal  @db.Decimal(10, 2) @default(0)
-  valorFixoMensal Decimal? @db.Decimal(10, 2)
+  priceOff        Decimal    @default(0) @db.Decimal(10, 2)
+  priceProduzido  Decimal    @default(0) @db.Decimal(10, 2)
   chavePix        String?
   tipoChavePix    String?
   banco           String?
-  description     String?  @db.Text
+  description     String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  valorFixoMensal Decimal?   @db.Decimal(10, 2)
   orders          Order[]
-  
   suppliers       Supplier[] @relation("LocutorSuppliers")
-
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 }
 
 model ServiceType {
@@ -146,103 +126,116 @@ model User {
   password  String
   name      String?
   role      Role     @default(USER)
-  tierId    String?
-  tier      Tier?    @relation(fields: [tierId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tierId    String?
+  tier      Tier?    @relation(fields: [tierId], references: [id])
+}
+
+model Supplier {
+  id        String          @id @default(uuid())
+  name      String          @unique
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  packages  CreditPackage[]
+  orders    Order[]
+  locutores Locutor[]       @relation("LocutorSuppliers")
+}
+
+model CreditPackage {
+  id            String   @id @default(uuid())
+  supplierId    String
+  name          String
+  price         Decimal  @db.Decimal(10, 2)
+  credits       Int
+  costPerCredit Decimal  @db.Decimal(10, 4)
+  purchaseDate  DateTime @default(now())
+  createdAt     DateTime @default(now())
+  supplier      Supplier @relation(fields: [supplierId], references: [id])
+}
+
+model Tier {
+  id                 String   @id @default(uuid())
+  name               String   @unique
+  accessDashboard    Boolean  @default(false)
+  accessPedidos      Boolean  @default(false)
+  accessClientes     Boolean  @default(false)
+  accessLocutores    Boolean  @default(false)
+  accessFornecedores Boolean  @default(false)
+  accessFaturamento  Boolean  @default(false)
+  accessRelatorios   Boolean  @default(false)
+  accessUsuarios     Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  accessPacotes      Boolean  @default(false)
+  users              User[]
+}
+
+model BackupConfig {
+  id                String           @id @default("default")
+  endpoint          String?
+  accessKey         String?
+  secretKey         String?
+  bucket            String?
+  region            String?          @default("us-east-1")
+  cronSchedule      String?          @default("0 3 * * *")
+  keepDays          Int              @default(7)
+  enabled           Boolean          @default(false)
+  updatedAt         DateTime         @updatedAt
+  folderId          String?
+  serviceAccountKey String?
+  schedules         BackupSchedule[]
+}
+
+model BackupSchedule {
+  id        String       @id @default(uuid())
+  configId  String       @default("default")
+  hour      Int
+  minute    Int
+  days      String
+  timezone  String       @default("America/Sao_Paulo")
+  enabled   Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  config    BackupConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
+}
+
+model BackupLog {
+  id        String   @id @default(uuid())
+  filename  String
+  size      BigInt?
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+model ClientPackage {
+  id             String      @id @default(uuid())
+  clientId       String
+  name           String
+  type           PackageType
+  fixedFee       Decimal     @db.Decimal(10, 2)
+  audioLimit     Int         @default(0)
+  usedAudios     Int         @default(0)
+  extraAudioFee  Decimal     @default(0) @db.Decimal(10, 2)
+  startDate      DateTime
+  endDate        DateTime
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  billingOrderId String?     @unique
+  clientCode     String?
+  billingOrder   Order?      @relation("PackageBilling", fields: [billingOrderId], references: [id])
+  client         Client      @relation(fields: [clientId], references: [id])
+  orders         Order[]     @relation("PackageOrders")
+
+  @@index([clientId])
+  @@index([active])
 }
 
 enum Role {
   ADMIN
   USER
-}
-
-model Supplier {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  locutores       Locutor[] @relation("LocutorSuppliers")
-  packages        CreditPackage[]
-  orders          Order[]
-}
-
-model CreditPackage {
-  id              String   @id @default(uuid())
-  supplierId      String
-  supplier        Supplier @relation(fields: [supplierId], references: [id])
-  name            String   // Ex: Pacote Janeiro
-  price           Decimal  @db.Decimal(10, 2)
-  credits         Int
-  costPerCredit   Decimal  @db.Decimal(10, 4) // High precision for internal calculation
-  purchaseDate    DateTime @default(now())
-  
-  createdAt       DateTime @default(now())
-}
-
-model Tier {
-  id                String   @id @default(uuid())
-  name              String   @unique
-  
-  // Permissions
-  accessDashboard   Boolean  @default(false)
-  accessPacotes     Boolean  @default(false)
-  accessPedidos     Boolean  @default(false)
-  accessClientes    Boolean  @default(false)
-  accessLocutores   Boolean  @default(false)
-  accessFornecedores Boolean  @default(false)
-  accessFaturamento Boolean  @default(false)
-  accessRelatorios  Boolean  @default(false)
-  accessUsuarios    Boolean  @default(false)
-
-  users             User[]
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-}
-
-model BackupConfig {
-  id                String   @id @default("default")
-  // MinIO / S3 (keeping for backward compatibility or optional use)
-  endpoint          String?
-  accessKey         String?
-  secretKey         String?
-  bucket            String?
-  region            String?  @default("us-east-1")
-  // Google Drive
-  folderId          String?
-  serviceAccountKey String?  @db.Text
-  // Common
-  cronSchedule      String?  @default("0 3 * * *") // Deprecated: use BackupSchedule instead
-  keepDays          Int      @default(7)
-  enabled           Boolean  @default(false)
-  updatedAt         DateTime @updatedAt
-  
-  schedules         BackupSchedule[]
-}
-
-model BackupSchedule {
-  id          String   @id @default(uuid())
-  configId    String   @default("default")
-  config      BackupConfig @relation(fields: [configId], references: [id], onDelete: Cascade)
-  
-  hour        Int      // 0-23 (GMT-3)
-  minute      Int      // 0-59
-  days        String   // JSON array: [0,1,2,3,4,5,6] (domingo=0)
-  timezone    String   @default("America/Sao_Paulo")
-  enabled     Boolean  @default(true)
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model BackupLog {
-  id                String   @id @default(uuid())
-  filename          String
-  size              BigInt?
-  status            String   // SUCCESS, FAILED
-  error             String?  @db.Text
-  createdAt         DateTime @default(now())
 }
 
 enum PackageType {
@@ -251,27 +244,44 @@ enum PackageType {
   FIXO_COM_LIMITE_VENCIMENTO
   FIXO_SOB_DEMANDA
 }
+enum ServiceRecurrence {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  BIMONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
+}
 
-model ClientPackage {
-  id              String   @id @default(uuid())
-  clientId        String
-  client          Client   @relation(fields: [clientId], references: [id])
-  name            String
-  type            PackageType
-  fixedFee        Decimal  @db.Decimal(10, 2)
-  audioLimit      Int      @default(0)
-  usedAudios      Int      @default(0)
-  extraAudioFee   Decimal  @db.Decimal(10, 2) @default(0)
-  startDate       DateTime
-  endDate         DateTime
-  active          Boolean  @default(true)
-  clientCode      String?  // Código identificador para auto-preenchimento de nome de arquivo
-  billingOrderId  String?  @unique // Venda automática gerada para este pacote
-  billingOrder    Order?   @relation("PackageBilling", fields: [billingOrderId], references: [id])
-  orders          Order[]  @relation("PackageOrders")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+model RecurringService {
+  id            String               @id @default(uuid())
+  name          String
+  clientId      String
+  client        Client               @relation(fields: [clientId], references: [id])
+  value         Decimal              @db.Decimal(10, 2)
+  recurrence    ServiceRecurrence
+  isAutomatic   Boolean              @default(true)
+  hasCommission Boolean              @default(false)
+  autoBilling   Boolean              @default(false)
+  active        Boolean              @default(true)
+  startDate     DateTime             @default(now())
+  nextExecution DateTime
+  lastExecution DateTime?
+  logs          RecurringServiceLog[]
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   @@index([clientId])
   @@index([active])
+}
+
+model RecurringServiceLog {
+  id               String           @id @default(uuid())
+  serviceId        String
+  service          RecurringService @relation(fields: [serviceId], references: [id])
+  status           String
+  message          String?
+  generatedOrderId String?
+  executionDate    DateTime         @default(now())
 }
