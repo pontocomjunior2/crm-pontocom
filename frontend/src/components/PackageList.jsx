@@ -126,7 +126,6 @@ const PackageList = ({ onAddNewOrder }) => {
             const response = await clientPackageAPI.getOrders(pkg.id);
             setPackageOrders(response.orders || []);
         } catch (error) {
-            console.error('Error fetching package orders:', error);
             showToast.error('Erro ao carregar pedidos do pacote.');
         } finally {
             setLoadingOrders(false);
@@ -345,16 +344,27 @@ const PackageList = ({ onAddNewOrder }) => {
         }
     };
 
-    const handleEditUniversal = (order) => {
+    const handleEditUniversal = async (order) => {
         // We need the Full Package Object for the Form
         // We rely on backend returning package info in /all/orders
         if (!order.package) {
             showToast.error('Erro: Informações do pacote não disponíveis');
             return;
         }
-        setEditingUniversalOrderPackage(order.package);
-        setEditingUniversalOrder(order);
-        // setIsDuplicateMode(false);
+
+        try {
+            // Fetch fresh full order details to ensure we have locutorId and all fields
+            const fullOrder = await orderAPI.get(order.id);
+            setEditingUniversalOrderPackage(order.package);
+
+            // Merge package info into fullOrder if missing (API usually returns flat or nested?)
+            // orderAPI.get returns the order object. It might have package nested.
+            // But we already have package from the list item.
+            setEditingUniversalOrder(fullOrder);
+        } catch (error) {
+            console.error('Error fetching order details:', error);
+            showToast.error('Erro ao carregar detalhes do pedido');
+        }
     };
 
     const handleCloseUniversalEdit = () => {

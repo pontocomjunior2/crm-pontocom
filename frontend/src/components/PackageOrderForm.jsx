@@ -28,7 +28,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         packageId: pkg.id,
         title: orderToEdit?.title || '',
         fileName: orderToEdit?.fileName || '',
-        locutorId: orderToEdit?.locutorId || '',
+        locutorId: orderToEdit?.locutorId ? String(orderToEdit.locutorId) : '',
         locutor: orderToEdit?.locutor || '',
         tipo: orderToEdit?.tipo || 'OFF',
         creditsToDebit: orderToEdit?.creditsConsumed || 1,
@@ -43,13 +43,70 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         loadLocutores();
     }, []);
 
+    const loadLocutores = async () => {
+        try {
+            const data = await locutorAPI.list({ status: 'DISPONIVEL' });
+            let allLocutores = data || [];
+
+            // Se estamos editando e o locutor atual não está na lista (ex: inativo), precisamos buscá-lo ou adicioná-lo
+            // Também tratamos o caso de locutorId NULO no banco (mas com nome preenchido)
+            if (orderToEdit?.locutor) {
+                let currentId = orderToEdit.locutorId ? String(orderToEdit.locutorId) : '';
+
+                // Tenta encontrar ID pelo NOME se o ID estiver vazio
+                if (!currentId) {
+                    const foundByName = allLocutores.find(l => l.name.toLowerCase().trim() === orderToEdit.locutor.toLowerCase().trim());
+                    if (foundByName) {
+                        currentId = String(foundByName.id);
+                        // Auto-fix form data state immediately
+                        setFormData(prev => ({ ...prev, locutorId: currentId }));
+                        console.log('DEBUG: Auto-recovered Locutor ID from Name:', currentId);
+                    }
+                }
+
+                if (currentId) {
+                    const exists = allLocutores.find(l => String(l.id) === currentId);
+
+                    if (!exists) {
+                        // Tentar buscar detalhes se possível, ou criar objeto mock mínimo
+                        try {
+                            const fullLocutor = await locutorAPI.get(currentId);
+                            if (fullLocutor) {
+                                allLocutores.push(fullLocutor);
+                            } else {
+                                // Fallback se não encontrar na API (muito raro)
+                                allLocutores.push({ id: currentId, name: orderToEdit.locutor, suppliers: [] });
+                            }
+                        } catch (e) {
+                            // Fallback simples
+                            allLocutores.push({ id: currentId, name: orderToEdit.locutor, suppliers: [] });
+                        }
+                    }
+
+                    // Auto-Repair Supplier: If supplierId is missing but locutor has only 1 supplier, auto-select it.
+                    const selectedLocutorHelper = allLocutores.find(l => String(l.id) === currentId);
+                    if (selectedLocutorHelper && (!orderToEdit.supplierId || orderToEdit.supplierId === '')) {
+                        if (selectedLocutorHelper.suppliers && selectedLocutorHelper.suppliers.length === 1) {
+                            const autoSupplierId = selectedLocutorHelper.suppliers[0].id;
+                            setFormData(prev => ({ ...prev, supplierId: autoSupplierId }));
+                        }
+                    }
+                }
+            }
+            setLocutores(allLocutores);
+        } catch (error) {
+            console.error('Error loading locutores:', error);
+        } finally {
+            setLoadingLocutores(false);
+        }
+    };
+
     // Auto-update filename
-    // Only auto-update if NOT editing OR if user changes relevant fields explicitly
-    // For simplicity, we maintain auto-update logic but maybe we should respect existing filename if specific fields didn't change?
-    // Let's keep autosync reactive to formData changes. If editing, formData starts with existing values.
-    // However, if we just load the form, this useEffect will run and might regenerate the fileName.
-    // To prevent overwriting custom filenames on load, we check if changes actually happened relative to initial load?
-    // Simplified approach: regenerate based on current formData fields.
+    // ... (rest of useEffect logic remains logically same, but avoiding re-paste large block if possible)
+    // Actually, I need to keep the file consistent. I'll paste the useEffect below loadLocutores because I am replacing the block that includes loadLocutores definition.
+    // Wait, `useEffect` for filename was BEFORE `loadLocutores` in original file.
+    // I am replacing lines 26 to 146. This covers State Init, UseEffect(s), loadLocutores, handleChange.
+
     useEffect(() => {
         // Calculate Start Number
         let startNumber = pkg.usedAudios + 1; // Default for NEW orders
@@ -61,7 +118,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
             if (match) {
                 startNumber = parseInt(match[1]);
             } else {
-                // Fallback parsing: remove client code look for first number
+                // Fallback parsing
                 let cleanName = orderToEdit.fileName;
                 if (pkg.clientCode && cleanName.startsWith(String(pkg.clientCode))) {
                     cleanName = cleanName.substring(String(pkg.clientCode).length).trim();
@@ -70,7 +127,6 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                 if (firstNum) {
                     startNumber = parseInt(firstNum[0]);
                 } else {
-                    // Last resort: assume it's the latest one (matches the clone->edit flow)
                     startNumber = pkg.usedAudios;
                 }
             }
@@ -93,7 +149,8 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         const limitPart = pkg.audioLimit ? ` de ${pkg.audioLimit}` : '';
         const creditPart = `${numbering}${limitPart} `;
 
-        const locutor = locutores.find(l => l.id === formData.locutorId);
+        // Find locutor safely with String comparison
+        const locutor = locutores.find(l => String(l.id) === String(formData.locutorId));
         const detailPart = `(${formData.title || 'S_TITULO'}_${locutor ? locutor.name : 'S_LOC'})`;
 
         setFormData(prev => ({
@@ -102,25 +159,13 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         }));
     }, [formData.title, formData.locutorId, formData.creditsToDebit, formData.clientCode, locutores, pkg.usedAudios, pkg.audioLimit, orderToEdit]);
 
-    const loadLocutores = async () => {
-        try {
-            const data = await locutorAPI.list({ status: 'DISPONIVEL' });
-            setLocutores(data || []);
-        } catch (error) {
-            console.error('Error loading locutores:', error);
-        } finally {
-            setLoadingLocutores(false);
-        }
-    };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
 
         if (name === 'locutorId') {
-            const selectedLocutor = locutores.find(l => l.id === value);
+            const selectedLocutor = locutores.find(l => String(l.id) === String(value));
             if (selectedLocutor) {
-                // Keep existing cache if editing and not changing type logic? 
-                // If editing, logic should still apply if I change locutor.
                 const cache = selectedLocutor.valorFixoMensal > 0 ? 0 : (formData.tipo === 'OFF' ? selectedLocutor.priceOff : selectedLocutor.priceProduzido);
                 let newSupplierId = '';
                 if (selectedLocutor.suppliers?.length === 1) {
@@ -138,7 +183,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                 setFormData(prev => ({ ...prev, locutorId: '', locutor: '', supplierId: '', cacheValor: 0 }));
             }
         } else if (name === 'tipo') {
-            const locutor = locutores.find(l => l.id === formData.locutorId);
+            const locutor = locutores.find(l => String(l.id) === String(formData.locutorId));
             const newCache = locutor ? (value === 'OFF' ? locutor.priceOff : locutor.priceProduzido) : 0;
             setFormData(prev => ({ ...prev, tipo: value, cacheValor: newCache }));
         } else {

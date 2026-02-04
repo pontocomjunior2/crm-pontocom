@@ -298,6 +298,38 @@ router.get('/:id', async (req, res) => {
     }
 });
 
+// GET /api/orders/:id - Get order details
+router.get('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const order = await prisma.order.findUnique({
+            where: { id },
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        razaoSocial: true,
+                        cnpj_cpf: true
+                    }
+                },
+                locutorObj: true,
+                package: true,
+                supplier: true
+            }
+        });
+
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        res.json(order);
+    } catch (error) {
+        console.error('Error fetching order details:', error);
+        res.status(500).json({ error: 'Failed to fetch order details' });
+    }
+});
+
 // POST /api/orders - Create new order
 router.post('/', async (req, res) => {
     try {
