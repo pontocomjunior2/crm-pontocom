@@ -27,12 +27,14 @@ import {
     ArrowDown,
     RotateCcw,
     Copy,
-    Trash2
+    Trash2,
+    Upload
 } from 'lucide-react';
 import { clientPackageAPI, orderAPI } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 import PackageOrderForm from './PackageOrderForm';
+import PackageBatchUploadModal from './PackageBatchUploadModal';
 
 const PackageList = ({ onAddNewOrder }) => {
     // Tab system
@@ -51,6 +53,10 @@ const PackageList = ({ onAddNewOrder }) => {
     const [selectedOrderIds, setSelectedOrderIds] = useState([]);
     const [bulkActionLoading, setBulkActionLoading] = useState(false);
     const [showBulkLocutorModal, setShowBulkLocutorModal] = useState(false);
+
+    // Batch Upload State
+    const [showBatchUploadModal, setShowBatchUploadModal] = useState(false);
+    const [batchUploadPackage, setBatchUploadPackage] = useState(null);
 
     // Packages management
     const [packages, setPackages] = useState([]);
@@ -444,6 +450,11 @@ const PackageList = ({ onAddNewOrder }) => {
         } finally {
             setBulkActionLoading(false);
         }
+    };
+
+    const handleOpenBatchUpload = (pkg) => {
+        setBatchUploadPackage(pkg);
+        setShowBatchUploadModal(true);
     };
 
     const handleBulkUpdateLocutor = async (e) => {
@@ -1033,20 +1044,29 @@ const PackageList = ({ onAddNewOrder }) => {
                                             </div>
                                         </div>
 
-                                        <div className="pt-4 border-t border-white/5 flex gap-2">
+                                        <div className="pt-4 border-t border-white/5 flex flex-col gap-2">
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleViewOrders(pkg)}
+                                                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 text-white py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all"
+                                                >
+                                                    <Eye size={14} />
+                                                    VER PEDIDOS
+                                                </button>
+                                                <button
+                                                    onClick={() => onAddNewOrder(pkg)}
+                                                    className="flex-1 btn-primary py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+                                                >
+                                                    <Plus size={14} />
+                                                    NOVO PEDIDO
+                                                </button>
+                                            </div>
                                             <button
-                                                onClick={() => handleViewOrders(pkg)}
-                                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 text-white py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all"
+                                                onClick={() => handleOpenBatchUpload(pkg)}
+                                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all"
                                             >
-                                                <Eye size={14} />
-                                                VER PEDIDOS
-                                            </button>
-                                            <button
-                                                onClick={() => onAddNewOrder(pkg)}
-                                                className="flex-1 btn-primary py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
-                                            >
-                                                <Plus size={14} />
-                                                NOVO PEDIDO
+                                                <Upload size={14} />
+                                                LANÇAMENTO EM LOTE
                                             </button>
                                         </div>
                                     </div>
@@ -1146,6 +1166,13 @@ const PackageList = ({ onAddNewOrder }) => {
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end gap-2">
+                                                        <button
+                                                            onClick={() => handleOpenBatchUpload(pkg)}
+                                                            className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-all"
+                                                            title="Lançamento em Lote"
+                                                        >
+                                                            <Upload size={16} />
+                                                        </button>
                                                         <button
                                                             onClick={() => handleViewOrders(pkg)}
                                                             className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-primary/30 text-white rounded-xl transition-all"
@@ -1449,6 +1476,21 @@ const PackageList = ({ onAddNewOrder }) => {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* Batch Upload Modal */}
+            {showBatchUploadModal && batchUploadPackage && (
+                <PackageBatchUploadModal
+                    pkg={batchUploadPackage}
+                    onClose={() => {
+                        setShowBatchUploadModal(false);
+                        setBatchUploadPackage(null);
+                    }}
+                    onSuccess={() => {
+                        fetchAllOrders();
+                        fetchPackages();
+                    }}
+                />
             )}
         </div>
     );

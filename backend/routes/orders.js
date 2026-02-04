@@ -1030,6 +1030,117 @@ router.post('/:id/clone', async (req, res) => {
     }
 });
 
+// POST /api/orders/batch-create - Create multiple package orders at once
+router.post('/batch-create', async (req, res) => {
+    try {
+        const {
+            packageId,
+            clientId,
+            locutor,
+            locutorId,
+            supplierId,
+            date,
+            items // Array of { title, fileName }
+        } = req.body;
+
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ error: 'Items array is required and cannot be empty' });
+        }
+
+        if (!packageId || !clientId || !locutorId) {
+            return res.status(400).json({ error: 'packageId, clientId and locutorId are required' });
+        }
+
+        // Fetch package to check limits and credits
+        const pkg = await prisma.clientPackage.findUnique({
+            where: { id: packageId }
+        });
+
+        if (!pkg || !pkg.active) {
+            return res.status(400).json({ error: 'PACKAGE_INACTIVE', message: 'Pacote não encontrado ou inativo.' });
+        }
+
+        const competenceDate = date ? new Date(date) : new Date();
+        if (competenceDate < pkg.startDate || competenceDate > pkg.endDate) {
+            return res.status(400).json({
+                error: 'PACKAGE_EXPIRED',
+                message: `O pacote expirou em ${new Date(pkg.endDate).toLocaleDateString('pt-BR')}.`
+            });
+        }
+
+        const totalCreditsToUse = items.length; // Default 1 per item
+
+        if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA') {
+            if (pkg.usedAudios + totalCreditsToUse > pkg.audioLimit) {
+                return res.status(400).json({
+                    error: 'PACKAGE_LIMIT_REACHED',
+                    message: `O limite do pacote (${pkg.audioLimit}) será excedido.`
+                });
+            }
+        }
+
+        // Calculate unit cache if supplier linked
+        let unitCacheValor = 0;
+        if (locutorId && supplierId) {
+            const selectedSupplier = await prisma.supplier.findUnique({
+                where: { id: supplierId },
+                include: {
+                    packages: {
+                        where: { price: { gt: 0 } },
+                        orderBy: { purchaseDate: 'desc' },
+                        take: 1
+                    }
+                }
+            });
+            if (selectedSupplier && selectedSupplier.packages.length > 0) {
+                unitCacheValor = parseFloat(selectedSupplier.packages[0].costPerCredit);
+            }
+        }
+
+        // Process creations in a transaction for consistency
+        const createdOrders = await prisma.$transaction(async (tx) => {
+            const results = [];
+
+            for (const item of items) {
+                const orderData = {
+                    clientId,
+                    packageId,
+                    title: item.title,
+                    fileName: item.fileName,
+                    locutor,
+                    locutorId,
+                    supplierId,
+                    tipo: 'OFF', // Default for batch upload usually
+                    date: competenceDate,
+                    creditsConsumed: 1,
+                    cacheValor: unitCacheValor,
+                    vendaValor: 0,
+                    status: 'VENDA',
+                    serviceType: 'PACOTE DE AUDIOS'
+                };
+
+                const newOrder = await tx.order.create({
+                    data: orderData
+                });
+                results.push(newOrder);
+            }
+
+            // Update package credits
+            await tx.clientPackage.update({
+                where: { id: packageId },
+                data: { usedAudios: { increment: totalCreditsToUse } }
+            });
+
+            return results;
+        });
+
+        res.status(201).json({ success: true, count: createdOrders.length, orders: createdOrders });
+    } catch (error) {
+        console.error('Error in batch-create:', error);
+        res.status(500).json({ error: 'Failed to create orders in batch', message: error.message });
+    }
+});
+
 // POST /api/orders/bulk-update - update multiple orders
 router.post('/bulk-update', async (req, res) => {
     try {

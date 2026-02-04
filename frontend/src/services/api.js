@@ -177,6 +177,13 @@ export const orderAPI = {
         });
     },
 
+    batchCreate: async (data) => {
+        return fetchAPI('/orders/batch-create', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    },
+
     convert: async (id) => {
         const response = await fetchAPI(`/orders/${id}/convert`, {
             method: 'PATCH',
