@@ -26,7 +26,8 @@ import {
     ArrowUp,
     ArrowDown,
     RotateCcw,
-    Copy
+    Copy,
+    Trash2
 } from 'lucide-react';
 import { clientPackageAPI, orderAPI } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';
@@ -45,7 +46,11 @@ const PackageList = ({ onAddNewOrder }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // 'asc' or 'desc'
     const [editingUniversalOrder, setEditingUniversalOrder] = useState(null);
     const [editingUniversalOrderPackage, setEditingUniversalOrderPackage] = useState(null);
-    // const [isDuplicateMode, setIsDuplicateMode] = useState(false); // Removed as duplication is now direct
+
+    // Batch Selection State
+    const [selectedOrderIds, setSelectedOrderIds] = useState([]);
+    const [bulkActionLoading, setBulkActionLoading] = useState(false);
+    const [showBulkLocutorModal, setShowBulkLocutorModal] = useState(false);
 
     // Packages management
     const [packages, setPackages] = useState([]);
@@ -60,6 +65,11 @@ const PackageList = ({ onAddNewOrder }) => {
     const [orderFilter, setOrderFilter] = useState('all'); // 'all', 'delivered', 'pending'
     const [packageStatusFilter, setPackageStatusFilter] = useState('all'); // 'all', 'active', 'expired', 'limit'
     const [packageSortConfig, setPackageSortConfig] = useState({ key: 'clientCode', direction: 'asc' });
+
+    // Locutores for bulk modal
+    const [locutores, setLocutores] = useState([]);
+    const [loadingLocutores, setLoadingLocutores] = useState(false);
+    const [bulkFormData, setBulkFormData] = useState({ locutorId: '', supplierId: '' });
 
     const fetchAllOrders = async () => {
         setLoadingAllOrders(true);
@@ -87,9 +97,22 @@ const PackageList = ({ onAddNewOrder }) => {
         }
     };
 
+    const fetchLocutores = async () => {
+        setLoadingLocutores(true);
+        try {
+            const data = await locutorAPI.list();
+            setLocutores(data || []);
+        } catch (error) {
+            console.error('Error fetching locutores:', error);
+        } finally {
+            setLoadingLocutores(false);
+        }
+    };
+
     useEffect(() => {
         fetchAllOrders();
         fetchPackages();
+        fetchLocutores();
     }, []);
 
     const handleSort = (key) => {
@@ -377,8 +400,135 @@ const PackageList = ({ onAddNewOrder }) => {
         fetchAllOrders();
     };
 
+    // Batch Actions logic
+    const handleSelectOrder = (id) => {
+        setSelectedOrderIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = (filteredOrders) => {
+        if (selectedOrderIds.length > 0) {
+            setSelectedOrderIds([]);
+        } else {
+            setSelectedOrderIds(filteredOrders.map(o => o.id));
+        }
+    };
+
+    const handleBulkDelivery = async () => {
+        if (!window.confirm(`Deseja marcar ${selectedOrderIds.length} pedidos como ENTREGUES?`)) return;
+        setBulkActionLoading(true);
+        try {
+            await orderAPI.bulkUpdate(selectedOrderIds, { entregue: true, status: 'ENTREGUE' });
+            showToast.success('Pedidos atualizados em lote!');
+            setSelectedOrderIds([]);
+            fetchAllOrders();
+        } catch (error) {
+            showToast.error('Erro ao atualizar pedidos em lote');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!window.confirm(`Tem certeza que deseja EXCLUIR ${selectedOrderIds.length} pedidos? Esta ação não pode ser desfeita.`)) return;
+        setBulkActionLoading(true);
+        try {
+            await orderAPI.bulkDelete(selectedOrderIds);
+            showToast.success('Pedidos excluídos em lote!');
+            setSelectedOrderIds([]);
+            fetchAllOrders();
+            fetchPackages();
+        } catch (error) {
+            showToast.error('Erro ao excluir pedidos em lote');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
+    const handleBulkUpdateLocutor = async (e) => {
+        e.preventDefault();
+        if (!bulkFormData.locutorId) {
+            showToast.error('Selecione um locutor');
+            return;
+        }
+
+        const selectedLocutor = locutores.find(l => String(l.id) === String(bulkFormData.locutorId));
+        if (!selectedLocutor) return;
+
+        setBulkActionLoading(true);
+        try {
+            await orderAPI.bulkUpdate(selectedOrderIds, {
+                locutorId: bulkFormData.locutorId,
+                locutor: selectedLocutor.name,
+                supplierId: bulkFormData.supplierId || null
+            });
+            showToast.success('Locutor/Fornecedor atualizado em lote!');
+            setShowBulkLocutorModal(false);
+            setBulkFormData({ locutorId: '', supplierId: '' });
+            setSelectedOrderIds([]);
+            fetchAllOrders();
+        } catch (error) {
+            showToast.error('Erro ao atualizar em lote');
+        } finally {
+            setBulkActionLoading(false);
+        }
+    };
+
     return (
         <div className="flex flex-col h-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Batch Actions Toolbar */}
+            {selectedOrderIds.length > 0 && activeTab === 'orders' && (
+                <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-8 duration-300">
+                    <div className="bg-[#1a1a1a]/95 border border-white/10 rounded-2xl shadow-2xl p-4 flex items-center gap-6 backdrop-blur-xl ring-1 ring-white/5">
+                        <div className="flex items-center gap-3 pr-6 border-r border-white/10">
+                            <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-[12px] font-bold text-white shadow-lg shadow-primary/20">
+                                {selectedOrderIds.length}
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-black text-white/50 uppercase tracking-widest">Selecionados</span>
+                                <span className="text-xs font-bold text-white leading-tight">Pedidos de Pacote</span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setShowBulkLocutorModal(true)}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-all border border-white/5 hover:border-white/10 active:scale-95"
+                            >
+                                <Users size={14} className="text-primary" />
+                                Alterar Voz
+                            </button>
+
+                            <button
+                                onClick={handleBulkDelivery}
+                                disabled={bulkActionLoading}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-xs font-bold text-emerald-400 transition-all border border-emerald-500/20 hover:border-emerald-500/40 active:scale-95 disabled:opacity-50"
+                            >
+                                <CheckCircle2 size={14} />
+                                Entregar Selecionados
+                            </button>
+
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={bulkActionLoading}
+                                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-xs font-bold text-red-400 transition-all border border-red-500/20 hover:border-red-500/40 active:scale-95 disabled:opacity-50"
+                            >
+                                <Trash2 size={14} />
+                                Excluir
+                            </button>
+                        </div>
+
+                        <button
+                            onClick={() => setSelectedOrderIds([])}
+                            className="ml-4 p-2 hover:bg-white/5 rounded-full text-muted-foreground hover:text-white transition-all"
+                            title="Limpar seleção"
+                        >
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* Header with Tabs */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
                 <div>
@@ -543,6 +693,37 @@ const PackageList = ({ onAddNewOrder }) => {
                                 <table className="w-full text-left border-collapse">
                                     <thead className="bg-white/5 text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b border-white/5 sticky top-0">
                                         <tr>
+                                            <th className="px-4 py-3 w-10">
+                                                <input
+                                                    type="checkbox"
+                                                    className="w-4 h-4 rounded border-white/10 bg-white/5 accent-primary cursor-pointer"
+                                                    checked={allOrders.length > 0 && selectedOrderIds.length === allOrders.filter(o => {
+                                                        const matchesSearch = !ordersSearchTerm ||
+                                                            o.title?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
+                                                            o.client?.name?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
+                                                            o.package?.name?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
+                                                            o.locutor?.toLowerCase().includes(ordersSearchTerm.toLowerCase());
+                                                        const matchesDelivery = ordersDeliveryFilter === 'all' ||
+                                                            (ordersDeliveryFilter === 'delivered' && o.entrega) ||
+                                                            (ordersDeliveryFilter === 'pending' && !o.entrega);
+                                                        return matchesSearch && matchesDelivery;
+                                                    }).length}
+                                                    onChange={() => {
+                                                        const filtered = allOrders.filter(o => {
+                                                            const matchesSearch = !ordersSearchTerm ||
+                                                                o.title?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
+                                                                o.client?.name?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
+                                                                o.package?.name?.toLowerCase().includes(ordersSearchTerm.toLowerCase()) ||
+                                                                o.locutor?.toLowerCase().includes(ordersSearchTerm.toLowerCase());
+                                                            const matchesDelivery = ordersDeliveryFilter === 'all' ||
+                                                                (ordersDeliveryFilter === 'delivered' && o.entrega) ||
+                                                                (ordersDeliveryFilter === 'pending' && !o.entrega);
+                                                            return matchesSearch && matchesDelivery;
+                                                        });
+                                                        handleSelectAll(filtered);
+                                                    }}
+                                                />
+                                            </th>
                                             <th className="px-4 py-3 cursor-pointer hover:text-foreground transition-colors" onClick={() => handleSort('id')}>
                                                 <div className="flex items-center">ID {getSortIcon('id')}</div>
                                             </th>
@@ -635,7 +816,15 @@ const PackageList = ({ onAddNewOrder }) => {
                                                 return 0;
                                             })
                                             .map((order) => (
-                                                <tr key={order.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                <tr key={order.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedOrderIds.includes(order.id) ? 'bg-primary/5' : ''}`}>
+                                                    <td className="px-4 py-3 w-10">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedOrderIds.includes(order.id)}
+                                                            onChange={() => handleSelectOrder(order.id)}
+                                                            className="w-4 h-4 rounded border-white/10 bg-white/5 accent-primary cursor-pointer"
+                                                        />
+                                                    </td>
                                                     <td className="px-4 py-3">
                                                         <span className="font-mono text-xs text-primary">
                                                             {order.consumptionId ? order.consumptionId : `#${order.numeroVenda || order.sequentialId}`}
@@ -1179,6 +1368,85 @@ const PackageList = ({ onAddNewOrder }) => {
                                 Fechar
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* Bulk Locutor Modal */}
+            {showBulkLocutorModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[70] p-4 animate-in fade-in duration-300">
+                    <div className="card-glass-dark w-full max-w-md rounded-3xl border border-white/10 shadow-2xl overflow-hidden overflow-y-auto max-h-[90vh]">
+                        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-primary/10 to-transparent">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary border border-primary/20">
+                                    <Users size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-white">Alterar Voz em Lote</h2>
+                                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">{selectedOrderIds.length} pedidos selecionados</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowBulkLocutorModal(false)} className="p-2 hover:bg-white/5 rounded-full text-muted-foreground transition-all">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleBulkUpdateLocutor} className="p-8 space-y-6">
+                            <div>
+                                <label className="block text-xs font-bold text-[#666666] uppercase tracking-wider mb-2">Selecione o Novo Locutor</label>
+                                <select
+                                    required
+                                    value={bulkFormData.locutorId}
+                                    onChange={(e) => {
+                                        const locId = e.target.value;
+                                        const loc = locutores.find(l => String(l.id) === String(locId));
+                                        let supId = '';
+                                        if (loc?.suppliers?.length === 1) supId = loc.suppliers[0].id;
+                                        setBulkFormData({ locutorId: locId, supplierId: supId });
+                                    }}
+                                    className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all"
+                                >
+                                    <option value="" className="bg-[#1a1a1a]">Selecione...</option>
+                                    {locutores.map(l => (
+                                        <option key={l.id} value={l.id} className="bg-[#1a1a1a]">{l.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {bulkFormData.locutorId && locutores.find(l => String(l.id) === String(bulkFormData.locutorId))?.suppliers?.length > 1 && (
+                                <div className="animate-in fade-in slide-in-from-top-2">
+                                    <label className="block text-xs font-bold text-[#666666] uppercase tracking-wider mb-2">Selecione o Fornecedor</label>
+                                    <select
+                                        required
+                                        value={bulkFormData.supplierId}
+                                        onChange={(e) => setBulkFormData(prev => ({ ...prev, supplierId: e.target.value }))}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-all font-bold"
+                                    >
+                                        <option value="" className="bg-[#1a1a1a]">Selecione...</option>
+                                        {locutores.find(l => String(l.id) === String(bulkFormData.locutorId)).suppliers.map(s => (
+                                            <option key={s.id} value={s.id} className="bg-[#1a1a1a]">{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            <div className="pt-4 flex gap-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowBulkLocutorModal(false)}
+                                    className="flex-1 px-6 py-3 rounded-xl text-xs font-bold text-white hover:bg-white/10 transition-all border border-white/5"
+                                >
+                                    CANCELAR
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={bulkActionLoading || !bulkFormData.locutorId}
+                                    className="flex-[2] btn-primary px-6 py-3 rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50"
+                                >
+                                    {bulkActionLoading ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                                    <span className="font-black tracking-tighter">ATUALIZAR TUDO</span>
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}

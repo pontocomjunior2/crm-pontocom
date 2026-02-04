@@ -170,6 +170,13 @@ export const orderAPI = {
         });
     },
 
+    bulkUpdate: async (ids, data) => {
+        return fetchAPI('/orders/bulk-update', {
+            method: 'POST',
+            body: JSON.stringify({ ids, data }),
+        });
+    },
+
     convert: async (id) => {
         const response = await fetchAPI(`/orders/${id}/convert`, {
             method: 'PATCH',

@@ -1030,6 +1030,35 @@ router.post('/:id/clone', async (req, res) => {
     }
 });
 
+// POST /api/orders/bulk-update - update multiple orders
+router.post('/bulk-update', async (req, res) => {
+    try {
+        const { ids, data } = req.body;
+        if (!ids || !Array.isArray(ids)) {
+            return res.status(400).json({ error: 'IDs array is required' });
+        }
+
+        const updateData = {};
+
+        // Allowed fields for bulk update
+        if (data.locutorId !== undefined) updateData.locutorId = data.locutorId;
+        if (data.locutor !== undefined) updateData.locutor = data.locutor;
+        if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
+        if (data.entregue !== undefined) updateData.entregue = data.entregue;
+        if (data.status !== undefined) updateData.status = data.status;
+
+        await prisma.order.updateMany({
+            where: { id: { in: ids } },
+            data: updateData
+        });
+
+        res.json({ success: true, message: `${ids.length} orders updated` });
+    } catch (error) {
+        console.error('Error bulk updating orders:', error);
+        res.status(500).json({ error: 'Failed to update orders' });
+    }
+});
+
 // POST /api/orders/bulk-delete - delete multiple orders
 router.post('/bulk-delete', async (req, res) => {
     try {
