@@ -225,12 +225,11 @@ router.get('/cache-report', async (req, res) => {
             if (Object.keys(dateFilter.date).length === 0) delete dateFilter.date;
         }
 
-        // Get orders with unpaid caches, excluding supplier-linked locutores
+        // Get orders with caches, excluding supplier-linked locutores
         const orders = await prisma.order.findMany({
             where: {
                 ...dateFilter,
                 status: 'VENDA', // Only sales generate cache payments
-                cachePago: false,
                 cacheValor: { gt: 0 },
                 locutorId: { not: null },
                 locutorObj: {
@@ -255,18 +254,26 @@ router.get('/cache-report', async (req, res) => {
                     pixType: order.locutorObj.tipoChavePix,
                     bank: order.locutorObj.banco,
                     pendingValue: 0,
+                    paidValue: 0,
                     orderCount: 0,
                     orders: []
                 };
             }
-            acc[locId].pendingValue += parseFloat(order.cacheValor);
+
+            if (order.cachePago) {
+                acc[locId].paidValue += parseFloat(order.cacheValor);
+            } else {
+                acc[locId].pendingValue += parseFloat(order.cacheValor);
+            }
+
             acc[locId].orderCount += 1;
             acc[locId].orders.push({
                 id: order.id,
                 title: order.title,
                 date: order.date,
                 value: order.cacheValor,
-                numeroVenda: order.numeroVenda
+                numeroVenda: order.numeroVenda,
+                paid: order.cachePago
             });
             return acc;
         }, {});

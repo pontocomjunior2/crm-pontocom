@@ -56,6 +56,7 @@ const Relatorios = () => {
     const [activeTab, setActiveTab] = useState('insights'); // 'insights' or 'caches'
     const [cacheData, setCacheData] = useState([]);
     const [loadingCaches, setLoadingCaches] = useState(false);
+    const [cacheStatusFilter, setCacheStatusFilter] = useState('pending'); // 'pending', 'paid', 'all'
     const [selectedLocutorCache, setSelectedLocutorCache] = useState(null);
     const [copiedId, setCopiedId] = useState(null);
 
@@ -457,14 +458,20 @@ const Relatorios = () => {
                             <p className="text-xs text-muted-foreground mb-6">Valores residuais de locutores avulsos no período</p>
 
                             <div className="space-y-4">
-                                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total a Lançar</p>
-                                    <h4 className="text-2xl font-black text-primary">
+                                <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total a Pagar</p>
+                                    <h4 className="text-2xl font-black text-amber-500">
                                         {formatCurrency(cacheData.reduce((acc, curr) => acc + curr.pendingValue, 0))}
                                     </h4>
                                 </div>
+                                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Pago (No Período)</p>
+                                    <h4 className="text-2xl font-black text-emerald-500">
+                                        {formatCurrency(cacheData.reduce((acc, curr) => acc + curr.paidValue, 0))}
+                                    </h4>
+                                </div>
                                 <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Locutores com Pendência</p>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Locutores Ativos</p>
                                     <h4 className="text-xl font-black text-white">{cacheData.length}</h4>
                                 </div>
                             </div>
@@ -479,7 +486,29 @@ const Relatorios = () => {
 
                         <div className="lg:col-span-2 card-dark overflow-hidden">
                             <div className="p-6 border-b border-border flex items-center justify-between">
-                                <h3 className="text-lg font-bold text-foreground">Aguardando Lançamento Financeiro</h3>
+                                <div className="flex items-center gap-4">
+                                    <h3 className="text-lg font-bold text-foreground">Detalhamento Financeiro</h3>
+                                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                                        <button
+                                            onClick={() => setCacheStatusFilter('pending')}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'pending' ? 'bg-amber-500 text-black' : 'text-muted-foreground hover:text-white'}`}
+                                        >
+                                            Pendentes
+                                        </button>
+                                        <button
+                                            onClick={() => setCacheStatusFilter('paid')}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'paid' ? 'bg-emerald-500 text-white' : 'text-muted-foreground hover:text-white'}`}
+                                        >
+                                            Pagos
+                                        </button>
+                                        <button
+                                            onClick={() => setCacheStatusFilter('all')}
+                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'all' ? 'bg-white/10 text-white' : 'text-muted-foreground hover:text-white'}`}
+                                        >
+                                            Todos
+                                        </button>
+                                    </div>
+                                </div>
                                 {loadingCaches && <Loader2 size={18} className="animate-spin text-primary" />}
                             </div>
                             <div className="overflow-x-auto min-h-[300px]">
@@ -493,54 +522,82 @@ const Relatorios = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {cacheData.length === 0 ? (
+                                        {cacheData
+                                            .filter(item => {
+                                                if (cacheStatusFilter === 'pending') return item.pendingValue > 0;
+                                                if (cacheStatusFilter === 'paid') return item.paidValue > 0;
+                                                return true;
+                                            })
+                                            .length === 0 ? (
                                             <tr>
                                                 <td colSpan="4" className="px-8 py-20 text-center text-muted-foreground text-sm italic">
-                                                    Nenhum cachê pendente para o período selecionado.
+                                                    Nenhum registro encontrado para este filtro.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            cacheData.map((item) => (
-                                                <tr key={item.locutorId} className="hover:bg-white/5 transition-colors group">
-                                                    <td className="px-8 py-4">
-                                                        <button
-                                                            onClick={() => setSelectedLocutorCache(item)}
-                                                            className="flex flex-col text-left group/name"
-                                                        >
-                                                            <span className="text-sm font-bold text-foreground group-hover/name:text-primary transition-colors underline-offset-4 decoration-primary/30 group-hover/name:underline decoration-2">{item.name}</span>
-                                                            <span className="text-[10px] text-muted-foreground">{item.orderCount} produções pendentes</span>
-                                                        </button>
-                                                    </td>
-                                                    <td className="px-4 py-4">
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white font-mono uppercase">{item.pixType || 'PIX'}</span>
-                                                                <span className="text-xs font-mono text-muted-foreground truncate max-w-[150px]">{item.pixKey || 'Não cadastrado'}</span>
+                                            cacheData
+                                                .filter(item => {
+                                                    if (cacheStatusFilter === 'pending') return item.pendingValue > 0;
+                                                    if (cacheStatusFilter === 'paid') return item.paidValue > 0;
+                                                    return true;
+                                                })
+                                                .map((item) => (
+                                                    <tr key={item.locutorId} className="hover:bg-white/5 transition-colors group">
+                                                        <td className="px-8 py-4">
+                                                            <button
+                                                                onClick={() => setSelectedLocutorCache(item)}
+                                                                className="flex flex-col text-left group/name"
+                                                            >
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-bold text-foreground group-hover/name:text-primary transition-colors underline-offset-4 decoration-primary/30 group-hover/name:underline decoration-2">{item.name}</span>
+                                                                    {item.pendingValue === 0 && (
+                                                                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest">QUITADO</span>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[10px] text-muted-foreground">{item.orderCount} produções no período</span>
+                                                            </button>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <div className="flex flex-col gap-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white font-mono uppercase">{item.pixType || 'PIX'}</span>
+                                                                    <span className="text-xs font-mono text-muted-foreground truncate max-w-[150px]">{item.pixKey || 'Não cadastrado'}</span>
+                                                                </div>
+                                                                {item.bank && <span className="text-[10px] text-muted-foreground italic">{item.bank}</span>}
                                                             </div>
-                                                            {item.bank && <span className="text-[10px] text-muted-foreground italic">{item.bank}</span>}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-4 py-4 text-center">
-                                                        <div className="flex flex-col items-center">
-                                                            <div className="flex -space-x-2">
-                                                                {item.orders.slice(0, 3).map((order, idx) => (
-                                                                    <div key={idx} className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[8px] font-bold text-primary" title={order.title}>
-                                                                        {idx + 1}
+                                                        </td>
+                                                        <td className="px-4 py-4 text-center">
+                                                            <div className="flex flex-col items-center">
+                                                                <div className="flex flex-col gap-1 items-center">
+                                                                    <div className="flex -space-x-2">
+                                                                        {item.orders.slice(0, 3).map((order, idx) => (
+                                                                            <div key={idx} className={`w-6 h-6 rounded-full border flex items-center justify-center text-[8px] font-bold ${order.paid ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/20 border-amber-500/30 text-amber-400'}`} title={order.title}>
+                                                                                {idx + 1}
+                                                                            </div>
+                                                                        ))}
+                                                                        {item.orderCount > 3 && (
+                                                                            <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-bold text-muted-foreground">
+                                                                                +{item.orderCount - 3}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                ))}
-                                                                {item.orderCount > 3 && (
-                                                                    <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-bold text-muted-foreground">
-                                                                        +{item.orderCount - 3}
-                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-4 text-right">
+                                                            <div className="flex flex-col items-end">
+                                                                {item.pendingValue > 0 && (
+                                                                    <span className="text-sm font-black text-amber-500">{formatCurrency(item.pendingValue)}</span>
+                                                                )}
+                                                                {item.paidValue > 0 && (
+                                                                    <span className={`font-black text-emerald-500 ${item.pendingValue > 0 ? 'text-[10px] opacity-60' : 'text-sm'}`}>
+                                                                        {item.pendingValue > 0 ? 'Pago: ' : ''}{formatCurrency(item.paidValue)}
+                                                                    </span>
                                                                 )}
                                                             </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-4 text-right">
-                                                        <span className="text-sm font-black text-white">{formatCurrency(item.pendingValue)}</span>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        </td>
+                                                    </tr>
+                                                ))
                                         )}
                                     </tbody>
                                 </table>
@@ -589,25 +646,46 @@ const Relatorios = () => {
                                                 <div className="flex items-center gap-2 mb-1">
                                                     <Calendar size={12} className="text-muted-foreground" />
                                                     <span className="text-[10px] text-muted-foreground">{formatDisplayDate(order.date)}</span>
+                                                    {order.paid ? (
+                                                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                                                            <CheckCircle2 size={8} /> PAGO
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
+                                                            <Clock size={8} /> PENDENTE
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <h4 className="text-sm font-bold text-foreground truncate">
                                                     {order.numeroVenda ? `${order.numeroVenda} - ` : ''}{order.title.toUpperCase()} ({formatCurrency(order.value)})
                                                 </h4>
                                             </div>
-                                            <button
-                                                onClick={() => handleCopyTitle(order.title, order.id)}
-                                                className={`p-2 rounded-lg transition-all flex items-center gap-2 ${copiedId === order.id ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-primary/20 text-muted-foreground hover:text-primary'}`}
-                                                title="Copiar Título"
-                                            >
-                                                {copiedId === order.id ? (
-                                                    <Check size={16} />
-                                                ) : (
-                                                    <Copy size={16} />
+                                            <div className="flex items-center gap-2">
+                                                {!order.paid && (
+                                                    <button
+                                                        onClick={() => handleMarkCacheAsPaid(order.id)}
+                                                        className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-all flex items-center gap-2"
+                                                        title="Marcar como Pago"
+                                                    >
+                                                        <DollarSign size={16} />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Pagar</span>
+                                                    </button>
                                                 )}
-                                                <span className="text-[10px] font-bold uppercase tracking-widest">
-                                                    {copiedId === order.id ? 'Copiado!' : 'Copiar'}
-                                                </span>
-                                            </button>
+                                                <button
+                                                    onClick={() => handleCopyTitle(order.title, order.id)}
+                                                    className={`p-2 rounded-lg transition-all flex items-center gap-2 ${copiedId === order.id ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-primary/20 text-muted-foreground hover:text-primary'}`}
+                                                    title="Copiar Título"
+                                                >
+                                                    {copiedId === order.id ? (
+                                                        <Check size={16} />
+                                                    ) : (
+                                                        <Copy size={16} />
+                                                    )}
+                                                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                                                        {copiedId === order.id ? 'Copiado!' : 'Copiar'}
+                                                    </span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
