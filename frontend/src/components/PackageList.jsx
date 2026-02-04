@@ -25,7 +25,8 @@ import {
     ArrowUpDown,
     ArrowUp,
     ArrowDown,
-    RotateCcw
+    RotateCcw,
+    Copy
 } from 'lucide-react';
 import { clientPackageAPI, orderAPI } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';
@@ -44,6 +45,7 @@ const PackageList = ({ onAddNewOrder }) => {
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // 'asc' or 'desc'
     const [editingUniversalOrder, setEditingUniversalOrder] = useState(null);
     const [editingUniversalOrderPackage, setEditingUniversalOrderPackage] = useState(null);
+    // const [isDuplicateMode, setIsDuplicateMode] = useState(false); // Removed as duplication is now direct
 
     // Packages management
     const [packages, setPackages] = useState([]);
@@ -264,6 +266,85 @@ const PackageList = ({ onAddNewOrder }) => {
         }
     };
 
+    const handleDuplicateUniversal = async (order) => {
+        if (!window.confirm(`Confirma a duplicação deste pedido de pacote?\n\nO novo arquivo será gerado automaticamente seguindo a sequência.`)) return;
+
+        try {
+            // Find up-to-date package info from local state to ensure correct audio count
+            const pkg = packages.find(p => p.id === (order.packageId || order.package?.id)) || order.package;
+
+            if (!pkg) {
+                showToast.error('Erro: Pacote não encontrado para recálculo.');
+                return;
+            }
+
+            const startNumber = (pkg.usedAudios || 0) + 1;
+            const credits = order.creditsConsumed || 1;
+            const limit = pkg.audioLimit || 0;
+
+            // Generate Numbering
+            let numbering = '';
+            if (credits === 1) {
+                numbering = String(startNumber).padStart(2, '0');
+            } else {
+                const sequence = [];
+                for (let i = 0; i < credits; i++) {
+                    sequence.push(String(startNumber + i).padStart(2, '0'));
+                }
+                numbering = sequence.join(', ');
+            }
+
+            const codePart = pkg.clientCode ? `${pkg.clientCode} ` : '';
+            const limitPart = limit > 0 ? ` de ${limit}` : '';
+            const creditPart = `${numbering}${limitPart} `;
+
+            // Extract detail part from original or reconstruct
+            // Reconstructing is safer to ensure standard format
+            const detailPart = `(${order.title || 'S_TITULO'}_${order.locutor || 'S_LOC'})`;
+
+            const newFileName = `${codePart}${creditPart}${detailPart}`.trim();
+
+            const newOrderData = {
+                packageId: pkg.id,
+                clientId: pkg.clientId,
+                title: order.title,
+                fileName: newFileName,
+                locutorId: order.locutorId,
+                locutor: order.locutor,
+                tipo: order.tipo || 'OFF',
+                creditsConsumed: credits,
+                clientCode: pkg.clientCode || '',
+                cacheValor: parseFloat(order.cacheValor || 0),
+                supplierId: order.supplierId,
+                status: 'VENDA',
+                date: new Date().toISOString().split('T')[0],
+                serviceType: 'PACOTE DE AUDIOS',
+                vendaValor: 0,
+                comentarios: order.comentarios // Preserve comments
+            };
+
+            await orderAPI.create(newOrderData);
+            showToast.success(`Pedido duplicado: ${newFileName}`);
+
+            // Refresh
+            fetchAllOrders();
+            fetchPackages();
+            if (selectedPackage) {
+                // If inside modal, refresh that too
+                // We need to fetch updated package data to refresh the modal header usage counts?
+                // handleViewOrders fetches orders, but maybe we should re-fetch package to update 'usedAudios' in UI
+                // We can't easily re-fetch just one package into selectedPackage state without a new API call or finding it in refreshed packages
+                // Simplified: Refresh orders list
+                const res = await clientPackageAPI.getOrders(pkg.id);
+                setPackageOrders(res.orders || []);
+            }
+
+        } catch (error) {
+            console.error('Erro na duplicação:', error);
+            showToast.error('Falha ao duplicar pedido.');
+        }
+    };
+
     const handleEditUniversal = (order) => {
         // We need the Full Package Object for the Form
         // We rely on backend returning package info in /all/orders
@@ -273,11 +354,13 @@ const PackageList = ({ onAddNewOrder }) => {
         }
         setEditingUniversalOrderPackage(order.package);
         setEditingUniversalOrder(order);
+        // setIsDuplicateMode(false);
     };
 
     const handleCloseUniversalEdit = () => {
         setEditingUniversalOrder(null);
         setEditingUniversalOrderPackage(null);
+        // setIsDuplicateMode(false);
     };
 
     const handleSuccessUniversalEdit = () => {
@@ -593,6 +676,13 @@ const PackageList = ({ onAddNewOrder }) => {
                                                                 </div>
                                                             )}
                                                             <button
+                                                                onClick={() => handleDuplicateUniversal(order)}
+                                                                className="p-2 bg-purple-500/10 text-purple-400 rounded-lg hover:bg-purple-500/20 transition-all"
+                                                                title="Duplicar Pedido"
+                                                            >
+                                                                <Copy size={16} />
+                                                            </button>
+                                                            <button
                                                                 onClick={() => handleEditUniversal(order)}
                                                                 className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-all"
                                                                 title="Editar Pedido"
@@ -888,6 +978,7 @@ const PackageList = ({ onAddNewOrder }) => {
                 <PackageOrderForm
                     pkg={editingUniversalOrderPackage}
                     orderToEdit={editingUniversalOrder}
+                    // isDuplicate={isDuplicateMode} // Removed
                     onClose={handleCloseUniversalEdit}
                     onSuccess={handleSuccessUniversalEdit}
                 />
@@ -1035,6 +1126,13 @@ const PackageList = ({ onAddNewOrder }) => {
                                                                         <Truck size={14} />
                                                                     </div>
                                                                 )}
+                                                                <button
+                                                                    onClick={() => handleDuplicateUniversal(order)}
+                                                                    className="p-2 bg-purple-500/10 text-purple-400 rounded-lg hover:bg-purple-500/20 transition-all"
+                                                                    title="Duplicar Pedido"
+                                                                >
+                                                                    <Copy size={16} />
+                                                                </button>
                                                                 <button
                                                                     onClick={() => handleEditUniversal(order)}
                                                                     className="p-2 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-all"

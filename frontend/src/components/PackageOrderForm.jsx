@@ -51,32 +51,33 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
     // To prevent overwriting custom filenames on load, we check if changes actually happened relative to initial load?
     // Simplified approach: regenerate based on current formData fields.
     useEffect(() => {
-        // If editing and no changes yet, keep original filename (handled by inputs producing changes)
-        // But here inputs ARE the dependencies.
+        // Calculate Start Number
+        let startNumber = pkg.usedAudios + 1; // Default for NEW orders
 
-        const startNumber = pkg.usedAudios + (orderToEdit ? 0 : 1); // If editing, don't increment next slot, assume current slot (simplified)
-        // Actually for editing, calculating "startNumber" is hard because we don't know the "position" of this order just from order data.
-        // It's safer to ONLY auto-generate if NOT editing, OR if user wants to recalculate.
-        // But the user might want to edit the title and have the filename update.
-
-        // Let's restrict auto-generation:
-        if (orderToEdit && formData.fileName === orderToEdit.fileName) {
-            // If filename hasn't changed from DB manually, allows update IF title/locutor changed?
-            // Complex. Let's stick to standard logic but be careful about startNumber.
+        if (orderToEdit) {
+            // If editing, try to preserve the original START number from the filename
+            // Regex matches: "03 de" or "03, 04 de" -> captures 03
+            const match = orderToEdit.fileName.match(/(\d+)(?:, \s*\d+)*\s+de/);
+            if (match) {
+                startNumber = parseInt(match[1]);
+            } else {
+                // Fallback parsing: remove client code look for first number
+                let cleanName = orderToEdit.fileName;
+                if (pkg.clientCode && cleanName.startsWith(String(pkg.clientCode))) {
+                    cleanName = cleanName.substring(String(pkg.clientCode).length).trim();
+                }
+                const firstNum = cleanName.match(/^\d+/);
+                if (firstNum) {
+                    startNumber = parseInt(firstNum[0]);
+                } else {
+                    // Last resort: assume it's the latest one (matches the clone->edit flow)
+                    startNumber = pkg.usedAudios;
+                }
+            }
         }
 
         const totalCredits = parseInt(formData.creditsToDebit) || 1;
-        // Use existing numbering logic, but for editing it might be weird to assume "next number".
-        // If editing, we probably shouldn't auto-update the number part, only the Title/Locutor part.
-
         const codePart = formData.clientCode ? `${formData.clientCode} ` : '';
-
-        // Only update logic if NOT editing, or accept that editing might reset numbering to "end of queue".
-        // Better strategy for EDIT: Do NOT auto-update fileName completely, or allow manual edit.
-        // But the requirement says "Nome do Arquivo (Auto-gerado)".
-
-        // For now, let's allow auto-update only for new orders. For edit, we trust what's there unless title changes?
-        if (orderToEdit) return; // Disable auto-gen for edits to avoid breaking history numbers
 
         let numbering = '';
         if (totalCredits === 1) {
