@@ -125,8 +125,8 @@ router.get('/', async (req, res) => {
             andConditions.push({ title: { contains: title, mode: 'insensitive' } });
         }
 
-        // Search filter (global) - only applied if no specific filters are active
-        if (search && !clientName && !numeroVenda && !title) {
+        // Search filter (global) - now combined with other filters via AND
+        if (search) {
             const searchConditions = [
                 { title: { contains: search, mode: 'insensitive' } },
                 { locutor: { contains: search, mode: 'insensitive' } },
@@ -183,8 +183,12 @@ router.get('/', async (req, res) => {
             orderBy = { sequentialId: sortOrder };
         } else if (sortBy === 'numeroVenda') {
             orderBy = [
-                { numeroVenda: sortOrder },
-                { date: sortOrder }
+                { numeroVenda: sortOrder }
+            ];
+        } else if (sortBy === 'faturado') {
+            orderBy = [
+                { faturado: sortOrder },
+                { numeroVenda: 'desc' }
             ];
         } else if (sortBy === 'vendaValor') {
             orderBy = [
@@ -192,7 +196,7 @@ router.get('/', async (req, res) => {
                 { date: sortOrder }
             ];
         } else {
-            orderBy[sortBy] = sortOrder;
+            orderBy = { [sortBy]: sortOrder };
         }
 
         const [ordersRaw, total, activeCount, salesCount, billedCount] = await Promise.all([

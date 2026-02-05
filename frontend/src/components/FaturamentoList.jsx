@@ -373,8 +373,17 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                     onClick={() => handleSort('numeroVenda')}
                                 >
                                     <div className="flex items-center gap-2">
-                                        ID / Status
+                                        ID
                                         <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'numeroVenda' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
+                                    </div>
+                                </th>
+                                <th
+                                    className="px-4 py-2.5 cursor-pointer hover:text-white transition-colors group/head text-center"
+                                    onClick={() => handleSort('faturado')}
+                                >
+                                    <div className="flex items-center justify-center gap-2">
+                                        Status
+                                        <ArrowUpDown size={12} className={`transition-opacity ${sortConfig.key === 'faturado' ? 'opacity-100 text-primary' : 'opacity-0 group-hover/head:opacity-50'}`} />
                                     </div>
                                 </th>
                                 <th
@@ -429,7 +438,7 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                         <tbody className="divide-y divide-border">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="8" className="py-20 text-center">
+                                    <td colSpan="9" className="py-20 text-center">
                                         <div className="flex flex-col items-center justify-center">
                                             <Loader2 size={32} className="text-primary animate-spin mb-3" />
                                             <span className="text-muted-foreground text-sm animate-pulse">Carregando vendas...</span>
@@ -438,7 +447,7 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                 </tr>
                             ) : filteredOrders.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="py-20 text-center text-muted-foreground">
+                                    <td colSpan="9" className="py-20 text-center text-muted-foreground">
                                         <div className="flex flex-col items-center justify-center opacity-50">
                                             <FileText size={48} className="mb-4" />
                                             <p>Nenhuma venda encontrada.</p>
@@ -458,18 +467,22 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                             </div>
                                         </td>
                                         <td className="px-4 py-2">
-                                            <div className="flex items-center gap-3">
+                                            {order.numeroVenda ? (
+                                                <span className="font-mono text-xs text-muted-foreground">
+                                                    #{order.numeroVenda}
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground/30">-</span>
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-2">
+                                            <div className="flex items-center justify-center">
                                                 <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${order.faturado
                                                     ? 'bg-green-500/10 text-green-500 border-green-500/20'
                                                     : 'bg-orange-500/10 text-orange-500 border-orange-500/20'
                                                     }`} title={order.faturado ? 'Faturado' : 'Pendente de Faturamento'}>
                                                     <DollarSign size={16} />
                                                 </div>
-                                                {order.numeroVenda && (
-                                                    <span className="font-mono text-xs text-muted-foreground">
-                                                        #{order.numeroVenda}
-                                                    </span>
-                                                )}
                                             </div>
                                         </td>
                                         <td className="px-4 py-2">
