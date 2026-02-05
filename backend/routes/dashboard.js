@@ -196,6 +196,168 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Get details for a specific metric
+router.get('/details', async (req, res) => {
+    try {
+        const { metric, startDate, endDate } = req.query;
+
+        // Build date filter
+        let dateFilter = {};
+        if (startDate && endDate) {
+            const end = new Date(`${endDate}T23:59:59.999`);
+            dateFilter = {
+                date: {
+                    gte: new Date(startDate),
+                    lte: end
+                }
+            };
+        } else if (startDate) {
+            dateFilter = {
+                date: { gte: new Date(startDate) }
+            };
+        }
+
+        let data = [];
+
+        switch (metric) {
+            case 'totalRevenue':
+            case 'orderRevenue':
+                // For orderRevenue, we filter for orders WITHOUT packageId and packageBilling
+                const orderRevWhere = {
+                    ...dateFilter,
+                    status: 'VENDA'
+                };
+                if (metric === 'orderRevenue') {
+                    orderRevWhere.packageId = null;
+                    orderRevWhere.packageBilling = null;
+                }
+                data = await prisma.order.findMany({
+                    where: orderRevWhere,
+                    include: { client: { select: { name: true } } },
+                    orderBy: { date: 'desc' }
+                });
+                break;
+
+            case 'packageRevenue':
+                data = await prisma.order.findMany({
+                    where: {
+                        ...dateFilter,
+                        status: 'VENDA',
+                        OR: [
+                            { packageId: { not: null } },
+                            { packageBilling: { isNot: null } }
+                        ]
+                    },
+                    include: { client: { select: { name: true } } },
+                    orderBy: { date: 'desc' }
+                });
+                break;
+
+            case 'activeClients':
+                data = await prisma.client.findMany({
+                    where: { status: 'ativado' },
+                    orderBy: { name: 'asc' }
+                });
+                // Map to a consistent format for the modal
+                data = data.map(c => ({
+                    id: c.id,
+                    title: c.name,
+                    client: c.company || 'Pessoa Física',
+                    value: c.email || c.phone,
+                    date: c.createdAt
+                }));
+                break;
+
+            case 'totalCache':
+            case 'orderCache':
+            case 'packageCache':
+                const cacheWhere = {
+                    ...dateFilter,
+                    status: 'VENDA'
+                };
+
+                if (metric === 'orderCache') {
+                    cacheWhere.packageId = null;
+                    cacheWhere.packageBilling = null;
+                } else if (metric === 'packageCache') {
+                    cacheWhere.OR = [
+                        { packageId: { not: null } },
+                        { packageBilling: { isNot: null } }
+                    ];
+                }
+
+                data = await prisma.order.findMany({
+                    where: cacheWhere,
+                    include: { client: { select: { name: true } } },
+                    orderBy: { date: 'desc' }
+                });
+
+                // For Cache metrics, we want to show the cache value
+                data = data.map(o => ({
+                    ...o,
+                    displayValue: o.cacheValor
+                }));
+
+                // If it's totalCache or packageCache, include fixed fees
+                if (metric === 'totalCache' || metric === 'packageCache') {
+                    const locutoresWithFixed = await prisma.locutor.findMany({
+                        where: {
+                            valorFixoMensal: { gt: 0 },
+                            orders: {
+                                some: {
+                                    ...dateFilter,
+                                    status: 'VENDA'
+                                }
+                            }
+                        }
+                    });
+
+                    const fixedFeesData = locutoresWithFixed.map(l => ({
+                        id: `FIXED-${l.id}`,
+                        title: `Fixo Mensal: ${l.name}`,
+                        client: 'Custo Fixo',
+                        displayValue: l.valorFixoMensal,
+                        date: new Date(), // Just for list positioning
+                        status: 'FIXO'
+                    }));
+
+                    data = [...data, ...fixedFeesData];
+                }
+                break;
+
+            case 'activeOrders':
+                data = await prisma.order.findMany({
+                    where: {
+                        entregue: false,
+                        ...dateFilter
+                    },
+                    include: { client: { select: { name: true } } },
+                    orderBy: { date: 'desc' }
+                });
+                break;
+
+            default:
+                return res.status(400).json({ error: 'Métrica inválida' });
+        }
+
+        // Standardize returning data
+        const formattedData = data.map(item => ({
+            id: item.id.toString(),
+            title: item.title || item.name || 'Sem título',
+            client: item.client?.name || item.client || 'N/A',
+            value: item.displayValue || item.vendaValor || item.value || 0,
+            date: item.date || item.createdAt,
+            status: item.status || (item.entregue ? 'ENTREGUE' : 'PRODUÇÃO'),
+            type: item.tipo || 'N/A'
+        }));
+
+        res.json(formattedData);
+    } catch (error) {
+        console.error('Dashboard details error:', error);
+        res.status(500).json({ error: 'Erro ao carregar detalhes do dashboard' });
+    }
+});
+
 function formatRelativeTime(date) {
     const now = new Date();
     const diffInMs = now - new Date(date);

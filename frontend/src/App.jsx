@@ -43,6 +43,7 @@ import Relatorios from './components/Relatorios';
 import PackageList from './components/PackageList';
 import PackageOrderForm from './components/PackageOrderForm';
 import RecurringServiceList from './components/RecurringServiceList';
+import DashboardDetailModal from './components/DashboardDetailModal';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -69,6 +70,10 @@ const CRM = () => {
 
   // Mobile Menu State
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Dashboard Details State
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedMetric, setSelectedMetric] = useState(null);
 
   useEffect(() => {
     // Close mobile menu when tab changes
@@ -228,6 +233,7 @@ const CRM = () => {
   const stats = dashboardData ? [
     // Line 1: Revenues + Growth
     {
+      id: 'totalRevenue',
       title: 'Receita Total',
       value: formatCurrency(dashboardData.metrics.totalRevenue),
       trend: '+0%', // To be implemented: real growth
@@ -238,6 +244,7 @@ const CRM = () => {
       textColor: 'text-amber-500'
     },
     {
+      id: 'packageRevenue',
       title: 'Receita de Pacotes',
       value: formatCurrency(dashboardData.metrics.packageRevenue || 0),
       trend: `${Math.round((dashboardData.metrics.packageRevenue / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
@@ -248,6 +255,7 @@ const CRM = () => {
       textColor: 'text-cyan-500'
     },
     {
+      id: 'orderRevenue',
       title: 'Receita de Avulsos',
       value: formatCurrency(dashboardData.metrics.orderRevenue || 0),
       trend: `${Math.round((dashboardData.metrics.orderRevenue / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
@@ -258,6 +266,7 @@ const CRM = () => {
       textColor: 'text-emerald-500'
     },
     {
+      id: 'activeClients',
       title: 'Clientes Ativos',
       value: dashboardData.metrics.activeClients.toString(),
       trend: '+1',
@@ -270,6 +279,7 @@ const CRM = () => {
 
     // Line 2: Costs + Operations
     {
+      id: 'totalCache',
       title: 'Custos com Cachê',
       value: formatCurrency(dashboardData.metrics.totalCache),
       trend: `${Math.round((dashboardData.metrics.totalCache / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
@@ -280,6 +290,7 @@ const CRM = () => {
       textColor: 'text-purple-500'
     },
     {
+      id: 'packageCache',
       title: 'Custo Pacotes',
       value: formatCurrency(dashboardData.metrics.packageCache || 0),
       trend: `${Math.round((dashboardData.metrics.packageCache / dashboardData.metrics.packageRevenue) * 100 || 0)}%`,
@@ -290,6 +301,7 @@ const CRM = () => {
       textColor: 'text-pink-500'
     },
     {
+      id: 'orderCache',
       title: 'Custo Avulsos',
       value: formatCurrency(dashboardData.metrics.orderCache || 0),
       trend: `${Math.round((dashboardData.metrics.orderCache / dashboardData.metrics.orderRevenue) * 100 || 0)}%`,
@@ -300,6 +312,7 @@ const CRM = () => {
       textColor: 'text-rose-500'
     },
     {
+      id: 'activeOrders',
       title: 'Pedidos Ativos',
       value: dashboardData.metrics.activeOrders.toString(),
       trend: 'ESTÁVEL',
@@ -502,7 +515,14 @@ const CRM = () => {
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-fade-in">
                       {stats.map((stat, i) => (
-                        <div key={i} className="card-dark p-6 group cursor-pointer">
+                        <div
+                          key={i}
+                          className="card-dark p-6 group cursor-pointer hover:border-primary/30 transition-all hover:shadow-lg active:scale-[0.98]"
+                          onClick={() => {
+                            setSelectedMetric({ id: stat.id, label: stat.title });
+                            setShowDetailModal(true);
+                          }}
+                        >
                           <div className="flex items-start justify-between mb-4">
                             <div>
                               <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">{stat.title}</span>
@@ -662,6 +682,17 @@ const CRM = () => {
       {showOrderForm && <OrderForm order={selectedOrder} initialStatus={initialOrderStatus} initialClient={selectedClient} onClose={() => { setShowOrderForm(false); setSelectedOrder(null); setSelectedClient(null); }} onSuccess={() => { setShowOrderForm(false); setSelectedOrder(null); setSelectedClient(null); setRefreshTrigger(prev => prev + 1); }} />}
       {showPackageOrderForm && <PackageOrderForm pkg={selectedPackage} onClose={() => { setShowPackageOrderForm(false); setSelectedPackage(null); }} onSuccess={() => { setShowPackageOrderForm(false); setSelectedPackage(null); setRefreshTrigger(prev => prev + 1); }} />}
       {showLocutorForm && <LocutorForm locutor={selectedLocutor} onClose={() => { setShowLocutorForm(false); setSelectedLocutor(null); }} onSave={() => { setShowLocutorForm(false); setSelectedLocutor(null); setRefreshTrigger(prev => prev + 1); }} />}
+      {showDetailModal && selectedMetric && (
+        <DashboardDetailModal
+          metric={selectedMetric.id}
+          metricLabel={selectedMetric.label}
+          dateRange={dateRange}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedMetric(null);
+          }}
+        />
+      )}
       <Toaster position="top-right" />
     </div >
   );

@@ -49,6 +49,10 @@ export const dashboardAPI = {
     get: async (params = {}) => {
         const queryString = new URLSearchParams(params).toString();
         return fetchAPI(`/dashboard${queryString ? `?${queryString}` : ''}`);
+    },
+    getDetails: async (metric, params = {}) => {
+        const queryString = new URLSearchParams({ ...params, metric }).toString();
+        return fetchAPI(`/dashboard/details?${queryString}`);
     }
 };
 
