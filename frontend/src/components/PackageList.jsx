@@ -402,8 +402,23 @@ const PackageList = ({ onAddNewOrder }) => {
         // setIsDuplicateMode(false);
     };
 
-    const handleSuccessUniversalEdit = () => {
-        fetchAllOrders();
+    const handleSuccessUniversalEdit = async () => {
+        await fetchAllOrders();
+        await fetchPackages();
+
+        // If package modal is open, refresh selectedPackage with updated data
+        if (selectedPackage) {
+            try {
+                // Fetch fresh package list and find the updated package
+                const freshPackages = await clientPackageAPI.listAll();
+                const updatedPkg = freshPackages.find(p => p.id === selectedPackage.id);
+                if (updatedPkg) {
+                    setSelectedPackage(updatedPkg);
+                }
+            } catch (error) {
+                console.error('Error refreshing selected package:', error);
+            }
+        }
     };
 
     // Batch Actions logic
