@@ -553,7 +553,7 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                                     )}
                                                     {order.arquivoOS && (
                                                         <a
-                                                            href={order.arquivoOS.startsWith('http') ? order.arquivoOS : `${STORAGE_URL}${order.arquivoOS.startsWith('/') ? '' : '/'}${order.arquivoOS}`}
+                                                            href={order.arquivoOS}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 uppercase tracking-wider flex items-center gap-1 hover:bg-blue-500/30 transition-all font-bold"

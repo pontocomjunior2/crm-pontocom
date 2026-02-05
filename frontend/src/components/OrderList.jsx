@@ -420,7 +420,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                                     )}
                                                     {order.arquivoOS && (
                                                         <a
-                                                            href={order.arquivoOS.startsWith('http') ? order.arquivoOS : `${STORAGE_URL}${order.arquivoOS.startsWith('/') ? '' : '/'}${order.arquivoOS}`}
+                                                            href={order.arquivoOS}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 uppercase tracking-wider flex items-center gap-1 hover:bg-blue-500/30 transition-all"
@@ -686,7 +686,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                                     </div>
                                 </div>
                                 <a
-                                    href={pendencyModal.osFile.startsWith('http') ? pendencyModal.osFile : `${STORAGE_URL}${pendencyModal.osFile.startsWith('/') ? '' : '/'}${pendencyModal.osFile}`}
+                                    href={pendencyModal.osFile}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-xl hover:bg-blue-600 transition-all text-xs font-bold"

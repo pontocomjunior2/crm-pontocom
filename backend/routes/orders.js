@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const prisma = require('../db');
+const storageService = require('../services/storageService');
 
 const router = express.Router();
 
@@ -1246,7 +1247,7 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// POST /api/orders/:id/upload-os - Upload OS/PP file
+// POST /api/orders/:id/upload-os - Upload OS/PP file to Google Drive
 router.post('/:id/upload-os', upload.single('file'), async (req, res) => {
     try {
         const { id } = req.params;
@@ -1255,7 +1256,14 @@ router.post('/:id/upload-os', upload.single('file'), async (req, res) => {
             return res.status(400).json({ error: 'Nenhum arquivo enviado' });
         }
 
-        const arquivoOS = `/uploads/os/${req.file.filename}`;
+        // Upload to Google Drive instead of local storage
+        const driveFile = await storageService.uploadFile(req.file.path, req.file.filename);
+        const arquivoOS = driveFile.webViewLink;
+
+        // Clean up local temporary file
+        if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
 
         const order = await prisma.order.update({
             where: { id },
@@ -1265,14 +1273,14 @@ router.post('/:id/upload-os', upload.single('file'), async (req, res) => {
             }
         });
 
-        res.json({ message: 'Arquivo enviado com sucesso', arquivoOS, order });
+        res.json({ message: 'Arquivo enviado com sucesso para o Google Drive', arquivoOS, order });
     } catch (error) {
-        console.error('Error uploading OS file:', error);
-        res.status(500).json({ error: 'Falha ao enviar arquivo' });
+        console.error('Error uploading OS file to Drive:', error);
+        res.status(500).json({ error: 'Falha ao enviar arquivo para o Google Drive', message: error.message });
     }
 });
 
-// DELETE /api/orders/:id/remove-os - Remove OS/PP file association and delete file
+// DELETE /api/orders/:id/remove-os - Remove OS/PP file association
 router.delete('/:id/remove-os', async (req, res) => {
     try {
         const { id } = req.params;
@@ -1286,12 +1294,9 @@ router.delete('/:id/remove-os', async (req, res) => {
             return res.status(404).json({ error: 'Pedido não encontrado' });
         }
 
-        if (order.arquivoOS) {
-            const filePath = path.join(__dirname, '..', order.arquivoOS);
-            if (fs.existsSync(filePath)) {
-                fs.unlinkSync(filePath);
-            }
-        }
+        // We don't necessarily need to delete from Drive to keep history, 
+        // but if we wanted to, we would need the fileId stored in the DB.
+        // For now, we just remove the association from the order.
 
         await prisma.order.update({
             where: { id },
@@ -1301,10 +1306,10 @@ router.delete('/:id/remove-os', async (req, res) => {
             }
         });
 
-        res.json({ message: 'Arquivo removido com sucesso' });
+        res.json({ message: 'Associação de arquivo removida com sucesso' });
     } catch (error) {
-        console.error('Error removing OS file:', error);
-        res.status(500).json({ error: 'Falha ao remover arquivo' });
+        console.error('Error removing OS association:', error);
+        res.status(500).json({ error: 'Falha ao remover associação de arquivo' });
     }
 });
 
