@@ -14,6 +14,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'pontocom-secret-key-2026';
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads/os', express.static(path.join(__dirname, 'uploads', 'os')));
 
 const PORT = process.env.PORT || 3000;
 
