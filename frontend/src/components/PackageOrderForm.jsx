@@ -128,7 +128,8 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                 if (firstNum) {
                     startNumber = parseInt(firstNum[0]);
                 } else {
-                    startNumber = pkg.usedAudios;
+                    // FIXED: Always add +1 to ensure numbering starts at 01, never 00
+                    startNumber = pkg.usedAudios + 1;
                 }
             }
         }
