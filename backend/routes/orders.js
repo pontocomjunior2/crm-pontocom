@@ -691,7 +691,9 @@ router.put('/:id', async (req, res) => {
             creditsConsumed,
             creditsConsumedSupplier,
             costPerCreditSnapshot,
-            isBonus
+            isBonus,
+            cachePago,
+            serviceType
         } = req.body;
 
         // Check if order exists
@@ -872,6 +874,7 @@ router.put('/:id', async (req, res) => {
                 creditsConsumedSupplier: creditsConsumedSupplier !== undefined ? parseInt(creditsConsumedSupplier) : undefined,
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
                 isBonus: isBonus !== undefined ? isBonus : undefined,
+                serviceType: serviceType !== undefined ? serviceType : undefined,
                 date: req.body.date ? new Date(req.body.date) : undefined
             },
             include: {
