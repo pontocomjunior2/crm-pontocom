@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { recurringServiceAPI, clientAPI } from '../services/api';
 import { toast } from 'react-hot-toast';
+import { getLocalISODate } from '../utils/formatters';
 
 const RecurringServiceForm = ({ service, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
@@ -26,7 +27,7 @@ const RecurringServiceForm = ({ service, onClose, onSuccess }) => {
         isAutomatic: true,
         hasCommission: false,
         autoBilling: false,
-        startDate: new Date().toISOString().split('T')[0],
+        startDate: getLocalISODate(),
         nextExecution: ''
     });
 
@@ -41,8 +42,8 @@ const RecurringServiceForm = ({ service, onClose, onSuccess }) => {
                 isAutomatic: service.isAutomatic,
                 hasCommission: service.hasCommission,
                 autoBilling: service.autoBilling,
-                startDate: service.startDate ? new Date(service.startDate).toISOString().split('T')[0] : '',
-                nextExecution: service.nextExecution ? new Date(service.nextExecution).toISOString().split('T')[0] : ''
+                startDate: service.startDate ? getLocalISODate(new Date(service.startDate)) : '',
+                nextExecution: service.nextExecution ? getLocalISODate(new Date(service.nextExecution)) : ''
             });
         }
     }, [service]);

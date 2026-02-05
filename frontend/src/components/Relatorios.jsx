@@ -43,7 +43,7 @@ import {
     Bar
 } from 'recharts';
 import { analyticsAPI, orderAPI } from '../services/api';
-import { formatCurrency, formatDisplayDate } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate, getLocalISODate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 
 const Relatorios = () => {
@@ -179,7 +179,7 @@ const Relatorios = () => {
                         <button
                             onClick={() => {
                                 const now = new Date();
-                                const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+                                const firstDay = getLocalISODate(new Date(now.getFullYear(), now.getMonth(), 1));
                                 setDateRange({ startDate: firstDay, endDate: '' });
                             }}
                             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${dateRange.startDate && !dateRange.endDate ? 'bg-white/10 text-white shadow-sm' : 'text-muted-foreground hover:text-white'}`}

@@ -31,7 +31,7 @@ import {
     Upload
 } from 'lucide-react';
 import { clientPackageAPI, orderAPI } from '../services/api';
-import { formatCurrency, formatDisplayDate } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate, getLocalISODate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 import PackageOrderForm from './PackageOrderForm';
 import PackageBatchUploadModal from './PackageBatchUploadModal';
@@ -345,7 +345,7 @@ const PackageList = ({ onAddNewOrder }) => {
                 cacheValor: parseFloat(order.cacheValor || 0),
                 supplierId: order.supplierId,
                 status: 'VENDA',
-                date: new Date().toISOString().split('T')[0],
+                date: getLocalISODate(),
                 serviceType: 'PACOTE DE AUDIOS',
                 vendaValor: 0,
                 comentarios: order.comentarios // Preserve comments

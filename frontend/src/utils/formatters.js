@@ -179,15 +179,22 @@ export const validateEmail = (email) => {
 
 export const formatDisplayDate = (value) => {
     if (!value) return '-';
-    const date = new Date(value);
-    // Se a data vier apenas como YYYY-MM-DD, o new Date() interpreta como UTC Meia-noite.
-    // Ao converter para string local em fusos negativos (Brasil), ele subtrai horas e cai no dia anterior.
-    // Ajustamos somando o offset do timezone para garantir que mostre o dia correto do calendário.
-    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
-    return adjustedDate.toLocaleDateString('pt-BR');
+    // Se a data vier como string YYYY-MM-DD, tratamos para não fatiar no fuso
+    const date = typeof value === 'string' && value.includes('-') && !value.includes('T')
+        ? new Date(value + 'T12:00:00') // Usar meio-dia para evitar problemas de borda de fuso
+        : new Date(value);
+
+    return date.toLocaleDateString('pt-BR');
 };
 
 export const formatDate = formatDisplayDate;
+
+export const getLocalISODate = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
 
 export const removeMask = (value) => {
     return value ? value.replace(/\D/g, '') : '';

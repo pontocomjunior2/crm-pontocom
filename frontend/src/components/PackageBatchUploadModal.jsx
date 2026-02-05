@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { locutorAPI, orderAPI } from '../services/api';
 import { showToast } from '../utils/toast';
+import { getLocalISODate } from '../utils/formatters';
 
 const PackageBatchUploadModal = ({ pkg, onClose, onSuccess }) => {
     const [loading, setLoading] = useState(false);
@@ -26,7 +27,7 @@ const PackageBatchUploadModal = ({ pkg, onClose, onSuccess }) => {
         locutorId: '',
         locutor: '',
         supplierId: '',
-        date: new Date().toISOString().split('T')[0],
+        date: getLocalISODate(),
         creditsConsumed: 1,
         creditsConsumedSupplier: 1,
     });

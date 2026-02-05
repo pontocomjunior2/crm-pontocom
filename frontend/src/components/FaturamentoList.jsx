@@ -488,10 +488,10 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                                         <td className="px-4 py-2">
                                             <div className="flex flex-col">
                                                 <span className="text-sm text-muted-foreground font-medium">
-                                                    {formatDisplayDate(order.updatedAt || order.date)}
+                                                    {formatDisplayDate(order.date)}
                                                 </span>
                                                 <span className="text-[10px] text-muted-foreground/70">
-                                                    {new Date(order.updatedAt || order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    {new Date(order.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>
                                             </div>
                                         </td>

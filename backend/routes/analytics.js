@@ -11,11 +11,13 @@ router.get('/financial-summary', async (req, res) => {
         if (startDate || endDate) {
             dateFilter.date = {};
             if (startDate) {
-                const sDate = new Date(startDate);
+                // startDate is YYYY-MM-DD, we want 00:00:00 at GMT-3
+                const sDate = new Date(`${startDate}T00:00:00-03:00`);
                 if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
             }
             if (endDate) {
-                const eDate = new Date(endDate);
+                // endDate is YYYY-MM-DD, we want 23:59:59.999 at GMT-3
+                const eDate = new Date(`${endDate}T23:59:59.999-03:00`);
                 if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
             }
             // Remove date filter if both were invalid
@@ -88,19 +90,23 @@ router.get('/financial-summary', async (req, res) => {
 router.get('/sales-trends', async (req, res) => {
     try {
         const { months = 6, startDate, endDate } = req.query;
-        const now = new Date();
+
+        // Use GMT-3 for current date calculation
+        const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
         const defaultStart = new Date(now.getFullYear(), now.getMonth() - parseInt(months) + 1, 1);
+        // Format defaultStart as YYYY-MM-DD for consistency
+        const defaultStartStr = defaultStart.toISOString().split('T')[0];
 
         const dateFilter = {
-            date: { gte: defaultStart }
+            date: { gte: new Date(`${defaultStartStr}T00:00:00-03:00`) }
         };
 
         if (startDate) {
-            const sDate = new Date(startDate);
+            const sDate = new Date(`${startDate}T00:00:00-03:00`);
             if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
         }
         if (endDate) {
-            const eDate = new Date(endDate);
+            const eDate = new Date(`${endDate}T23:59:59.999-03:00`);
             if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
         }
 
@@ -112,10 +118,17 @@ router.get('/sales-trends', async (req, res) => {
             orderBy: { date: 'asc' }
         });
 
-        // Group by month
+        // Group by month using GMT-3 for the labels
         const trends = {};
         orders.forEach(order => {
-            const monthLabel = new Date(order.date).toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+            // Ensure we use the date as-is or adjusted to GMT-3 for grouping
+            const date = new Date(order.date);
+            const monthLabel = date.toLocaleString('pt-BR', {
+                month: 'short',
+                year: '2-digit',
+                timeZone: 'America/Sao_Paulo'
+            });
+
             if (!trends[monthLabel]) {
                 trends[monthLabel] = { month: monthLabel, revenue: 0, orders: 0 };
             }
@@ -169,11 +182,11 @@ router.get('/performance-metrics', async (req, res) => {
         if (startDate || endDate) {
             dateFilter.date = {};
             if (startDate) {
-                const sDate = new Date(startDate);
+                const sDate = new Date(`${startDate}T00:00:00-03:00`);
                 if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
             }
             if (endDate) {
-                const eDate = new Date(endDate);
+                const eDate = new Date(`${endDate}T23:59:59.999-03:00`);
                 if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
             }
         }
@@ -214,11 +227,11 @@ router.get('/cache-report', async (req, res) => {
         if (startDate || endDate) {
             dateFilter.date = {};
             if (startDate) {
-                const sDate = new Date(startDate);
+                const sDate = new Date(`${startDate}T00:00:00-03:00`);
                 if (!isNaN(sDate.getTime())) dateFilter.date.gte = sDate;
             }
             if (endDate) {
-                const eDate = new Date(endDate);
+                const eDate = new Date(`${endDate}T23:59:59.999-03:00`);
                 if (!isNaN(eDate.getTime())) dateFilter.date.lte = eDate;
             }
             // Remove date filter if both were invalid

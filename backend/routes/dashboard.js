@@ -10,26 +10,19 @@ router.get('/', async (req, res) => {
         // Build date filter
         let dateFilter = {};
         if (startDate && endDate) {
-            // Append time to ensure it picks up the end of the day in LOCAL time (or consistent string parsing)
-            // Using ISO format with T without Z usually parses as local time or explicit components
-            const end = new Date(`${endDate}T23:59:59.999`);
-
-            console.log('Dashboard Filter:', {
-                startDateArgs: startDate,
-                endDateArgs: endDate,
-                constructedEnd: end,
-                endISO: end.toISOString()
-            });
+            // Normalize to GMT-3
+            const start = new Date(`${startDate}T00:00:00-03:00`);
+            const end = new Date(`${endDate}T23:59:59.999-03:00`);
 
             dateFilter = {
                 date: {
-                    gte: new Date(startDate),
+                    gte: start,
                     lte: end
                 }
             };
         } else if (startDate) {
             dateFilter = {
-                date: { gte: new Date(startDate) }
+                date: { gte: new Date(`${startDate}T00:00:00-03:00`) }
             };
         }
 
@@ -204,16 +197,17 @@ router.get('/details', async (req, res) => {
         // Build date filter
         let dateFilter = {};
         if (startDate && endDate) {
-            const end = new Date(`${endDate}T23:59:59.999`);
+            const start = new Date(`${startDate}T00:00:00-03:00`);
+            const end = new Date(`${endDate}T23:59:59.999-03:00`);
             dateFilter = {
                 date: {
-                    gte: new Date(startDate),
+                    gte: start,
                     lte: end
                 }
             };
         } else if (startDate) {
             dateFilter = {
-                date: { gte: new Date(startDate) }
+                date: { gte: new Date(`${startDate}T00:00:00-03:00`) }
             };
         }
 

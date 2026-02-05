@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Package, Calendar, DollarSign, History, Building2, Settings } from 'lucide-react';
 import { supplierAPI } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, getLocalISODate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 
 const SupplierList = () => {
@@ -17,7 +17,7 @@ const SupplierList = () => {
         name: '',
         price: '',
         credits: '',
-        purchaseDate: new Date().toISOString().substring(0, 10)
+        purchaseDate: getLocalISODate()
     });
 
     useEffect(() => {
@@ -59,7 +59,7 @@ const SupplierList = () => {
                 name: '',
                 price: '',
                 credits: '',
-                purchaseDate: new Date().toISOString().substring(0, 10)
+                purchaseDate: getLocalISODate()
             });
             fetchSuppliers();
             showToast.success('Pacote de créditos adicionado!');

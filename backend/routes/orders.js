@@ -102,8 +102,8 @@ router.get('/', async (req, res) => {
         // Date range filter
         if (dateFrom || dateTo) {
             where.date = {};
-            if (dateFrom) where.date.gte = new Date(dateFrom);
-            if (dateTo) where.date.lte = new Date(dateTo);
+            if (dateFrom) where.date.gte = new Date(`${dateFrom}T00:00:00-03:00`);
+            if (dateTo) where.date.lte = new Date(`${dateTo}T23:59:59.999-03:00`);
         }
 
         // Specific filters - now added to AND conditions

@@ -15,7 +15,7 @@ import {
     Building2
 } from 'lucide-react';
 import { orderAPI, locutorAPI, clientPackageAPI } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, getLocalISODate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 
 const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
@@ -37,7 +37,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         cacheValor: orderToEdit ? parseFloat(orderToEdit.cacheValor) : 0,
         supplierId: orderToEdit?.supplierId || '',
         status: orderToEdit?.status || 'VENDA',
-        date: orderToEdit?.date ? new Date(orderToEdit.date).toISOString().split('T')[0] : ''
+        date: orderToEdit?.date ? getLocalISODate(new Date(orderToEdit.date)) : getLocalISODate()
     });
 
     useEffect(() => {
@@ -257,7 +257,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
                 creditsConsumed: parseInt(formData.creditsToDebit),
                 creditsConsumedSupplier: parseInt(formData.creditsConsumedSupplier),
                 serviceType: 'PACOTE DE AUDIOS',
-                date: formData.date || new Date().toISOString()
+                date: formData.date || getLocalISODate()
             };
 
             if (orderToEdit) {

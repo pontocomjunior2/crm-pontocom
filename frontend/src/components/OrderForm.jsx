@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Hash, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2, Calendar } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
-import { parseCurrency, formatCurrency } from '../utils/formatters';
+import { parseCurrency, formatCurrency, getLocalISODate } from '../utils/formatters';
 import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI } from '../services/api';
 import { showToast } from '../utils/toast';
 
@@ -32,8 +32,8 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         precisaNF: undefined, // Removed
         dispensaNF: order?.dispensaNF || false,
         emiteBoleto: order?.emiteBoleto || false,
-        dataFaturar: order?.dataFaturar ? new Date(order.dataFaturar).toISOString().split('T')[0] : '',
-        vencimento: order?.vencimento ? new Date(order.vencimento).toISOString().split('T')[0] : '',
+        dataFaturar: order?.dataFaturar ? getLocalISODate(new Date(order.dataFaturar)) : '',
+        vencimento: order?.vencimento ? getLocalISODate(new Date(order.vencimento)) : '',
         pago: order?.pago || false,
         pendenciaFinanceiro: order?.pendenciaFinanceiro || false,
         pendenciaMotivo: order?.pendenciaMotivo || '',
@@ -48,7 +48,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         cachePago: order?.cachePago || false,
         packageId: order?.packageId || null,
         isBonus: order?.isBonus || false,
-        date: order?.date ? new Date(order.date).toISOString().split('T')[0] : ''
+        date: order?.date ? getLocalISODate(new Date(order.date)) : getLocalISODate()
     });
 
     const [activePackage, setActivePackage] = useState(null);
@@ -483,7 +483,10 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 // Let's send only if truthy.
             };
 
-            if (formData.date) dataToSend.date = formData.date;
+            if (formData.date) {
+                // Form data date is YYYY-MM-DD
+                dataToSend.date = formData.date;
+            }
 
             // Note: File upload would need to be handled separately with FormData
             // For now, we'll just save the order data

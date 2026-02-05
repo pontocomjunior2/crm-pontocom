@@ -49,7 +49,7 @@ import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { dashboardAPI, STORAGE_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
-import { formatCurrency } from './utils/formatters';
+import { formatCurrency, getLocalISODate } from './utils/formatters';
 
 const CRM = () => {
   const { user, logout, isAdmin, loading } = useAuth();
@@ -92,8 +92,8 @@ const CRM = () => {
 
     // Default to 'This Month'
     const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-    const end = today.toISOString().split('T')[0];
+    const start = getLocalISODate(new Date(today.getFullYear(), today.getMonth(), 1));
+    const end = getLocalISODate(today);
 
     return {
       label: 'Este Mês',
@@ -167,7 +167,7 @@ const CRM = () => {
   const handleDateFilterChange = (value) => {
     const today = new Date();
     let start = '';
-    let end = today.toISOString().split('T')[0];
+    let end = getLocalISODate(today);
     let label = '';
 
     switch (value) {
@@ -177,23 +177,31 @@ const CRM = () => {
         label = 'Todo o Período';
         break;
       case '7days':
-        start = new Date(today.setDate(today.getDate() - 7)).toISOString().split('T')[0];
+        const d7 = new Date();
+        d7.setDate(d7.getDate() - 7);
+        start = getLocalISODate(d7);
         label = 'Últimos 7 dias';
         break;
       case '15days':
-        start = new Date(today.setDate(today.getDate() - 15)).toISOString().split('T')[0];
+        const d15 = new Date();
+        d15.setDate(d15.getDate() - 15);
+        start = getLocalISODate(d15);
         label = 'Últimos 15 dias';
         break;
       case '30days':
-        start = new Date(today.setDate(today.getDate() - 30)).toISOString().split('T')[0];
+        const d30 = new Date();
+        d30.setDate(d30.getDate() - 30);
+        start = getLocalISODate(d30);
         label = 'Últimos 30 dias';
         break;
       case 'thisMonth':
-        start = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+        start = getLocalISODate(new Date(today.getFullYear(), today.getMonth(), 1));
         label = 'Este Mês';
         break;
       case '12months':
-        start = new Date(today.setFullYear(today.getFullYear() - 1)).toISOString().split('T')[0];
+        const d12m = new Date();
+        d12m.setFullYear(d12m.getFullYear() - 1);
+        start = getLocalISODate(d12m);
         label = 'Últimos 12 meses';
         break;
       case 'custom':

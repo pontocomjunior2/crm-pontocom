@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Loader2, CheckCircle2, AlertCircle, Building2, Mail, Phone, MapPin, Music, Plus, Calendar, Flame, Clock, Pencil, Trash2 } from 'lucide-react';
-import { formatCNPJ, formatPhone, formatCEP, removeMask, validateCNPJ, validateEmail, formatCurrency, parseCurrency } from '../utils/formatters';
+import { formatCNPJ, formatPhone, formatCEP, removeMask, validateCNPJ, validateEmail, formatCurrency, parseCurrency, getLocalISODate } from '../utils/formatters';
 import { lookupCNPJ, lookupCEP, clientAPI, clientPackageAPI } from '../services/api';
 import { showToast } from '../utils/toast';
 
@@ -54,8 +54,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         fixedFee: 0,
         audioLimit: 0,
         extraAudioFee: 0,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString().split('T')[0],
+        startDate: getLocalISODate(),
+        endDate: getLocalISODate(new Date(new Date().setMonth(new Date().getMonth() + 1))),
         active: true
     });
 
@@ -219,8 +219,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
             fixedFee: pkg.fixedFee,
             audioLimit: pkg.audioLimit,
             extraAudioFee: pkg.extraAudioFee,
-            startDate: new Date(pkg.startDate).toISOString().split('T')[0],
-            endDate: new Date(pkg.endDate).toISOString().split('T')[0],
+            startDate: getLocalISODate(new Date(pkg.startDate)),
+            endDate: getLocalISODate(new Date(pkg.endDate)),
             active: pkg.active
         });
         setShowPackageForm(true);
