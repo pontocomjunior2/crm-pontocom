@@ -79,7 +79,8 @@ router.get('/', async (req, res) => {
             dateTo = '',
             search = '',
             sortBy = 'date',
-            sortOrder = 'desc'
+            sortOrder = 'desc',
+            serviceType = ''
         } = req.query;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -97,6 +98,11 @@ router.get('/', async (req, res) => {
         // Type filter
         if (tipo) {
             where.tipo = tipo;
+        }
+
+        // Service Type filter
+        if (serviceType) {
+            where.serviceType = serviceType;
         }
 
         // Date range filter
