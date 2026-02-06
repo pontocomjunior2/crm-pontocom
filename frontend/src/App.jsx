@@ -44,6 +44,8 @@ import Relatorios from './components/Relatorios';
 import PackageList from './components/PackageList';
 import PackageOrderForm from './components/PackageOrderForm';
 import RecurringServiceList from './components/RecurringServiceList';
+
+import AdminSettings from './components/AdminSettings';
 import DashboardDetailModal from './components/DashboardDetailModal';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
@@ -120,6 +122,7 @@ const CRM = () => {
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} />, permission: 'accessRelatorios' },
     { id: 'usuarios', label: 'Usuários', icon: <Shield size={20} />, permission: 'accessUsuarios' },
     { id: 'servicos', label: 'Serviços Extras', icon: <Clock size={20} />, adminOnly: true },
+    { id: 'config', label: 'Configurações', icon: <Settings size={20} />, adminOnly: true },
     { id: 'backup', label: 'Backup (GD)', icon: <Database size={20} />, adminOnly: true },
     { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} />, alwaysShow: true },
   ];
@@ -689,7 +692,14 @@ const CRM = () => {
           )}
 
 
-          {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup', 'pacotes', 'servicos'].includes(activeTab) && (
+          {activeTab === 'config' && isAdmin && (
+            <div className="flex-1 overflow-y-auto custom-scrollbar h-full max-w-[1400px] mx-auto w-full">
+              <AdminSettings />
+            </div>
+          )}
+
+
+          {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup', 'pacotes', 'servicos', 'config'].includes(activeTab) && (
             <div className="p-20 text-center">
               <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
               <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>

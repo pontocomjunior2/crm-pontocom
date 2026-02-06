@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { X, Hash, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2, Calendar } from 'lucide-react';
+import { X, Hash, Loader2, CheckCircle2, AlertCircle, ShoppingCart, DollarSign, Calculator, Paperclip, Image as ImageIcon, Search, TrendingUp, TrendingDown, FileText, ArrowUpRight, Trash2, Calendar, Users } from 'lucide-react';
 import { calculateOrderMargins, formatCalculationDisplay } from '../utils/calculations';
 import { parseCurrency, formatCurrency, getLocalISODate } from '../utils/formatters';
-import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI } from '../services/api';
+import { clientAPI, orderAPI, locutorAPI, serviceTypeAPI, STORAGE_URL, clientPackageAPI, adminAPI } from '../services/api';
 import { showToast } from '../utils/toast';
+import CommissionModal from './CommissionModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = null, onClose, onSuccess }) => {
     const [clients, setClients] = useState([]);
@@ -60,6 +62,10 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
 
     const [showClientDropdown, setShowClientDropdown] = useState(false);
     const [clientSearch, setClientSearch] = useState('');
+
+    const { isAdmin } = useAuth();
+    const [showCommissionModal, setShowCommissionModal] = useState(false);
+    const [pendingCommissions, setPendingCommissions] = useState([]); // Temporary store before save
 
     // Filter clients based on search
     const filteredClients = clients.filter(client =>
@@ -488,6 +494,19 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 dataToSend.date = formData.date;
             }
 
+            // Include commissions
+            if (pendingCommissions.length > 0) {
+                // Modal provides { userId, percent: "50" }
+                // Backend requires { userId, percent: "50" } (our backend logic handles division /100)
+                dataToSend.commissions = pendingCommissions;
+            } else if (order?.hasCommission && pendingCommissions.length === 0) {
+                // If it had commission and now empty, send empty array to clear?
+                // Backend check: if (commissions && Array.isArray(commissions))
+                // Sending empty array [] is truthy and is array.
+                // Our backend logic: deleteMany, then createMany (empty). So it clears. Correct.
+                dataToSend.commissions = [];
+            }
+
             // Note: File upload would need to be handled separately with FormData
             // For now, we'll just save the order data
             let savedOrder = null;
@@ -604,6 +623,22 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                 </button>
                             )}
                         </div>
+
+                        {/* Commission Button (Admin Only) */}
+                        {isAdmin && (
+                            <div className="flex justify-end mb-4">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCommissionModal(true)}
+                                    className="text-xs flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-medium bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20"
+                                >
+                                    <Users size={14} />
+                                    {pendingCommissions.length > 0
+                                        ? `Comissões Definidas (${pendingCommissions.length})`
+                                        : 'Definir Comissões Compartilhadas'}
+                                </button>
+                            </div>
+                        )}
 
                         {/* Package Info Alert */}
                         {formData.clientId && (
@@ -1549,15 +1584,23 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                             ) : (
                                 <>
                                     <CheckCircle2 size={18} />
-                                    {order ? 'Atualizar' : 'Criar Pedido'}
+                                    Salvar Lançamento
                                 </>
                             )}
                         </button>
                     </div>
                 </div >
             </div >
+
+            <CommissionModal
+                open={showCommissionModal}
+                onClose={() => setShowCommissionModal(false)}
+                initialCommissions={pendingCommissions}
+                onSave={(data) => setPendingCommissions(data)}
+            />
         </div >
     );
 };
 
 export default OrderForm;
+

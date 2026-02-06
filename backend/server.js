@@ -32,48 +32,18 @@ const tierRoutes = require('./routes/tiers');
 const backupRoutes = require('./routes/backups');
 const clientPackageRoutes = require('./routes/clientPackages');
 const recurringServicesRoutes = require('./routes/recurringServices');
+const adminConfigRoutes = require('./routes/adminConfig');
 const backupService = require('./services/backupService');
 const recurringAutomationService = require('./services/recurringAutomation');
 const cron = require('node-cron');
+const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 // const uploadRoutes = require('./routes/upload');
 
-// Middleware de Autenticação
-const authenticateToken = (req, res, next) => {
-  // Bypass auth for OPTIONS requests (CORS preflight)
-  if (req.method === 'OPTIONS') {
-    return next();
-  }
+// Middleware de Autenticação (IMPORTADO)
+const authenticateToken = authMiddleware;
+const isAdmin = adminMiddleware;
 
-  const authHeader = req.headers['authorization'];
-  console.log(`[Auth] ${req.method} ${req.originalUrl} - Header Value: '${authHeader}'`); // Debug Content
-  const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    console.log(`[Auth] ${req.method} ${req.originalUrl} - No token provided`); // Debug
-    return res.status(401).json({ error: 'Token não fornecido' });
-  }
-
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      console.log(`[Auth Error] ${req.method} ${req.originalUrl} - Reason: ${err.message}`); // Debug
-      if (err.name === 'TokenExpiredError') {
-        return res.status(403).json({ error: 'Sessão expirada. Por favor, faça login novamente.' });
-      }
-      return res.status(403).json({ error: 'Token inválido ou acesso negado' });
-    }
-    // console.log(`[Auth Success] User ${user.email} authenticated`); // Debug
-    req.user = user;
-    next();
-  });
-};
-
-// Middleware de Admin
-const isAdmin = (req, res, next) => {
-  if (req.user.role !== 'ADMIN') {
-    return res.status(403).json({ error: 'Acesso negado: apenas administradores' });
-  }
-  next();
-};
 
 // --- ROTAS DE AUTENTICAÇÃO ---
 
@@ -132,19 +102,20 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
 });
 
 // --- REGISTER ROUTES ---
-app.use('/api/clients', authenticateToken, clientRoutes);
-app.use('/api/orders', authenticateToken, orderRoutes);
-app.use('/api/dashboard', authenticateToken, dashboardRoutes);
-app.use('/api/locutores', authenticateToken, locutoresRoutes);
-app.use('/api/import', authenticateToken, importRoutes);
-app.use('/api/service-types', authenticateToken, serviceTypesRoutes);
-app.use('/api/users', authenticateToken, userRoutes);
-app.use('/api/suppliers', authenticateToken, supplierRoutes);
-app.use('/api/analytics', authenticateToken, analyticsRoutes);
-app.use('/api/tiers', authenticateToken, tierRoutes);
-app.use('/api/backups', authenticateToken, backupRoutes);
-app.use('/api/client-packages', authenticateToken, clientPackageRoutes);
-app.use('/api/recurring-services', authenticateToken, recurringServicesRoutes);
+app.use('/api/clients', authMiddleware, clientRoutes);
+app.use('/api/orders', authMiddleware, orderRoutes);
+app.use('/api/dashboard', authMiddleware, dashboardRoutes);
+app.use('/api/locutores', authMiddleware, locutoresRoutes);
+app.use('/api/import', authMiddleware, importRoutes);
+app.use('/api/service-types', authMiddleware, serviceTypesRoutes);
+app.use('/api/users', authMiddleware, userRoutes);
+app.use('/api/suppliers', authMiddleware, supplierRoutes);
+app.use('/api/analytics', authMiddleware, analyticsRoutes);
+app.use('/api/tiers', authMiddleware, tierRoutes);
+app.use('/api/backups', authMiddleware, backupRoutes);
+app.use('/api/client-packages', authMiddleware, clientPackageRoutes);
+app.use('/api/recurring-services', authMiddleware, recurringServicesRoutes);
+app.use('/api/admin', authMiddleware, adminConfigRoutes);
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Health check

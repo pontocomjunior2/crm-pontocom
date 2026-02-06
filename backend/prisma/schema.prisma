@@ -8,12 +8,12 @@ datasource db {
 }
 
 model Client {
-  id                String          @id @default(uuid())
+  id                String             @id @default(uuid())
   name              String
   razaoSocial       String?
-  cnpj_cpf          String          @unique
+  cnpj_cpf          String             @unique
   dataCriacao       String?
-  status            String          @default("ativado")
+  status            String             @default("ativado")
   inscricaoEstadual String?
   emailPrincipal    String?
   telefonePrincipal String?
@@ -28,11 +28,11 @@ model Client {
   emailContato      String?
   dataAniversario   String?
   observacoes       String?
-  totalVendas       Decimal?        @db.Decimal(10, 2)
+  totalVendas       Decimal?           @db.Decimal(10, 2)
   dataUltimaVenda   String?
-  salesCount        Int?            @default(0)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  salesCount        Int?               @default(0)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
   packages          ClientPackage[]
   orders            Order[]
   recurringServices RecurringService[]
@@ -42,52 +42,53 @@ model Client {
 }
 
 model Order {
-  id                    String         @id @default(uuid())
-  sequentialId          Int            @unique @default(autoincrement())
-  date                  DateTime       @default(now())
-  clientId              String
-  title                 String
-  fileName              String?
-  locutor               String
-  locutorId             String?
-  tipo                  String
-  cacheValor            Decimal        @db.Decimal(10, 2)
-  vendaValor            Decimal        @db.Decimal(10, 2)
-  comentarios           String?
-  status                String         @default("PEDIDO")
-  urgency               String         @default("NORMAL")
-  numeroVenda           Int?           @unique
-  faturado              Boolean        @default(false)
-  entregue              Boolean        @default(false)
-  dispensaNF            Boolean        @default(false)
-  emiteBoleto           Boolean        @default(false)
-  dataFaturar           DateTime?
-  vencimento            DateTime?
-  pago                  Boolean        @default(false)
-  statusEnvio           String         @default("PENDENTE")
-  createdAt             DateTime       @default(now())
-  updatedAt             DateTime       @updatedAt
-  pendenciaFinanceiro   Boolean        @default(false)
-  pendenciaMotivo       String?
-  arquivoOS             String?
-  costPerCreditSnapshot Decimal?       @db.Decimal(10, 2)
+  id                      String         @id @default(uuid())
+  sequentialId            Int            @unique @default(autoincrement())
+  date                    DateTime       @default(now())
+  clientId                String
+  title                   String
+  fileName                String?
+  locutor                 String
+  locutorId               String?
+  tipo                    String
+  cacheValor              Decimal        @db.Decimal(10, 2)
+  vendaValor              Decimal        @db.Decimal(10, 2)
+  comentarios             String?
+  status                  String         @default("PEDIDO")
+  urgency                 String         @default("NORMAL")
+  numeroVenda             Int?           @unique
+  faturado                Boolean        @default(false)
+  entregue                Boolean        @default(false)
+  dispensaNF              Boolean        @default(false)
+  emiteBoleto             Boolean        @default(false)
+  dataFaturar             DateTime?
+  vencimento              DateTime?
+  pago                    Boolean        @default(false)
+  statusEnvio             String         @default("PENDENTE")
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+  pendenciaFinanceiro     Boolean        @default(false)
+  pendenciaMotivo         String?
+  arquivoOS               String?
+  costPerCreditSnapshot   Decimal?       @db.Decimal(10, 2)
   creditsConsumed         Int            @default(0)
+  numeroOS                String?
+  serviceType             String?
+  cachePago               Boolean        @default(false)
+  supplierId              String?
+  packageId               String?
+  wasReopened             Boolean        @default(false)
+  isBonus                 Boolean        @default(false)
+  consumptionId           String?
+  packageName             String?
   creditsConsumedSupplier Int            @default(0)
-  numeroOS              String?
-  serviceType           String?
-  cachePago             Boolean        @default(false)
-  supplierId            String?
-  packageId             String?
-  wasReopened           Boolean        @default(false)
-  isBonus               Boolean        @default(false)
-  consumptionId         String?
-  packageName           String?
-  packageBilling        ClientPackage? @relation("PackageBilling")
-  hasCommission         Boolean        @default(false)
-  client                Client         @relation(fields: [clientId], references: [id])
-  locutorObj            Locutor?       @relation(fields: [locutorId], references: [id])
-  package               ClientPackage? @relation("PackageOrders", fields: [packageId], references: [id])
-  supplier              Supplier?      @relation(fields: [supplierId], references: [id])
+  hasCommission           Boolean        @default(false)
+  packageBilling          ClientPackage? @relation("PackageBilling")
+  client                  Client         @relation(fields: [clientId], references: [id])
+  locutorObj              Locutor?       @relation(fields: [locutorId], references: [id])
+  package                 ClientPackage?    @relation("PackageOrders", fields: [packageId], references: [id])
+  supplier                Supplier?         @relation(fields: [supplierId], references: [id])
+  commissions             OrderCommission[]
 
   @@index([date])
   @@index([status])
@@ -130,8 +131,10 @@ model User {
   role      Role     @default(USER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  tierId    String?
-  tier      Tier?    @relation(fields: [tierId], references: [id])
+  tierId               String?
+  tier                 Tier?             @relation(fields: [tierId], references: [id])
+  isCommissionEligible Boolean           @default(false)
+  commissions          OrderCommission[]
 }
 
 model Supplier {
@@ -235,6 +238,58 @@ model ClientPackage {
   @@index([active])
 }
 
+model RecurringService {
+  id            String                @id @default(uuid())
+  name          String
+  clientId      String
+  value         Decimal               @db.Decimal(10, 2)
+  recurrence    ServiceRecurrence
+  isAutomatic   Boolean               @default(true)
+  hasCommission Boolean               @default(false)
+  autoBilling   Boolean               @default(false)
+  active        Boolean               @default(true)
+  startDate     DateTime              @default(now())
+  nextExecution DateTime
+  lastExecution DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  client        Client                @relation(fields: [clientId], references: [id])
+  logs          RecurringServiceLog[]
+
+  @@index([clientId])
+  @@index([active])
+}
+
+model RecurringServiceLog {
+  id               String           @id @default(uuid())
+  serviceId        String
+  status           String
+  message          String?
+  generatedOrderId String?
+  executionDate    DateTime         @default(now())
+  service          RecurringService @relation(fields: [serviceId], references: [id])
+}
+
+model FinancialConfig {
+  id             String   @id @default("default")
+  taxRate        Decimal  @default(0.10) @db.Decimal(5, 4)
+  commissionRate Decimal  @default(0.04) @db.Decimal(5, 4)
+  updatedAt      DateTime @updatedAt
+}
+
+model OrderCommission {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  percent   Decimal  @db.Decimal(5, 4) // Fração da comissão total (ex: 0.50 = 50%)
+  value     Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+
+  @@unique([orderId, userId])
+}
+
 enum Role {
   ADMIN
   USER
@@ -246,6 +301,7 @@ enum PackageType {
   FIXO_COM_LIMITE_VENCIMENTO
   FIXO_SOB_DEMANDA
 }
+
 enum ServiceRecurrence {
   WEEKLY
   BIWEEKLY
@@ -254,36 +310,4 @@ enum ServiceRecurrence {
   QUARTERLY
   SEMIANNUAL
   ANNUAL
-}
-
-model RecurringService {
-  id            String               @id @default(uuid())
-  name          String
-  clientId      String
-  client        Client               @relation(fields: [clientId], references: [id])
-  value         Decimal              @db.Decimal(10, 2)
-  recurrence    ServiceRecurrence
-  isAutomatic   Boolean              @default(true)
-  hasCommission Boolean              @default(false)
-  autoBilling   Boolean              @default(false)
-  active        Boolean              @default(true)
-  startDate     DateTime             @default(now())
-  nextExecution DateTime
-  lastExecution DateTime?
-  logs          RecurringServiceLog[]
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-
-  @@index([clientId])
-  @@index([active])
-}
-
-model RecurringServiceLog {
-  id               String           @id @default(uuid())
-  serviceId        String
-  service          RecurringService @relation(fields: [serviceId], references: [id])
-  status           String
-  message          String?
-  generatedOrderId String?
-  executionDate    DateTime         @default(now())
 }

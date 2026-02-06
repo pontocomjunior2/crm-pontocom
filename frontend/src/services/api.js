@@ -530,3 +530,23 @@ export const recurringServiceAPI = {
         });
     },
 };
+
+export const adminAPI = {
+    getConfig: async () => fetchAPI('/admin/config'),
+
+    updateConfig: async (data) => fetchAPI('/admin/config', {
+        method: 'PUT',
+        body: JSON.stringify(data),
+    }),
+
+    getCommissionUsers: async () => fetchAPI('/admin/commission-users'),
+
+    updateUserEligibility: async (userId, isCommissionEligible) => fetchAPI(`/admin/commission-users/${userId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isCommissionEligible }),
+    }),
+
+    recalculateAll: async () => fetchAPI('/admin/recalculate-all', {
+        method: 'POST',
+    }),
+};

@@ -1,0 +1,41 @@
+
+> frontend@0.0.0 build
+> vite build
+
+[36mrolldown-vite v7.2.5 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Ô£ô 2257 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.48 kB Ôöé gzip:   0.32 kB
+dist/assets/index-BsNvSAwM.css   91.72 kB Ôöé gzip:  13.60 kB
+dist/assets/index-CXciBdN3.js   962.29 kB Ôöé gzip: 243.59 kB
+[plugin builtin:reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+Ô£ù Build failed in 582ms
+error during build:
+Build failed with 1 error:
+
+Error: [vite]: Rolldown failed to resolve import "@mui/material" from "D:/Projetos/crm-pontocom/frontend/src/components/AdminSettings.jsx".
+This is most likely unintended because it can break your application at runtime.
+If you do want to externalize this module explicitly add it to
+`build.rollupOptions.external`
+    at viteLog (file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33561:57)
+    at file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33597:73
+    at onwarn (file:///D:/Projetos/crm-pontocom/frontend/node_modules/@vitejs/plugin-react/dist/index.js:76:7)
+    at file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33597:28
+    at onRollupLog (file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33592:63)
+    at onLog (file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33360:4)
+    at file:///D:/Projetos/crm-pontocom/frontend/node_modules/rolldown/dist/shared/src-CYkh2Ybc.mjs:294:26
+    at logger (file:///D:/Projetos/crm-pontocom/frontend/node_modules/rolldown/dist/shared/src-CYkh2Ybc.mjs:285:3)
+    at onLog (file:///D:/Projetos/crm-pontocom/frontend/node_modules/rolldown/dist/shared/src-CYkh2Ybc.mjs:3964:32)
+    at aggregateBindingErrorsIntoJsError (file:///D:/Projetos/crm-pontocom/frontend/node_modules/rolldown/dist/shared/src-CYkh2Ybc.mjs:2659:18)
+    at unwrapBindingResult (file:///D:/Projetos/crm-pontocom/frontend/node_modules/rolldown/dist/shared/src-CYkh2Ybc.mjs:2634:128)
+    at #build (file:///D:/Projetos/crm-pontocom/frontend/node_modules/rolldown/dist/shared/src-CYkh2Ybc.mjs:4433:34)
+    at async buildEnvironment (file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33468:64)
+    at async Object.build (file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33871:19)
+    at async Object.buildApp (file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/chunks/node.js:33868:153)
+    at async CAC.<anonymous> (file:///D:/Projetos/crm-pontocom/frontend/node_modules/vite/dist/node/cli.js:629:3)

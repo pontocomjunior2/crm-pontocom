@@ -706,11 +706,16 @@ router.put('/:id', async (req, res) => {
             costPerCreditSnapshot,
             isBonus,
             cachePago,
-            serviceType
+
+            serviceType,
+            commissions // Array of { userId, percent }
         } = req.body;
 
         // Check if order exists
-        const existing = await prisma.order.findUnique({ where: { id } });
+        const existing = await prisma.order.findUnique({
+            where: { id },
+            include: { commissions: true }
+        });
         if (!existing) {
             return res.status(404).json({ error: 'Order not found' });
         }
