@@ -353,7 +353,7 @@ const RecurringServiceList = () => {
                                         <th className="px-6 py-4">Cliente</th>
                                         <th className="px-6 py-4">Serviço / Título</th>
                                         <th className="px-6 py-4">Valor</th>
-                                        <th className="px-6 py-4 text-center">Status</th>
+                                        <th className="px-6 py-4 text-center">Faturamento</th>
                                     </tr>
                                 </thead>
                                 <tbody className="text-sm divide-y divide-white/5">
