@@ -299,9 +299,62 @@ router.get('/details', async (req, res) => {
                 }));
                 break;
 
+            case 'packageCache':
+                const packageOrders = await prisma.order.findMany({
+                    where: {
+                        ...dateFilter,
+                        status: 'VENDA',
+                        OR: [
+                            { packageId: { not: null } },
+                            { packageBilling: { isNot: null } }
+                        ]
+                    },
+                    include: {
+                        client: { select: { name: true } },
+                        package: { select: { id: true, name: true } },
+                        packageBilling: { select: { id: true, name: true } }
+                    }
+                });
+
+                const groupedPackages = {};
+                packageOrders.forEach(order => {
+                    const pkg = order.package || order.packageBilling;
+                    if (!pkg) return;
+
+                    if (!groupedPackages[pkg.id]) {
+                        groupedPackages[pkg.id] = {
+                            id: pkg.id,
+                            title: `Pacote: ${pkg.name}`,
+                            client: order.client.name,
+                            value: 0,
+                            date: order.date,
+                            status: 'PACOTE',
+                            type: 'Custo Consolidado'
+                        };
+                    }
+                    groupedPackages[pkg.id].value += Number(order.cacheValor);
+                    if (new Date(order.date) > new Date(groupedPackages[pkg.id].date)) {
+                        groupedPackages[pkg.id].date = order.date;
+                    }
+                });
+                data = Object.values(groupedPackages);
+
+                // For consolidated data, we skip the standard mapping at the end
+                // So we format it here and return
+                const formattedPackageData = data.map(item => ({
+                    id: item.id.toString(),
+                    title: item.title,
+                    client: item.client,
+                    value: item.value,
+                    date: item.date,
+                    status: item.status,
+                    type: item.type
+                }));
+                return res.json(formattedPackageData);
+
             case 'totalCache':
             case 'orderCache':
-            case 'packageCache':
+            case 'recurringCache':
                 const cacheWhere = {
                     ...dateFilter,
                     status: 'VENDA'
@@ -313,21 +366,16 @@ router.get('/details', async (req, res) => {
                     cacheWhere.serviceType = { not: 'SERVIÇO RECORRENTE' };
                 } else if (metric === 'recurringCache') {
                     cacheWhere.serviceType = 'SERVIÇO RECORRENTE';
-                } else if (metric === 'packageCache') {
-                    cacheWhere.OR = [
-                        { packageId: { not: null } },
-                        { packageBilling: { isNot: null } }
-                    ];
                 }
 
-                data = await prisma.order.findMany({
+                const dataList = await prisma.order.findMany({
                     where: cacheWhere,
                     include: { client: { select: { name: true } } },
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
 
                 // For Cache metrics, we want to show the cache value
-                data = data.map(o => ({
+                data = dataList.map(o => ({
                     ...o,
                     displayValue: o.cacheValor
                 }));
@@ -350,7 +398,7 @@ router.get('/details', async (req, res) => {
                         id: `FIXED-${l.id}`,
                         title: `Fixo Mensal: ${l.name}`,
                         client: 'Custo Fixo',
-                        displayValue: l.valorFixoMensal,
+                        displayValue: Number(l.valorFixoMensal || 0),
                         date: new Date(), // Just for list positioning
                         status: 'FIXO'
                     }));
