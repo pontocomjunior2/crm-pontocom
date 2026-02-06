@@ -86,6 +86,7 @@ class RecurringServiceAutomation {
                     serviceType: 'SERVIÇO RECORRENTE',
                     vendaValor: service.value,
                     cacheValor: 0, // Por padrão, outros serviços não contam comissão (cache=0)
+                    hasCommission: service.hasCommission,
                     status: 'VENDA',
                     faturado: service.autoBilling, // Fatura automática se configurado
                     date: new Date(),

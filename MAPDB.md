@@ -70,3 +70,20 @@
 **Conexões:**
 - `creditsConsumed` continua sendo o valor debitado do `ClientPackage`.
 - `creditsConsumedSupplier` passa a ser a base para o cálculo de `cacheValor` automático e deduções de saldo de fornecedores (se implementado futuramente).
+
+---
+
+## 2026-02-06 - Controle de Comissões por Pedido
+
+**Tabela Alvo:** `Order`
+
+**Mudança:**
+- Adicionada coluna `hasCommission` (Boolean, default: `false`).
+
+**Motivo:**
+- Permitir distinguir quais serviços recorrentes ou avulsos devem incidir no cálculo da comissão de 4%.
+- Por padrão, serviços recorrentes não geram comissão, a menos que configurado manualmente no cadastro da recorrência.
+
+**Conexões:**
+- Herdado do campo `hasCommission` da tabela `RecurringService` durante o lançamento automático.
+- Utilizado na rota `/api/analytics/financial-summary` para o cálculo de `commission`.

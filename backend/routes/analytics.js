@@ -67,9 +67,29 @@ router.get('/financial-summary', async (req, res) => {
             .filter(o => !o.faturado)
             .reduce((sum, order) => sum + Number(order.vendaValor), 0);
 
+        let commissionableProfit = 0;
+        orders.forEach(order => {
+            const revenue = Number(order.vendaValor);
+            let cost = Number(order.cacheValor);
+
+            if (order.locutorId && order.locutorObj?.valorFixoMensal > 0 && Number(order.cacheValor) === 0) {
+                const month = new Date(order.date).toISOString().substring(0, 7);
+                const key = `${order.locutorId}_${month}`;
+                const count = locutorMonthCounts[key] || 1;
+                cost = Number(order.locutorObj.valorFixoMensal) / count;
+            }
+
+            const isRecurring = order.packageId !== null || order.packageBilling !== null || order.serviceType === 'SERVIÇO RECORRENTE';
+
+            // Commission only on "Avulsos" OR "Recurring with hasCommission flag"
+            if (!isRecurring || order.hasCommission) {
+                commissionableProfit += (revenue - cost);
+            }
+        });
+
         const netProfit = totalRevenue - totalCosts;
         const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
-        const commission = netProfit > 0 ? netProfit * 0.04 : 0;
+        const commission = commissionableProfit > 0 ? commissionableProfit * 0.04 : 0;
 
         res.json({
             totalRevenue,

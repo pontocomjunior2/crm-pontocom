@@ -83,6 +83,7 @@ model Order {
   consumptionId         String?
   packageName           String?
   packageBilling        ClientPackage? @relation("PackageBilling")
+  hasCommission         Boolean        @default(false)
   client                Client         @relation(fields: [clientId], references: [id])
   locutorObj            Locutor?       @relation(fields: [locutorId], references: [id])
   package               ClientPackage? @relation("PackageOrders", fields: [packageId], references: [id])

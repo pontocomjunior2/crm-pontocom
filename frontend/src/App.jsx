@@ -26,7 +26,8 @@ import {
   User as UserIcon,
   Building2,
   Database,
-  Menu
+  Menu,
+  RotateCcw
 } from 'lucide-react';
 import BackupSettings from './components/BackupSettings';
 import SupplierList from './components/SupplierList';
@@ -118,7 +119,7 @@ const CRM = () => {
     { id: 'faturamento', label: 'Faturamento', icon: <DollarSign size={20} />, permission: 'accessFaturamento' },
     { id: 'relatorios', label: 'Relatórios', icon: <BarChart3 size={20} />, permission: 'accessRelatorios' },
     { id: 'usuarios', label: 'Usuários', icon: <Shield size={20} />, permission: 'accessUsuarios' },
-    { id: 'servicos', label: 'Serviços Recorrentes', icon: <Clock size={20} />, adminOnly: true },
+    { id: 'servicos', label: 'Serviços Extras', icon: <Clock size={20} />, adminOnly: true },
     { id: 'backup', label: 'Backup (GD)', icon: <Database size={20} />, adminOnly: true },
     { id: 'perfil', label: 'Meu Perfil', icon: <UserIcon size={20} />, alwaysShow: true },
   ];
@@ -252,17 +253,6 @@ const CRM = () => {
       textColor: 'text-amber-500'
     },
     {
-      id: 'packageRevenue',
-      title: 'Receita de Pacotes',
-      value: formatCurrency(dashboardData.metrics.packageRevenue || 0),
-      trend: `${Math.round((dashboardData.metrics.packageRevenue / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
-      sub: 'do total',
-      icon: <Package size={20} />,
-      color: 'from-cyan-500 to-cyan-600',
-      bgColor: 'bg-cyan-500/10',
-      textColor: 'text-cyan-500'
-    },
-    {
       id: 'orderRevenue',
       title: 'Receita de Avulsos',
       value: formatCurrency(dashboardData.metrics.orderRevenue || 0),
@@ -274,10 +264,32 @@ const CRM = () => {
       textColor: 'text-emerald-500'
     },
     {
+      id: 'packageRevenue',
+      title: 'Receita de Pacotes',
+      value: formatCurrency(dashboardData.metrics.packageRevenue || 0),
+      trend: `${Math.round((dashboardData.metrics.packageRevenue / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
+      sub: 'extras pacotes',
+      icon: <Package size={20} />,
+      color: 'from-cyan-500 to-cyan-600',
+      bgColor: 'bg-cyan-500/10',
+      textColor: 'text-cyan-500'
+    },
+    {
+      id: 'recurringRevenue',
+      title: 'Serviços Extras',
+      value: formatCurrency(dashboardData.metrics.recurringRevenue || 0),
+      trend: `${Math.round((dashboardData.metrics.recurringRevenue / dashboardData.metrics.totalRevenue) * 100 || 0)}%`,
+      sub: 'serviços extra-core',
+      icon: <RotateCcw size={20} />,
+      color: 'from-indigo-500 to-indigo-600',
+      bgColor: 'bg-indigo-500/10',
+      textColor: 'text-indigo-500'
+    },
+    {
       id: 'activeClients',
       title: 'Clientes Ativos',
       value: dashboardData.metrics.activeClients.toString(),
-      trend: '+1',
+      trend: '+0',
       sub: 'clientes totais',
       icon: <Users size={20} />,
       color: 'from-green-500 to-green-600',

@@ -57,9 +57,20 @@ router.get('/', async (req, res) => {
             }
         });
 
-        // Calculate Package Revenue & Cache
-        // 1. Orders that are package fees (billingOrder)
-        // 2. Orders that are consumptions with extra cost (packageId is not null)
+        // 1.1 Calculate Recurring Revenue (Fixed Fees + Recurring Services)
+        const recurringMetricsSum = await prisma.order.aggregate({
+            _sum: {
+                vendaValor: true,
+                cacheValor: true
+            },
+            where: {
+                ...dateFilter,
+                status: 'VENDA',
+                serviceType: 'SERVIÇO RECORRENTE'
+            }
+        });
+
+        // 1.2 Calculate Package Revenue (Extra audio consumptions + Package Monthly Fees)
         const packageMetricsSum = await prisma.order.aggregate({
             _sum: {
                 vendaValor: true,
@@ -75,9 +86,10 @@ router.get('/', async (req, res) => {
             }
         });
 
-        const packageRevenue = Number(packageMetricsSum._sum.vendaValor || 0);
         const totalRevenue = Number(revenueSums._sum.vendaValor || 0);
-        const orderRevenue = totalRevenue - packageRevenue;
+        const recurringRevenue = Number(recurringMetricsSum._sum.vendaValor || 0);
+        const packageRevenue = Number(packageMetricsSum._sum.vendaValor || 0);
+        const orderRevenue = totalRevenue - recurringRevenue - packageRevenue;
 
         // 1.1 Calculate total fixed fees for locutores who have orders IN THIS PERIOD
         const locutoresWithOrders = await prisma.locutor.findMany({
@@ -97,10 +109,12 @@ router.get('/', async (req, res) => {
 
         // Cache Calculations
         const totalVariableCache = Number(revenueSums._sum.cacheValor || 0);
+        const recurringVariableCache = Number(recurringMetricsSum._sum.cacheValor || 0);
         const packageVariableCache = Number(packageMetricsSum._sum.cacheValor || 0);
 
-        const packageCache = packageVariableCache + totalFixedFees;
-        const orderCache = totalVariableCache - packageVariableCache;
+        const recurringCache = recurringVariableCache + totalFixedFees;
+        const packageCache = packageVariableCache;
+        const orderCache = totalVariableCache - recurringVariableCache - packageVariableCache;
         const adjustedTotalCache = totalVariableCache + totalFixedFees;
 
         // 2. Recent Orders (Last 5 within filter or global if no filter?)
@@ -158,10 +172,12 @@ router.get('/', async (req, res) => {
         res.json({
             metrics: {
                 totalRevenue,
+                recurringRevenue,
                 packageRevenue,
                 orderRevenue,
                 activeOrders: activeOrdersCount,
                 totalCache: adjustedTotalCache,
+                recurringCache,
                 packageCache,
                 orderCache,
                 activeClients: totalClientsCount,
@@ -216,7 +232,7 @@ router.get('/details', async (req, res) => {
         switch (metric) {
             case 'totalRevenue':
             case 'orderRevenue':
-                // For orderRevenue, we filter for orders WITHOUT packageId and packageBilling
+                // For orderRevenue, we filter for orders WITHOUT packageId, packageBilling AND not RECURRING
                 const orderRevWhere = {
                     ...dateFilter,
                     status: 'VENDA'
@@ -224,9 +240,22 @@ router.get('/details', async (req, res) => {
                 if (metric === 'orderRevenue') {
                     orderRevWhere.packageId = null;
                     orderRevWhere.packageBilling = null;
+                    orderRevWhere.serviceType = { not: 'SERVIÇO RECORRENTE' };
                 }
                 data = await prisma.order.findMany({
                     where: orderRevWhere,
+                    include: { client: { select: { name: true } } },
+                    orderBy: { date: 'desc' }
+                });
+                break;
+
+            case 'recurringRevenue':
+                data = await prisma.order.findMany({
+                    where: {
+                        ...dateFilter,
+                        status: 'VENDA',
+                        serviceType: 'SERVIÇO RECORRENTE'
+                    },
                     include: { client: { select: { name: true } } },
                     orderBy: { date: 'desc' }
                 });
@@ -273,6 +302,9 @@ router.get('/details', async (req, res) => {
                 if (metric === 'orderCache') {
                     cacheWhere.packageId = null;
                     cacheWhere.packageBilling = null;
+                    cacheWhere.serviceType = { not: 'SERVIÇO RECORRENTE' };
+                } else if (metric === 'recurringCache') {
+                    cacheWhere.serviceType = 'SERVIÇO RECORRENTE';
                 } else if (metric === 'packageCache') {
                     cacheWhere.OR = [
                         { packageId: { not: null } },
@@ -292,8 +324,8 @@ router.get('/details', async (req, res) => {
                     displayValue: o.cacheValor
                 }));
 
-                // If it's totalCache or packageCache, include fixed fees
-                if (metric === 'totalCache' || metric === 'packageCache') {
+                // If it's totalCache or recurringCache, include fixed fees
+                if (metric === 'totalCache' || metric === 'recurringCache') {
                     const locutoresWithFixed = await prisma.locutor.findMany({
                         where: {
                             valorFixoMensal: { gt: 0 },
