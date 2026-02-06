@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Download, ExternalLink, Calendar, Search } from 'lucide-react';
 import { dashboardAPI } from '../services/api';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 
 const DashboardDetailModal = ({ metric, metricLabel, dateRange, onClose }) => {
     const [data, setData] = useState([]);
@@ -33,10 +33,7 @@ const DashboardDetailModal = ({ metric, metricLabel, dateRange, onClose }) => {
         item.client?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'N/A';
-        return new Date(dateStr).toLocaleDateString('pt-BR');
-    };
+    // Using formatDisplayDate from utils instead of local function to avoid timezone issues
 
     const isCurrency = !['activeClients', 'activeOrders'].includes(metric);
 
@@ -55,7 +52,7 @@ const DashboardDetailModal = ({ metric, metricLabel, dateRange, onClose }) => {
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                             <span className="flex items-center gap-1.5">
                                 <Calendar size={12} className="text-primary" />
-                                {dateRange.label} ({formatDate(dateRange.start)} - {formatDate(dateRange.end)})
+                                {dateRange.label} ({formatDisplayDate(dateRange.start)} - {formatDisplayDate(dateRange.end)})
                             </span>
                             <span className="bg-white/5 px-2 py-0.5 rounded font-medium">
                                 {filteredData.length} registros encontrados
@@ -115,7 +112,7 @@ const DashboardDetailModal = ({ metric, metricLabel, dateRange, onClose }) => {
                                 {filteredData.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-accent/20 transition-colors group">
                                         <td className="px-6 py-4">
-                                            <span className="text-sm font-medium text-foreground">{formatDate(item.date)}</span>
+                                            <span className="text-sm font-medium text-foreground">{formatDisplayDate(item.date)}</span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="max-w-[300px]">
