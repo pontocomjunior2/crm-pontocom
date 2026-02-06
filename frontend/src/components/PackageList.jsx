@@ -30,7 +30,7 @@ import {
     Trash2,
     Upload
 } from 'lucide-react';
-import { clientPackageAPI, orderAPI } from '../services/api';
+import { clientPackageAPI, orderAPI, locutorAPI } from '../services/api';
 import { formatCurrency, formatDisplayDate, getLocalISODate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
 import PackageOrderForm from './PackageOrderForm';
@@ -834,11 +834,33 @@ const PackageList = ({ onAddNewOrder }) => {
                                                         valB = b.entrega ? 1 : 0;
                                                         break;
                                                     default:
-                                                        return 0;
                                                 }
 
+                                                // Primary Sort
                                                 if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                                                 if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+
+                                                // Secondary Sort (Tie-breaker): CreatedAt Descending (Newest first)
+                                                if (a.createdAt && b.createdAt) {
+                                                    const dateA = new Date(a.createdAt).getTime();
+                                                    const dateB = new Date(b.createdAt).getTime();
+                                                    if (dateA !== dateB) {
+                                                        // Always NEWEST first for tie-breaker in lists, regardless of main sort direction?
+                                                        // Actually, if we are sorting by Date ASC, we might want CreatedAt ASC.
+                                                        // If Date DESC, CreatedAt DESC.
+                                                        // So we respect sortConfig.direction usually.
+                                                        // BUT user wants "Last launched first".
+                                                        return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
+                                                    }
+                                                }
+
+                                                // Tertiary Sort: ID Descending
+                                                const idA = a.id || 0;
+                                                const idB = b.id || 0;
+                                                // Fallback to string comparison if IDs are not numbers
+                                                if (idA < idB) return sortConfig.direction === 'asc' ? -1 : 1;
+                                                if (idA > idB) return sortConfig.direction === 'asc' ? 1 : -1;
+
                                                 return 0;
                                             })
                                             .map((order) => (

@@ -54,7 +54,7 @@ router.get('/all/orders', checkPermission('accessPacotes'), async (req, res) => 
                     }
                 }
             },
-            orderBy: { date: 'desc' }
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
         });
 
         res.json({
@@ -77,7 +77,8 @@ router.get('/all/orders', checkPermission('accessPacotes'), async (req, res) => 
                 comentarios: order.comentarios,
                 client: order.client,
                 package: order.package,
-                packageId: order.packageId
+                packageId: order.packageId,
+                createdAt: order.createdAt
             }))
         });
     } catch (error) {
@@ -346,7 +347,7 @@ router.get('/:id/orders', async (req, res) => {
                     }
                 }
             },
-            orderBy: { date: 'desc' }
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
         });
 
         res.json({
@@ -369,7 +370,9 @@ router.get('/:id/orders', async (req, res) => {
                 vendaValor: order.vendaValor,
                 cacheValor: order.cacheValor,
                 comentarios: order.comentarios,
-                client: order.client
+                comentarios: order.comentarios,
+                client: order.client,
+                createdAt: order.createdAt
             }))
         });
     } catch (error) {

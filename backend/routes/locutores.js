@@ -33,7 +33,7 @@ router.get('/', async (req, res) => {
                         date: true,
                         status: true
                     },
-                    orderBy: { date: 'desc' }
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 },
                 suppliers: {
                     include: {
@@ -115,7 +115,7 @@ router.get('/:id/history', async (req, res) => {
                 where,
                 skip,
                 take,
-                orderBy: { date: 'desc' },
+                orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
                 select: {
                     id: true,
                     title: true,

@@ -204,7 +204,7 @@ router.get('/:id', async (req, res) => {
             where: { id },
             include: {
                 orders: {
-                    orderBy: { date: 'desc' },
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
                     take: 10
                 }
             }

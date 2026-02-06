@@ -178,6 +178,7 @@ router.get('/', async (req, res) => {
         } else if (sortBy === 'date') {
             orderBy = [
                 { date: sortOrder },
+                { createdAt: sortOrder },
                 { numeroVenda: sortOrder }
             ];
         } else if (sortBy === 'sequentialId') {

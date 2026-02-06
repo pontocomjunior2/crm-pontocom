@@ -123,7 +123,7 @@ router.get('/', async (req, res) => {
         const recentOrders = await prisma.order.findMany({
             where: dateFilter,
             take: 5,
-            orderBy: { date: 'desc' },
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
             include: {
                 client: {
                     select: { name: true }
@@ -147,7 +147,7 @@ router.get('/', async (req, res) => {
                     select: { name: true }
                 }
             },
-            orderBy: { date: 'desc' }
+            orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
         });
 
         // Group pending invoices by client for the widget
@@ -245,7 +245,7 @@ router.get('/details', async (req, res) => {
                 data = await prisma.order.findMany({
                     where: orderRevWhere,
                     include: { client: { select: { name: true } } },
-                    orderBy: { date: 'desc' }
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
                 break;
 
@@ -257,7 +257,7 @@ router.get('/details', async (req, res) => {
                         serviceType: 'SERVIÇO RECORRENTE'
                     },
                     include: { client: { select: { name: true } } },
-                    orderBy: { date: 'desc' }
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
                 break;
 
@@ -272,7 +272,7 @@ router.get('/details', async (req, res) => {
                         ]
                     },
                     include: { client: { select: { name: true } } },
-                    orderBy: { date: 'desc' }
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
                 break;
 
@@ -315,7 +315,7 @@ router.get('/details', async (req, res) => {
                 data = await prisma.order.findMany({
                     where: cacheWhere,
                     include: { client: { select: { name: true } } },
-                    orderBy: { date: 'desc' }
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
 
                 // For Cache metrics, we want to show the cache value
@@ -358,7 +358,7 @@ router.get('/details', async (req, res) => {
                         ...dateFilter
                     },
                     include: { client: { select: { name: true } } },
-                    orderBy: { date: 'desc' }
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
                 break;
 
