@@ -39,7 +39,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor, onViewHistory }) => {
 
     useEffect(() => {
         fetchLocutores();
-    }, [statusFilter, sortConfig]);
+    }, [statusFilter, sortConfig]); // Removed search to disable real-time search
 
     const fetchLocutores = async () => {
         setLoading(true);

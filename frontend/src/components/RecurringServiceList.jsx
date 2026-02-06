@@ -82,7 +82,7 @@ const RecurringServiceList = () => {
         if (activeTab === 'history') {
             fetchHistoryOrders();
         }
-    }, [activeTab, historyPagination.page, refreshTrigger]);
+    }, [activeTab, historyPagination.page, refreshTrigger]); // Removed searchTerm to disable real-time search
 
     const handleToggleActive = async (id, currentStatus) => {
         const action = currentStatus ? 'desativar' : 'ativar';

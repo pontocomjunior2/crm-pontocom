@@ -93,7 +93,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         } finally {
             setLoading(false);
         }
-    }, [pagination.page, pagination.limit, search, filters, sortConfig]);
+    }, [pagination.page, pagination.limit, sortConfig]); // Removed search and filters to disable real-time search
 
     useEffect(() => {
         fetchOrders();

@@ -44,6 +44,7 @@ const PackageList = ({ onAddNewOrder }) => {
     const [allOrders, setAllOrders] = useState([]);
     const [loadingAllOrders, setLoadingAllOrders] = useState(true);
     const [ordersSearchTerm, setOrdersSearchTerm] = useState('');
+    const [ordersSearchInput, setOrdersSearchInput] = useState(''); // Temporary state for orders search
     const [ordersDeliveryFilter, setOrdersDeliveryFilter] = useState('all'); // 'all', 'delivered', 'pending'
     const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' }); // 'asc' or 'desc'
     const [editingUniversalOrder, setEditingUniversalOrder] = useState(null);
@@ -62,6 +63,7 @@ const PackageList = ({ onAddNewOrder }) => {
     const [packages, setPackages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchInput, setSearchInput] = useState(''); // Temporary state for input
     const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
     const [editingCode, setEditingCode] = useState(null); // id of package being edited
     const [tempCode, setTempCode] = useState('');
@@ -598,15 +600,26 @@ const PackageList = ({ onAddNewOrder }) => {
                     {/* Filters for Orders */}
                     <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
                         <div className="flex items-center gap-3 w-full md:w-auto flex-1 max-w-2xl">
-                            <div className="bg-input-background border border-border rounded-xl flex items-center px-3 py-2 flex-1 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all">
+                            <div className="bg-input-background border border-border rounded-xl flex items-center px-3 py-2 flex-1 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary/50 transition-all relative">
                                 <Search size={16} className="text-muted-foreground mr-3" />
                                 <input
                                     type="text"
                                     placeholder="Buscar por título, cliente, pacote, locutor..."
-                                    value={ordersSearchTerm}
-                                    onChange={(e) => setOrdersSearchTerm(e.target.value)}
-                                    className="bg-transparent border-none outline-none text-xs text-foreground placeholder:text-muted-foreground w-full"
+                                    value={ordersSearchInput}
+                                    onChange={(e) => setOrdersSearchInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            setOrdersSearchTerm(ordersSearchInput);
+                                        }
+                                    }}
+                                    className="bg-transparent border-none outline-none text-xs text-foreground placeholder:text-muted-foreground w-full pr-20"
                                 />
+                                <button
+                                    onClick={() => setOrdersSearchTerm(ordersSearchInput)}
+                                    className="absolute right-2 px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all"
+                                >
+                                    Buscar
+                                </button>
                             </div>
                         </div>
 
@@ -645,12 +658,23 @@ const PackageList = ({ onAddNewOrder }) => {
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
                             <input
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        setSearchTerm(searchInput);
+                                    }
+                                }}
                                 placeholder="Buscar por cliente, nome do pacote ou código..."
                                 className="w-full bg-input-background border border-border rounded-xl pl-10 pr-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-xs"
                             />
                         </div>
+                        <button
+                            onClick={() => setSearchTerm(searchInput)}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all"
+                        >
+                            Buscar
+                        </button>
                     </div>
 
                     {/* Status Filter */}

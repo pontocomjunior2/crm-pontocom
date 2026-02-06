@@ -52,7 +52,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
 
     useEffect(() => {
         fetchClients();
-    }, [pagination.page, pagination.limit, statusFilter, sortConfig, packageFilter]);
+    }, [pagination.page, pagination.limit, statusFilter, sortConfig, packageFilter]); // Removed search filters to disable real-time search
 
     const fetchClients = async () => {
         setLoading(true);
