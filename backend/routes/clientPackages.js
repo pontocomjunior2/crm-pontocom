@@ -150,8 +150,8 @@ router.post('/', checkPermission('accessPacotes'), async (req, res) => {
                 audioLimit: parseInt(audioLimit) || 0,
                 usedAudios: 0,
                 extraAudioFee: parseFloat(extraAudioFee) || 0,
-                startDate: new Date(startDate),
-                endDate: new Date(endDate),
+                startDate: new Date(startDate + 'T12:00:00'),
+                endDate: new Date(endDate + 'T12:00:00'),
                 active: true,
                 clientCode: clientCode || null
             }
@@ -180,7 +180,7 @@ router.post('/', checkPermission('accessPacotes'), async (req, res) => {
                         cacheValor: 0,
                         status: 'VENDA',
                         faturado: false,
-                        date: new Date(startDate),
+                        date: new Date(startDate + 'T12:00:00'),
                         numeroVenda: nextNumeroVenda,
                         comentarios: `Lançamento automático referente ao pacote: ${name}`
                     }
@@ -235,8 +235,8 @@ router.put('/:id', checkPermission('accessPacotes'), async (req, res) => {
         if (updateData.fixedFee) updateData.fixedFee = parseFloat(updateData.fixedFee);
         if (updateData.extraAudioFee) updateData.extraAudioFee = parseFloat(updateData.extraAudioFee);
         if (updateData.audioLimit !== undefined) updateData.audioLimit = parseInt(updateData.audioLimit);
-        if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
-        if (updateData.endDate) updateData.endDate = new Date(updateData.endDate);
+        if (updateData.startDate) updateData.startDate = new Date(updateData.startDate + 'T12:00:00');
+        if (updateData.endDate) updateData.endDate = new Date(updateData.endDate + 'T12:00:00');
         if (updateData.clientCode !== undefined) updateData.clientCode = updateData.clientCode || null;
 
         // Atualizar o pacote

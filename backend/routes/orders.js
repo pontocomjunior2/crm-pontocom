@@ -432,7 +432,7 @@ router.post('/', async (req, res) => {
             });
 
             if (pkg && pkg.active) {
-                const competenceDate = req.body.date ? new Date(req.body.date) : new Date();
+                const competenceDate = req.body.date ? new Date(req.body.date + 'T12:00:00') : new Date();
                 const creditsToUse = creditsToConsume || 1;
 
                 // 1. Verificar Validade (Regra 2 e 4)
@@ -622,8 +622,8 @@ router.post('/', async (req, res) => {
                 entregue,
                 dispensaNF,
                 emiteBoleto,
-                dataFaturar: dataFaturar ? new Date(dataFaturar) : null,
-                vencimento: vencimento ? new Date(vencimento) : null,
+                dataFaturar: dataFaturar ? new Date(dataFaturar + 'T12:00:00') : null,
+                vencimento: vencimento ? new Date(vencimento + 'T12:00:00') : null,
                 pago,
                 statusEnvio,
                 pendenciaFinanceiro,
@@ -642,7 +642,8 @@ router.post('/', async (req, res) => {
                 isBonus: isBonus,
                 // Custom Date Logic: Use provided date or default to now() (handled by Prisma default or backend logic if needed, but Prisma has @default(now()))
                 // However, we want to ensure explicit dates are respected.
-                ...(req.body.date ? { date: new Date(req.body.date) } : {})
+                // Custom Date Logic: Use T12:00:00 to avoid timezone regression
+                ...(req.body.date ? { date: new Date(req.body.date + 'T12:00:00') } : {})
             },
             include: {
                 client: {
@@ -795,7 +796,7 @@ router.put('/:id', async (req, res) => {
 
                 // Se não veio ID do pacote, buscar ativo no banco
                 if (!pkgToDebitId) {
-                    const competenceDate = req.body.date ? new Date(req.body.date) : new Date();
+                    const competenceDate = req.body.date ? new Date(req.body.date + 'T12:00:00') : new Date();
                     const activePkg = await prisma.clientPackage.findFirst({
                         where: {
                             clientId: clientId || existing.clientId,
@@ -812,7 +813,7 @@ router.put('/:id', async (req, res) => {
                         const pkg = await prisma.clientPackage.findUnique({ where: { id: pkgToDebitId } });
                         if (pkg) {
                             // Validar se pode debitar (limite/validade)
-                            const competenceDate = req.body.date ? new Date(req.body.date) : new Date();
+                            const competenceDate = req.body.date ? new Date(req.body.date + 'T12:00:00') : new Date();
                             if (competenceDate < pkg.startDate || competenceDate > pkg.endDate) {
                                 return res.status(400).json({ error: 'PACKAGE_EXPIRED', message: 'Erro: Pacote expirado.' });
                             }
@@ -880,7 +881,7 @@ router.put('/:id', async (req, res) => {
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
                 isBonus: isBonus !== undefined ? isBonus : undefined,
                 serviceType: serviceType !== undefined ? serviceType : undefined,
-                date: req.body.date ? new Date(req.body.date) : undefined
+                date: req.body.date ? new Date(req.body.date + 'T12:00:00') : undefined
             },
             include: {
                 client: {
