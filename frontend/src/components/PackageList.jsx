@@ -74,6 +74,21 @@ const PackageList = ({ onAddNewOrder }) => {
     const [packageStatusFilter, setPackageStatusFilter] = useState('all'); // 'all', 'active', 'expired', 'limit'
     const [packageSortConfig, setPackageSortConfig] = useState({ key: 'clientCode', direction: 'asc' });
 
+    // Package Edit State
+    const [editingPackage, setEditingPackage] = useState(null);
+    const [packageFormOpen, setPackageFormOpen] = useState(false);
+    const [packageFormData, setPackageFormData] = useState({
+        name: '',
+        type: 'FIXO_COM_LIMITE',
+        fixedFee: '',
+        audioLimit: '',
+        extraAudioFee: '',
+        startDate: '',
+        endDate: '',
+        clientCode: '',
+        active: true
+    });
+
     // Locutores for bulk modal
     const [locutores, setLocutores] = useState([]);
     const [loadingLocutores, setLoadingLocutores] = useState(false);
@@ -147,6 +162,78 @@ const PackageList = ({ onAddNewOrder }) => {
         } catch (error) {
             console.error('Error saving client code:', error);
             showToast.error(error);
+        }
+    };
+
+    const handleOpenPackageEdit = (pkg) => {
+        setEditingPackage(pkg);
+        setPackageFormData({
+            name: pkg.name,
+            type: pkg.type,
+            fixedFee: pkg.fixedFee.toString(),
+            audioLimit: pkg.audioLimit.toString(),
+            extraAudioFee: pkg.extraAudioFee.toString(),
+            startDate: getLocalISODate(pkg.startDate),
+            endDate: getLocalISODate(pkg.endDate),
+            clientCode: pkg.clientCode || '',
+            active: pkg.active
+        });
+        setPackageFormOpen(true);
+    };
+
+    const handleClosePackageEdit = () => {
+        setEditingPackage(null);
+        setPackageFormOpen(false);
+        setPackageFormData({
+            name: '',
+            type: 'FIXO_COM_LIMITE',
+            fixedFee: '',
+            audioLimit: '',
+            extraAudioFee: '',
+            startDate: '',
+            endDate: '',
+            clientCode: '',
+            active: true
+        });
+    };
+
+    const handleSavePackageEdit = async () => {
+        try {
+            // Validações
+            if (!packageFormData.name.trim()) {
+                showToast.error('Nome do pacote é obrigatório');
+                return;
+            }
+
+            if (parseFloat(packageFormData.audioLimit) < editingPackage.usedAudios) {
+                showToast.error(`Limite de áudios não pode ser menor que o consumo atual (${editingPackage.usedAudios})`);
+                return;
+            }
+
+            if (new Date(packageFormData.startDate) >= new Date(packageFormData.endDate)) {
+                showToast.error('Data de início deve ser anterior à data de término');
+                return;
+            }
+
+            const updateData = {
+                name: packageFormData.name,
+                type: packageFormData.type,
+                fixedFee: parseFloat(packageFormData.fixedFee),
+                audioLimit: parseInt(packageFormData.audioLimit),
+                extraAudioFee: parseFloat(packageFormData.extraAudioFee),
+                startDate: packageFormData.startDate,
+                endDate: packageFormData.endDate,
+                clientCode: packageFormData.clientCode || null,
+                active: packageFormData.active
+            };
+
+            await clientPackageAPI.update(editingPackage.id, updateData);
+            showToast.success('Pacote atualizado com sucesso!');
+            handleClosePackageEdit();
+            fetchPackages();
+        } catch (error) {
+            console.error('Error updating package:', error);
+            showToast.error('Erro ao atualizar pacote');
         }
     };
 
@@ -1122,13 +1209,22 @@ const PackageList = ({ onAddNewOrder }) => {
                                                     NOVO PEDIDO
                                                 </button>
                                             </div>
-                                            <button
-                                                onClick={() => handleOpenBatchUpload(pkg)}
-                                                className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all"
-                                            >
-                                                <Upload size={14} />
-                                                LANÇAMENTO EM LOTE
-                                            </button>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={() => handleOpenBatchUpload(pkg)}
+                                                    className="flex-1 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-400 py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all"
+                                                >
+                                                    <Upload size={14} />
+                                                    LANÇAMENTO EM LOTE
+                                                </button>
+                                                <button
+                                                    onClick={() => handleOpenPackageEdit(pkg)}
+                                                    className="flex-1 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 text-blue-400 py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-2 transition-all"
+                                                >
+                                                    <Settings size={14} />
+                                                    EDITAR PACOTE
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -1269,6 +1365,182 @@ const PackageList = ({ onAddNewOrder }) => {
                     onClose={handleCloseUniversalEdit}
                     onSuccess={handleSuccessUniversalEdit}
                 />
+            )}
+
+            {/* Package Edit Modal */}
+            {packageFormOpen && editingPackage && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-300">
+                    <div className="bg-card border border-border rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl shadow-black/50 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+                        {/* Header */}
+                        <div className="p-6 border-b border-border flex items-center justify-between sticky top-0 bg-card z-10">
+                            <div>
+                                <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                                    <Settings className="text-primary" size={24} />
+                                    Editar Pacote
+                                </h2>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    Cliente: {editingPackage.client?.name}
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleClosePackageEdit}
+                                className="p-2 hover:bg-white/10 rounded-xl text-muted-foreground hover:text-white transition-all"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Form */}
+                        <div className="p-6 space-y-4">
+                            {/* Nome do Pacote */}
+                            <div>
+                                <label className="block text-sm font-bold text-foreground mb-2">
+                                    Nome do Pacote *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={packageFormData.name}
+                                    onChange={(e) => setPackageFormData({ ...packageFormData, name: e.target.value })}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                    placeholder="Ex: Pacote Premium"
+                                />
+                            </div>
+
+                            {/* Tipo de Pacote */}
+                            <div>
+                                <label className="block text-sm font-bold text-foreground mb-2">
+                                    Tipo de Pacote *
+                                </label>
+                                <select
+                                    value={packageFormData.type}
+                                    onChange={(e) => setPackageFormData({ ...packageFormData, type: e.target.value })}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                >
+                                    <option value="FIXO_ILIMITADO">Fixo Ilimitado</option>
+                                    <option value="FIXO_COM_LIMITE">Fixo com Limite</option>
+                                    <option value="FIXO_SOB_DEMANDA">Fixo Sob Demanda</option>
+                                </select>
+                            </div>
+
+                            {/* Valores */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-foreground mb-2">
+                                        Valor Fixo Mensal *
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={packageFormData.fixedFee}
+                                        onChange={(e) => setPackageFormData({ ...packageFormData, fixedFee: e.target.value })}
+                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-foreground mb-2">
+                                        Taxa por Áudio Extra
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={packageFormData.extraAudioFee}
+                                        onChange={(e) => setPackageFormData({ ...packageFormData, extraAudioFee: e.target.value })}
+                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                        placeholder="0.00"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Limite de Áudios */}
+                            <div>
+                                <label className="block text-sm font-bold text-foreground mb-2">
+                                    Limite de Áudios *
+                                </label>
+                                <input
+                                    type="number"
+                                    value={packageFormData.audioLimit}
+                                    onChange={(e) => setPackageFormData({ ...packageFormData, audioLimit: e.target.value })}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                    placeholder="Ex: 20"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Consumo atual: {editingPackage.usedAudios} áudios
+                                </p>
+                            </div>
+
+                            {/* Datas */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-bold text-foreground mb-2">
+                                        Data de Início *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={packageFormData.startDate}
+                                        onChange={(e) => setPackageFormData({ ...packageFormData, startDate: e.target.value })}
+                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-foreground mb-2">
+                                        Data de Término *
+                                    </label>
+                                    <input
+                                        type="date"
+                                        value={packageFormData.endDate}
+                                        onChange={(e) => setPackageFormData({ ...packageFormData, endDate: e.target.value })}
+                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Código do Cliente */}
+                            <div>
+                                <label className="block text-sm font-bold text-foreground mb-2">
+                                    Código do Cliente
+                                </label>
+                                <input
+                                    type="text"
+                                    value={packageFormData.clientCode}
+                                    onChange={(e) => setPackageFormData({ ...packageFormData, clientCode: e.target.value })}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-foreground focus:outline-none focus:border-primary/50"
+                                    placeholder="Ex: CLI-001"
+                                />
+                            </div>
+
+                            {/* Status */}
+                            <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/10">
+                                <input
+                                    type="checkbox"
+                                    id="packageActive"
+                                    checked={packageFormData.active}
+                                    onChange={(e) => setPackageFormData({ ...packageFormData, active: e.target.checked })}
+                                    className="w-5 h-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-0"
+                                />
+                                <label htmlFor="packageActive" className="text-sm font-bold text-foreground cursor-pointer">
+                                    Pacote Ativo
+                                </label>
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="p-6 border-t border-border flex gap-3 sticky bottom-0 bg-card">
+                            <button
+                                onClick={handleClosePackageEdit}
+                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white py-3 rounded-xl font-bold transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSavePackageEdit}
+                                className="flex-1 btn-primary py-3 rounded-xl font-bold shadow-lg shadow-primary/20"
+                            >
+                                Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Modal de Pedidos (View Orders for a Package) */}

@@ -182,6 +182,7 @@ router.post('/', checkPermission('accessPacotes'), async (req, res) => {
                         status: 'VENDA',
                         faturado: false,
                         date: new Date(startDate + 'T12:00:00'),
+                        dataFaturar: new Date(new Date(endDate).getTime() + 86400000), // endDate + 1 dia
                         numeroVenda: nextNumeroVenda,
                         comentarios: `Lançamento automático referente ao pacote: ${name}`
                     }
@@ -252,6 +253,11 @@ router.put('/:id', checkPermission('accessPacotes'), async (req, res) => {
             if (updateData.name) orderUpdateData.title = updateData.name;
             if (updateData.fixedFee) orderUpdateData.vendaValor = updateData.fixedFee;
             if (updateData.startDate) orderUpdateData.date = updateData.startDate;
+
+            // Sincronizar dataFaturar quando endDate mudar
+            if (updateData.endDate) {
+                orderUpdateData.dataFaturar = new Date(updateData.endDate.getTime() + 86400000);
+            }
 
             // Se forceUpdate = true e estava faturado, reverter para não faturado
             if (forceUpdate && currentPackage.billingOrder?.faturado) {

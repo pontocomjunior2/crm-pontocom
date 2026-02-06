@@ -434,241 +434,264 @@ router.post('/', async (req, res) => {
             packageId = null; // Remove vínculo com pacote
         }
         else if (packageId) {
-            const pkg = await prisma.clientPackage.findUnique({
-                where: { id: packageId }
+            // Buscar o pacote mais recente e ativo do cliente para garantir isolamento
+            const mostRecentPackage = await prisma.clientPackage.findFirst({
+                where: {
+                    clientId: req.body.clientId,
+                    active: true
+                },
+                orderBy: { createdAt: 'desc' }
             });
 
-            if (pkg && pkg.active) {
-                const competenceDate = req.body.date ? new Date(req.body.date + 'T12:00:00') : new Date();
-                const creditsToUse = creditsToConsume || 1;
+            if (!mostRecentPackage) {
+                return res.status(400).json({
+                    error: 'NO_ACTIVE_PACKAGE',
+                    message: 'Erro no Backend: Cliente não possui pacote ativo. Crie um novo pacote ou defina um valor de venda (Pedido Avulso).'
+                });
+            }
 
-                // 1. Verificar Validade (Regra 2 e 4)
-                if (competenceDate < pkg.startDate || competenceDate > pkg.endDate) {
-                    const dataFormatada = new Date(pkg.endDate).toLocaleDateString('pt-BR');
+            // Se o packageId fornecido não é o mais recente, usar o mais recente e avisar
+            if (mostRecentPackage.id !== packageId) {
+                console.warn(`[PACKAGE_ISOLATION] PackageId ${packageId} fornecido, mas usando pacote mais recente ${mostRecentPackage.id} para cliente ${req.body.clientId}`);
+                packageId = mostRecentPackage.id;
+            }
+
+            const pkg = mostRecentPackage;
+            const competenceDate = req.body.date ? new Date(req.body.date + 'T12:00:00') : new Date();
+            const creditsToUse = creditsToConsume || 1;
+
+            // 1. Verificar Validade (Regra 2 e 4) - Avisar mas permitir visualização
+            if (competenceDate < pkg.startDate || competenceDate > pkg.endDate) {
+                const dataFormatada = new Date(pkg.endDate).toLocaleDateString('pt-BR');
+                return res.status(400).json({
+                    error: 'PACKAGE_EXPIRED',
+                    message: `⚠️ Atenção: O pacote "${pkg.name}" expirou em ${dataFormatada}. Para prosseguir, defina um valor de venda (Pedido Avulso) ou crie/atualize o pacote do cliente.`,
+                    packageName: pkg.name,
+                    packageEndDate: pkg.endDate
+                });
+            }
+
+            const usageAfter = pkg.usedAudios + creditsToUse;
+
+            // 2. Verificar Limites (Regra 3) - Avisar sobre quota excedida
+            if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA') {
+                if (usageAfter > pkg.audioLimit) {
                     return res.status(400).json({
-                        error: 'PACKAGE_EXPIRED',
-                        message: `Erro no Pacote: O plano do cliente expirou em ${dataFormatada}. Para prosseguir, defina um valor de venda (Pedido Avulso) ou atualize o pacote do cliente.`
+                        error: 'PACKAGE_LIMIT_REACHED',
+                        message: `⚠️ Atenção: O limite de créditos do pacote "${pkg.name}" (${pkg.audioLimit}) foi atingido. Consumo atual: ${pkg.usedAudios}. Para prosseguir, defina um valor de venda (Pedido Avulso) ou altere o plano para Sob Demanda.`,
+                        packageName: pkg.name,
+                        currentUsage: pkg.usedAudios,
+                        limit: pkg.audioLimit
                     });
                 }
+            }
 
-                const usageAfter = pkg.usedAudios + creditsToUse;
+            // 3. Cálculo de Valor Extra e Consolidação no Faturamento (billingOrder)
+            if (pkg.type === 'FIXO_SOB_DEMANDA' && usageAfter > pkg.audioLimit) {
+                const usageBefore = pkg.usedAudios;
+                const extras = Math.max(0, usageAfter - Math.max(pkg.audioLimit, usageBefore));
+                const extraValue = extras * parseFloat(pkg.extraAudioFee);
 
-                // 2. Verificar Limites (Regra 3)
-                if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA') {
-                    if (usageAfter > pkg.audioLimit) {
-                        return res.status(400).json({
-                            error: 'PACKAGE_LIMIT_REACHED',
-                            message: `Erro no Pacote: O limite de créditos (${pkg.audioLimit}) foi atingido. Para prosseguir, defina um valor de venda (Pedido Avulso) ou altere o plano para Sob Demanda.`
+                // Se não existe um pedido de faturamento vinculado ao pacote (ex: valor fixo era 0)
+                if (!pkg.billingOrderId && extraValue > 0) {
+                    try {
+                        const lastSale = await prisma.order.findFirst({
+                            where: { numeroVenda: { not: null } },
+                            orderBy: { numeroVenda: 'desc' }
                         });
+                        const lastId = lastSale?.numeroVenda || 42531;
+                        const nextNumeroVenda = lastId + 1;
+
+                        const billingOrder = await prisma.order.create({
+                            data: {
+                                clientId: pkg.clientId,
+                                title: pkg.name,
+                                locutor: 'Sistema',
+                                tipo: 'PRODUZIDO',
+                                serviceType: 'PLANO MENSAL',
+                                vendaValor: 0,
+                                cacheValor: 0,
+                                status: 'VENDA',
+                                faturado: false,
+                                date: new Date(),
+                                numeroVenda: nextNumeroVenda,
+                                comentarios: `Faturamento consolidado: ${pkg.name}`
+                            }
+                        });
+
+                        await prisma.clientPackage.update({
+                            where: { id: pkg.id },
+                            data: { billingOrderId: billingOrder.id }
+                        });
+                        pkg.billingOrderId = billingOrder.id;
+                    } catch (createError) {
+                        console.error('Erro ao criar faturamento dinâmico:', createError);
                     }
                 }
 
-                // 3. Cálculo de Valor Extra e Consolidação no Faturamento (billingOrder)
-                if (pkg.type === 'FIXO_SOB_DEMANDA' && usageAfter > pkg.audioLimit) {
-                    const usageBefore = pkg.usedAudios;
-                    const extras = Math.max(0, usageAfter - Math.max(pkg.audioLimit, usageBefore));
-                    const extraValue = extras * parseFloat(pkg.extraAudioFee);
+                if (pkg.billingOrderId && extraValue > 0) {
+                    try {
+                        const currentBilling = await prisma.order.findUnique({
+                            where: { id: pkg.billingOrderId }
+                        });
 
-                    // Se não existe um pedido de faturamento vinculado ao pacote (ex: valor fixo era 0)
-                    if (!pkg.billingOrderId && extraValue > 0) {
-                        try {
-                            const lastSale = await prisma.order.findFirst({
-                                where: { numeroVenda: { not: null } },
-                                orderBy: { numeroVenda: 'desc' }
-                            });
-                            const lastId = lastSale?.numeroVenda || 42531;
-                            const nextNumeroVenda = lastId + 1;
+                        if (currentBilling) {
+                            const newVendaValor = parseFloat(currentBilling.vendaValor) + extraValue;
+                            const totalExtras = usageAfter - pkg.audioLimit;
 
-                            const billingOrder = await prisma.order.create({
+                            await prisma.order.update({
+                                where: { id: pkg.billingOrderId },
                                 data: {
-                                    clientId: pkg.clientId,
-                                    title: pkg.name,
-                                    locutor: 'Sistema',
-                                    tipo: 'PRODUZIDO',
-                                    serviceType: 'PLANO MENSAL',
-                                    vendaValor: 0,
-                                    cacheValor: 0,
-                                    status: 'VENDA',
-                                    faturado: false,
-                                    date: new Date(),
-                                    numeroVenda: nextNumeroVenda,
-                                    comentarios: `Faturamento consolidado: ${pkg.name}`
+                                    vendaValor: newVendaValor,
+                                    comentarios: `Lançamento automático referente ao pacote: ${pkg.name}. Áudios extras: ${totalExtras}.`
                                 }
                             });
-
-                            await prisma.clientPackage.update({
-                                where: { id: pkg.id },
-                                data: { billingOrderId: billingOrder.id }
-                            });
-                            pkg.billingOrderId = billingOrder.id;
-                        } catch (createError) {
-                            console.error('Erro ao criar faturamento dinâmico:', createError);
                         }
-                    }
-
-                    if (pkg.billingOrderId && extraValue > 0) {
-                        try {
-                            const currentBilling = await prisma.order.findUnique({
-                                where: { id: pkg.billingOrderId }
-                            });
-
-                            if (currentBilling) {
-                                const newVendaValor = parseFloat(currentBilling.vendaValor) + extraValue;
-                                const totalExtras = usageAfter - pkg.audioLimit;
-
-                                await prisma.order.update({
-                                    where: { id: pkg.billingOrderId },
-                                    data: {
-                                        vendaValor: newVendaValor,
-                                        comentarios: `Lançamento automático referente ao pacote: ${pkg.name}. Áudios extras: ${totalExtras}.`
-                                    }
-                                });
-                            }
-                        } catch (billError) {
-                            console.error('Erro ao consolidar extra no faturamento:', billError);
-                        }
+                    } catch (billError) {
+                        console.error('Erro ao consolidar extra no faturamento:', billError);
                     }
                 }
-
-                // O pedido individual de consumo SEMPRE terá valor 0 para faturamento
-                finalVendaValor = 0;
-
-                // Incrementar uso no pacote
-                await prisma.clientPackage.update({
-                    where: { id: packageId },
-                    data: { usedAudios: usageAfter }
-                });
-
-                // --- GERAÇÃO DO CONSUMPTION ID (PC-XXXX) ---
-                let consumptionId = null;
-                const lastPackageOrder = await prisma.order.findFirst({
-                    where: {
-                        consumptionId: { startsWith: 'PC-' }
-                    },
-                    orderBy: {
-                        consumptionId: 'desc'
-                    }
-                });
-
-                let nextSeq = 1;
-                if (lastPackageOrder && lastPackageOrder.consumptionId) {
-                    const lastNum = parseInt(lastPackageOrder.consumptionId.replace('PC-', ''));
-                    if (!isNaN(lastNum)) nextSeq = lastNum + 1;
-                }
-                consumptionId = `PC-${nextSeq.toString().padStart(4, '0')}`;
-
-                // Adicionar campos extras ao escopo do pedido
-                req.consumptionId = consumptionId;
-                req.packageName = pkg.name;
             }
+
+            // O pedido individual de consumo SEMPRE terá valor 0 para faturamento
+            finalVendaValor = 0;
+
+            // Incrementar uso no pacote
+            await prisma.clientPackage.update({
+                where: { id: packageId },
+                data: { usedAudios: usageAfter }
+            });
+
+            // --- GERAÇÃO DO CONSUMPTION ID (PC-XXXX) ---
+            let consumptionId = null;
+            const lastPackageOrder = await prisma.order.findFirst({
+                where: {
+                    consumptionId: { startsWith: 'PC-' }
+                },
+                orderBy: {
+                    consumptionId: 'desc'
+                }
+            });
+
+            let nextSeq = 1;
+            if (lastPackageOrder && lastPackageOrder.consumptionId) {
+                const lastNum = parseInt(lastPackageOrder.consumptionId.replace('PC-', ''));
+                if (!isNaN(lastNum)) nextSeq = lastNum + 1;
+            }
+            consumptionId = `PC-${nextSeq.toString().padStart(4, '0')}`;
+
+            // Adicionar campos extras ao escopo do pedido
+            req.consumptionId = consumptionId;
+            req.packageName = pkg.name;
         }
+    }
 
         // Validate required fields
         if (!clientId) {
-            return res.status(400).json({ error: 'Client ID is required' });
-        }
+        return res.status(400).json({ error: 'Client ID is required' });
+    }
 
-        if (!title) {
-            return res.status(400).json({ error: 'Title is required' });
-        }
+    if (!title) {
+        return res.status(400).json({ error: 'Title is required' });
+    }
 
-        if (status === 'PEDIDO' && (!tipo || !['OFF', 'PRODUZIDO'].includes(tipo))) {
-            return res.status(400).json({ error: 'Type must be OFF or PRODUZIDO for orders' });
-        }
+    if (status === 'PEDIDO' && (!tipo || !['OFF', 'PRODUZIDO'].includes(tipo))) {
+        return res.status(400).json({ error: 'Type must be OFF or PRODUZIDO for orders' });
+    }
 
-        // Verify client exists
-        const client = await prisma.client.findUnique({
-            where: { id: clientId }
+    // Verify client exists
+    const client = await prisma.client.findUnique({
+        where: { id: clientId }
+    });
+
+    if (!client) {
+        return res.status(404).json({ error: 'Client not found' });
+    }
+
+    let finalNumeroVenda = numeroVenda ? parseInt(numeroVenda) : null;
+
+    // If a manual number is provided, check for uniqueness
+    if (finalNumeroVenda) {
+        const existingNum = await prisma.order.findUnique({
+            where: { numeroVenda: finalNumeroVenda }
+        });
+        if (existingNum) {
+            return res.status(400).json({
+                error: 'Manual number already exists',
+                message: `O número de pedido ${finalNumeroVenda} já está em uso.`
+            });
+        }
+    }
+
+    // Auto-generate numeroVenda for direct sales if not provided
+    if (status === 'VENDA' && !finalNumeroVenda) {
+        const lastSale = await prisma.order.findFirst({
+            where: { numeroVenda: { not: null } },
+            orderBy: { numeroVenda: 'desc' }
         });
 
-        if (!client) {
-            return res.status(404).json({ error: 'Client not found' });
-        }
+        const lastId = lastSale?.numeroVenda || 42531;
+        finalNumeroVenda = lastId + 1;
+    }
 
-        let finalNumeroVenda = numeroVenda ? parseInt(numeroVenda) : null;
-
-        // If a manual number is provided, check for uniqueness
-        if (finalNumeroVenda) {
-            const existingNum = await prisma.order.findUnique({
-                where: { numeroVenda: finalNumeroVenda }
-            });
-            if (existingNum) {
-                return res.status(400).json({
-                    error: 'Manual number already exists',
-                    message: `O número de pedido ${finalNumeroVenda} já está em uso.`
-                });
-            }
-        }
-
-        // Auto-generate numeroVenda for direct sales if not provided
-        if (status === 'VENDA' && !finalNumeroVenda) {
-            const lastSale = await prisma.order.findFirst({
-                where: { numeroVenda: { not: null } },
-                orderBy: { numeroVenda: 'desc' }
-            });
-
-            const lastId = lastSale?.numeroVenda || 42531;
-            finalNumeroVenda = lastId + 1;
-        }
-
-        const order = await prisma.order.create({
-            data: {
-                clientId,
-                title,
-                fileName,
-                locutor: locutor || '',
-                locutorId: locutorId || null,
-                tipo,
-                urgency,
-                cacheValor: parseFloat(finalCacheValor),
-                vendaValor: parseFloat(finalVendaValor),
-                comentarios,
-                status,
-                numeroVenda: finalNumeroVenda || null,
-                faturado,
-                entregue,
-                dispensaNF,
-                emiteBoleto,
-                dataFaturar: dataFaturar ? new Date(dataFaturar + 'T12:00:00') : null,
-                vencimento: vencimento ? new Date(vencimento + 'T12:00:00') : null,
-                pago,
-                statusEnvio,
-                pendenciaFinanceiro,
-                pendenciaMotivo,
-                numeroOS: numeroOS || null,
-                arquivoOS: arquivoOS || null,
-                serviceType: serviceType || null,
-                supplierId: supplierId || null,
-                creditsConsumed: creditsToConsume,
-                creditsConsumedSupplier: creditsToConsumeSupplier,
-                costPerCreditSnapshot: costPerCreditVal ? parseFloat(costPerCreditVal) : null,
-                cachePago: cachePago || false,
-                packageId: packageId || null,
-                packageName: req.packageName || null,
-                consumptionId: req.consumptionId || null,
-                isBonus: isBonus,
-                // Custom Date Logic: Use provided date or default to now() (handled by Prisma default or backend logic if needed, but Prisma has @default(now()))
-                // However, we want to ensure explicit dates are respected.
-                // Custom Date Logic: Use T12:00:00 to avoid timezone regression
-                ...(req.body.date ? { date: new Date(req.body.date + 'T12:00:00') } : {})
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        razaoSocial: true,
-                        cnpj_cpf: true
-                    }
+    const order = await prisma.order.create({
+        data: {
+            clientId,
+            title,
+            fileName,
+            locutor: locutor || '',
+            locutorId: locutorId || null,
+            tipo,
+            urgency,
+            cacheValor: parseFloat(finalCacheValor),
+            vendaValor: parseFloat(finalVendaValor),
+            comentarios,
+            status,
+            numeroVenda: finalNumeroVenda || null,
+            faturado,
+            entregue,
+            dispensaNF,
+            emiteBoleto,
+            dataFaturar: dataFaturar ? new Date(dataFaturar + 'T12:00:00') : null,
+            vencimento: vencimento ? new Date(vencimento + 'T12:00:00') : null,
+            pago,
+            statusEnvio,
+            pendenciaFinanceiro,
+            pendenciaMotivo,
+            numeroOS: numeroOS || null,
+            arquivoOS: arquivoOS || null,
+            serviceType: serviceType || null,
+            supplierId: supplierId || null,
+            creditsConsumed: creditsToConsume,
+            creditsConsumedSupplier: creditsToConsumeSupplier,
+            costPerCreditSnapshot: costPerCreditVal ? parseFloat(costPerCreditVal) : null,
+            cachePago: cachePago || false,
+            packageId: packageId || null,
+            packageName: req.packageName || null,
+            consumptionId: req.consumptionId || null,
+            isBonus: isBonus,
+            // Custom Date Logic: Use provided date or default to now() (handled by Prisma default or backend logic if needed, but Prisma has @default(now()))
+            // However, we want to ensure explicit dates are respected.
+            // Custom Date Logic: Use T12:00:00 to avoid timezone regression
+            ...(req.body.date ? { date: new Date(req.body.date + 'T12:00:00') } : {})
+        },
+        include: {
+            client: {
+                select: {
+                    id: true,
+                    name: true,
+                    razaoSocial: true,
+                    cnpj_cpf: true
                 }
             }
-        });
+        }
+    });
 
-        res.status(201).json(order);
-    } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({ error: 'Failed to create order', message: error.message });
-    }
+    res.status(201).json(order);
+} catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ error: 'Failed to create order', message: error.message });
+}
 });
 
 // PUT /api/orders/:id - Update order
