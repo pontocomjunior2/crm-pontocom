@@ -699,14 +699,8 @@ const PackageList = ({ onAddNewOrder }) => {
                                             setOrdersSearchTerm(ordersSearchInput);
                                         }
                                     }}
-                                    className="bg-transparent border-none outline-none text-xs text-foreground placeholder:text-muted-foreground w-full pr-20"
+                                    className="bg-transparent border-none outline-none text-xs text-foreground placeholder:text-muted-foreground w-full"
                                 />
-                                <button
-                                    onClick={() => setOrdersSearchTerm(ordersSearchInput)}
-                                    className="absolute right-2 px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all"
-                                >
-                                    Buscar
-                                </button>
                             </div>
                         </div>
 
@@ -756,12 +750,6 @@ const PackageList = ({ onAddNewOrder }) => {
                                 className="w-full bg-input-background border border-border rounded-xl pl-10 pr-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-xs"
                             />
                         </div>
-                        <button
-                            onClick={() => setSearchTerm(searchInput)}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg text-xs font-bold transition-all"
-                        >
-                            Buscar
-                        </button>
                     </div>
 
                     {/* Status Filter */}
