@@ -120,7 +120,19 @@ const DashboardDetailModal = ({ metric, metricLabel, dateRange, onClose }) => {
                                         <td className="px-6 py-4">
                                             <div className="max-w-[300px]">
                                                 <p className="text-sm font-bold text-white truncate">{item.title}</p>
-                                                <p className="text-[10px] text-muted-foreground font-bold uppercase">{item.type || 'N/A'}</p>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <p className="text-[10px] text-muted-foreground font-bold uppercase">{item.type || 'N/A'}</p>
+                                                    {item.isPackageMonthly && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 text-[9px] font-bold border border-purple-500/20 uppercase tracking-wider">
+                                                            Mensalidade
+                                                        </span>
+                                                    )}
+                                                    {item.isPackageExtra && (
+                                                        <span className="px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400 text-[9px] font-bold border border-orange-500/20 uppercase tracking-wider">
+                                                            Extra Pacote
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">

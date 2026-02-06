@@ -269,11 +269,19 @@ router.get('/details', async (req, res) => {
                         OR: [
                             { packageId: { not: null } },
                             { packageBilling: { isNot: null } }
-                        ]
+                        ],
+                        vendaValor: { gt: 0 } // Exclude zero-value orders (included in package)
                     },
                     include: { client: { select: { name: true } } },
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
+
+                // Add metadata for frontend
+                data = data.map(order => ({
+                    ...order,
+                    isPackageMonthly: !!order.packageBilling,
+                    isPackageExtra: !!order.packageId && !order.packageBilling
+                }));
                 break;
 
             case 'activeClients':
