@@ -152,12 +152,10 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
         }
     };
 
+    // Removed automatic debounce - now using explicit "Filtrar" button
     useEffect(() => {
-        const timer = setTimeout(() => {
-            fetchOrders();
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [searchTerm, statusFilter, clientFilter, titleFilter, idFilter, dateFrom, dateTo, sortConfig, pagination.page, pagination.limit]);
+        fetchOrders();
+    }, [statusFilter, sortConfig, pagination.page, pagination.limit]);
 
     const filteredOrders = orders;
 
@@ -245,6 +243,12 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                             placeholder="Pesquisa rápida..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    setPagination(prev => ({ ...prev, page: 1 }));
+                                    fetchOrders();
+                                }
+                            }}
                             className="bg-transparent border-none outline-none text-xs text-foreground placeholder:text-muted-foreground w-full"
                         />
                     </div>
@@ -256,6 +260,18 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
                     >
                         <Filter size={16} />
                         <span className="text-xs font-bold hidden sm:inline">Filtros</span>
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            setPagination(prev => ({ ...prev, page: 1 }));
+                            fetchOrders();
+                        }}
+                        className="p-2.5 bg-primary/10 text-primary border border-primary/20 rounded-xl hover:bg-primary/20 transition-all flex items-center gap-2 shadow-sm"
+                        title="Aplicar Filtros"
+                    >
+                        <Search size={16} />
+                        <span className="text-xs font-bold hidden sm:inline">Filtrar</span>
                     </button>
 
                     {(clientFilter || idFilter || titleFilter || dateFrom || dateTo) && (
