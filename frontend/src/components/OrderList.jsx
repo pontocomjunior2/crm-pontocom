@@ -93,11 +93,11 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         } finally {
             setLoading(false);
         }
-    }, [pagination.page, pagination.limit, sortConfig]); // Removed search and filters to disable real-time search
+    }, [pagination.page, pagination.limit, sortConfig, search, filters]); // Added search and filters to fix search not working
 
     useEffect(() => {
         fetchOrders();
-    }, [fetchOrders]);
+    }, [pagination.page, pagination.limit, sortConfig]); // search and filters removed to prevent real-time search
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -286,6 +286,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                         <select
                             value={filters.type}
                             onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                             className="bg-input-background border border-border rounded-xl px-3 py-2 text-foreground text-xs focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Tipos</option>
@@ -296,6 +297,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
                         <select
                             value={filters.status}
                             onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                             className="bg-input-background border border-border rounded-xl px-3 py-2 text-foreground text-xs focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Status</option>

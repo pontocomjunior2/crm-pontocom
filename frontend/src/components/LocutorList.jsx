@@ -39,7 +39,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor, onViewHistory }) => {
 
     useEffect(() => {
         fetchLocutores();
-    }, [statusFilter, sortConfig]); // Removed search to disable real-time search
+    }, [sortConfig]); // statusFilter removed to prevent real-time search
 
     const fetchLocutores = async () => {
         setLoading(true);
@@ -122,6 +122,7 @@ const LocutorList = ({ onEditLocutor, onAddNewLocutor, onViewHistory }) => {
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') fetchLocutores(); }}
                             className="bg-input-background border border-border rounded-xl px-3 py-2 text-foreground text-xs focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Todos os Status</option>

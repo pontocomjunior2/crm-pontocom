@@ -52,7 +52,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
 
     useEffect(() => {
         fetchClients();
-    }, [pagination.page, pagination.limit, statusFilter, sortConfig, packageFilter]); // Removed search filters to disable real-time search
+    }, [pagination.page, pagination.limit, sortConfig]); // statusFilter and packageFilter removed to prevent real-time search
 
     const fetchClients = async () => {
         setLoading(true);
@@ -227,6 +227,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                 placeholder="Nome do Cliente"
                                 value={nameFilter}
                                 onChange={(e) => setNameFilter(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                                 className="w-full bg-input-background border border-border rounded-xl pl-10 pr-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
                             />
                         </div>
@@ -236,6 +237,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                 placeholder="Cidade"
                                 value={cityFilter}
                                 onChange={(e) => setCityFilter(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                                 className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
                             />
                         </div>
@@ -245,12 +247,14 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                 placeholder="CNPJ / CPF"
                                 value={cnpjFilter}
                                 onChange={(e) => setCnpjFilter(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                                 className="w-full bg-input-background border border-border rounded-xl px-4 py-2 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-sm"
                             />
                         </div>
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                             className="bg-input-background border border-border rounded-xl px-4 py-2 text-foreground text-sm focus:outline-none focus:border-primary/50"
                         >
                             <option value="ativado">Status: Ativados</option>
@@ -260,6 +264,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                         <select
                             value={packageFilter}
                             onChange={(e) => setPackageFilter(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                             className="bg-input-background border border-border rounded-xl px-4 py-2 text-foreground text-sm focus:outline-none focus:border-primary/50"
                         >
                             <option value="">Pacotes: Todos</option>
@@ -276,6 +281,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
                                 placeholder="Busca global (email, razão social...)"
                                 value={search}
                                 onChange={handleSearchChange}
+                                onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                                 className="w-full bg-input-background border border-border rounded-lg pl-9 pr-4 py-1.5 text-foreground focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground text-xs"
                             />
                         </div>

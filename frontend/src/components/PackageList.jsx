@@ -64,7 +64,7 @@ const PackageList = ({ onAddNewOrder }) => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [searchInput, setSearchInput] = useState(''); // Temporary state for input
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+    const [viewMode, setViewMode] = useState('list'); // Default changed from 'grid' to 'list'
     const [editingCode, setEditingCode] = useState(null); // id of package being edited
     const [tempCode, setTempCode] = useState('');
     const [selectedPackage, setSelectedPackage] = useState(null);
@@ -757,6 +757,7 @@ const PackageList = ({ onAddNewOrder }) => {
                         <select
                             value={packageStatusFilter}
                             onChange={(e) => setPackageStatusFilter(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') fetchPackages(); }}
                             className="bg-transparent text-xs font-bold text-white px-3 py-2 outline-none cursor-pointer"
                         >
                             <option value="all" className="bg-card">Todos Status</option>
@@ -1317,6 +1318,13 @@ const PackageList = ({ onAddNewOrder }) => {
                                                             title="Lançamento em Lote"
                                                         >
                                                             <Upload size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleOpenPackageEdit(pkg)}
+                                                            className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500/20 transition-all border border-blue-500/10 hover:border-blue-500/30"
+                                                            title="Editar Pacote"
+                                                        >
+                                                            <Settings size={18} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleViewOrders(pkg)}
