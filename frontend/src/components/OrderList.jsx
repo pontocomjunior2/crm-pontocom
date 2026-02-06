@@ -130,9 +130,6 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
         try {
             await orderAPI.convert(id);
             fetchOrders();
-            if (onNavigate) {
-                onNavigate('faturamento');
-            }
         } catch (error) {
             console.error('Error converting order:', error);
             alert('Erro ao converter pedido: ' + error.message);
