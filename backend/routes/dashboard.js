@@ -46,6 +46,7 @@ router.get('/', async (req, res) => {
             where: { status: 'ativado' }
         });
 
+        // 1. Calculate main KPIs
         const revenueSums = await prisma.order.aggregate({
             _sum: {
                 vendaValor: true,
@@ -53,32 +54,58 @@ router.get('/', async (req, res) => {
             },
             where: {
                 ...dateFilter,
-                status: 'VENDA'
+                status: { in: ['VENDA', 'FATURADO'] }
             }
         });
 
-        // 1.1 Calculate Recurring Revenue (Fixed Fees + Recurring Services)
-        const recurringMetricsSum = await prisma.order.aggregate({
+        // Cache involves everything that is already "done" or "sold"
+        const cacheSums = await prisma.order.aggregate({
             _sum: {
-                vendaValor: true,
                 cacheValor: true
             },
             where: {
                 ...dateFilter,
-                status: 'VENDA',
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] }
+            }
+        });
+
+        // 1.1 Calculate Recurring Metrics
+        const recurringRevenueSum = await prisma.order.aggregate({
+            _sum: { vendaValor: true },
+            where: {
+                ...dateFilter,
+                status: { in: ['VENDA', 'FATURADO'] },
                 serviceType: 'SERVIÇO RECORRENTE'
             }
         });
 
-        // 1.2 Calculate Package Revenue (Extra audio consumptions + Package Monthly Fees)
-        const packageMetricsSum = await prisma.order.aggregate({
-            _sum: {
-                vendaValor: true,
-                cacheValor: true
-            },
+        const recurringCacheSum = await prisma.order.aggregate({
+            _sum: { cacheValor: true },
             where: {
                 ...dateFilter,
-                status: 'VENDA',
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
+                serviceType: 'SERVIÇO RECORRENTE'
+            }
+        });
+
+        // 1.2 Calculate Package Metrics
+        const packageRevenueSum = await prisma.order.aggregate({
+            _sum: { vendaValor: true },
+            where: {
+                ...dateFilter,
+                status: { in: ['VENDA', 'FATURADO'] },
+                OR: [
+                    { packageId: { not: null } },
+                    { packageBilling: { isNot: null } }
+                ]
+            }
+        });
+
+        const packageCacheSum = await prisma.order.aggregate({
+            _sum: { cacheValor: true },
+            where: {
+                ...dateFilter,
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
                 OR: [
                     { packageId: { not: null } },
                     { packageBilling: { isNot: null } }
@@ -87,8 +114,8 @@ router.get('/', async (req, res) => {
         });
 
         const totalRevenue = Number(revenueSums._sum.vendaValor || 0);
-        const recurringRevenue = Number(recurringMetricsSum._sum.vendaValor || 0);
-        const packageRevenue = Number(packageMetricsSum._sum.vendaValor || 0);
+        const recurringRevenue = Number(recurringRevenueSum._sum.vendaValor || 0);
+        const packageRevenue = Number(packageRevenueSum._sum.vendaValor || 0);
         const orderRevenue = totalRevenue - recurringRevenue - packageRevenue;
 
         // 1.1 Calculate total fixed fees for locutores who have orders IN THIS PERIOD
@@ -98,7 +125,7 @@ router.get('/', async (req, res) => {
                 orders: {
                     some: {
                         ...dateFilter,
-                        status: 'VENDA'
+                        status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] }
                     }
                 }
             },
@@ -108,9 +135,9 @@ router.get('/', async (req, res) => {
         const totalFixedFees = locutoresWithOrders.reduce((sum, loc) => sum + Number(loc.valorFixoMensal), 0);
 
         // Cache Calculations
-        const totalVariableCache = Number(revenueSums._sum.cacheValor || 0);
-        const recurringVariableCache = Number(recurringMetricsSum._sum.cacheValor || 0);
-        const packageVariableCache = Number(packageMetricsSum._sum.cacheValor || 0);
+        const totalVariableCache = Number(cacheSums._sum.cacheValor || 0);
+        const recurringVariableCache = Number(recurringCacheSum._sum.cacheValor || 0);
+        const packageVariableCache = Number(packageCacheSum._sum.cacheValor || 0);
 
         const recurringCache = recurringVariableCache + totalFixedFees;
         const packageCache = packageVariableCache;
@@ -232,56 +259,31 @@ router.get('/details', async (req, res) => {
         switch (metric) {
             case 'totalRevenue':
             case 'orderRevenue':
-                // For orderRevenue, we filter for orders WITHOUT packageId, packageBilling AND not RECURRING
-                const orderRevWhere = {
-                    ...dateFilter,
-                    status: 'VENDA'
-                };
-                if (metric === 'orderRevenue') {
-                    orderRevWhere.packageId = null;
-                    orderRevWhere.packageBilling = null;
-                    orderRevWhere.serviceType = { not: 'SERVIÇO RECORRENTE' };
-                }
-                data = await prisma.order.findMany({
-                    where: orderRevWhere,
-                    include: { client: { select: { name: true } } },
-                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
-                });
-                break;
-
             case 'recurringRevenue':
-                data = await prisma.order.findMany({
-                    where: {
-                        ...dateFilter,
-                        status: 'VENDA',
-                        serviceType: 'SERVIÇO RECORRENTE'
-                    },
-                    include: { client: { select: { name: true } } },
-                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
-                });
-                break;
-
             case 'packageRevenue':
+                const revenueWhere = {
+                    ...dateFilter,
+                    status: { in: ['VENDA', 'FATURADO'] }
+                };
+
+                if (metric === 'orderRevenue') {
+                    revenueWhere.packageId = null;
+                    revenueWhere.packageBilling = null;
+                    revenueWhere.serviceType = { not: 'SERVIÇO RECORRENTE' };
+                } else if (metric === 'recurringRevenue') {
+                    revenueWhere.serviceType = 'SERVIÇO RECORRENTE';
+                } else if (metric === 'packageRevenue') {
+                    revenueWhere.OR = [
+                        { packageId: { not: null } },
+                        { packageBilling: { isNot: null } }
+                    ];
+                }
+
                 data = await prisma.order.findMany({
-                    where: {
-                        ...dateFilter,
-                        status: 'VENDA',
-                        OR: [
-                            { packageId: { not: null } },
-                            { packageBilling: { isNot: null } }
-                        ],
-                        vendaValor: { gt: 0 } // Exclude zero-value orders (included in package)
-                    },
+                    where: revenueWhere,
                     include: { client: { select: { name: true } } },
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
-
-                // Add metadata for frontend
-                data = data.map(order => ({
-                    ...order,
-                    isPackageMonthly: !!order.packageBilling,
-                    isPackageExtra: !!order.packageId && !order.packageBilling
-                }));
                 break;
 
             case 'activeClients':
@@ -289,13 +291,14 @@ router.get('/details', async (req, res) => {
                     where: { status: 'ativado' },
                     orderBy: { name: 'asc' }
                 });
-                // Map to a consistent format for the modal
                 data = data.map(c => ({
                     id: c.id,
                     title: c.name,
                     client: c.company || 'Pessoa Física',
-                    value: c.email || c.phone,
-                    date: c.createdAt
+                    displayValue: c.email || c.phone || 'S/D',
+                    date: c.createdAt,
+                    status: 'ATIVO',
+                    tipo: 'CLIENTE'
                 }));
                 break;
 
@@ -303,7 +306,7 @@ router.get('/details', async (req, res) => {
                 const packageOrders = await prisma.order.findMany({
                     where: {
                         ...dateFilter,
-                        status: 'VENDA',
+                        status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
                         OR: [
                             { packageId: { not: null } },
                             { packageBilling: { isNot: null } }
@@ -338,9 +341,6 @@ router.get('/details', async (req, res) => {
                     }
                 });
                 data = Object.values(groupedPackages);
-
-                // For consolidated data, we skip the standard mapping at the end
-                // So we format it here and return
                 const formattedPackageData = data.map(item => ({
                     id: item.id.toString(),
                     title: item.title,
@@ -357,7 +357,7 @@ router.get('/details', async (req, res) => {
             case 'recurringCache':
                 const cacheWhere = {
                     ...dateFilter,
-                    status: 'VENDA'
+                    status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] }
                 };
 
                 if (metric === 'orderCache') {
@@ -374,23 +374,16 @@ router.get('/details', async (req, res) => {
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });
 
-                // For Cache metrics, we want to show the cache value
                 data = dataList.map(o => ({
                     ...o,
-                    displayValue: o.cacheValor
+                    displayValue: Number(o.cacheValor)
                 }));
 
-                // If it's totalCache or recurringCache, include fixed fees
                 if (metric === 'totalCache' || metric === 'recurringCache') {
                     const locutoresWithFixed = await prisma.locutor.findMany({
                         where: {
                             valorFixoMensal: { gt: 0 },
-                            orders: {
-                                some: {
-                                    ...dateFilter,
-                                    status: 'VENDA'
-                                }
-                            }
+                            orders: { some: { ...dateFilter, status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] } } }
                         }
                     });
 
@@ -399,8 +392,9 @@ router.get('/details', async (req, res) => {
                         title: `Fixo Mensal: ${l.name}`,
                         client: 'Custo Fixo',
                         displayValue: Number(l.valorFixoMensal || 0),
-                        date: new Date(), // Just for list positioning
-                        status: 'FIXO'
+                        date: new Date(),
+                        status: 'FIXO',
+                        tipo: 'TAXA MENSAL'
                     }));
 
                     data = [...data, ...fixedFeesData];
@@ -409,10 +403,15 @@ router.get('/details', async (req, res) => {
 
             case 'activeOrders':
                 data = await prisma.order.findMany({
-                    where: {
-                        entregue: false,
-                        ...dateFilter
-                    },
+                    where: { entregue: false, ...dateFilter },
+                    include: { client: { select: { name: true } } },
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
+                });
+                break;
+
+            case 'totalOrders':
+                data = await prisma.order.findMany({
+                    where: dateFilter,
                     include: { client: { select: { name: true } } },
                     orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
                 });

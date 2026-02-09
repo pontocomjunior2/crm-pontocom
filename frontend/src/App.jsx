@@ -47,6 +47,7 @@ import RecurringServiceList from './components/RecurringServiceList';
 
 import AdminSettings from './components/AdminSettings';
 import DashboardDetailModal from './components/DashboardDetailModal';
+import DashboardDetailView from './components/DashboardDetailView';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -158,7 +159,7 @@ const CRM = () => {
 
   // Tab Access Control
   useEffect(() => {
-    if (!user || activeTab === 'perfil') return;
+    if (!user || activeTab === 'perfil' || activeTab === 'dashboard-view') return;
 
     const isPermitted = filteredMenuItems.some(item => item.id === activeTab);
     if (!isPermitted) {
@@ -543,7 +544,7 @@ const CRM = () => {
                           className="card-dark p-6 group cursor-pointer hover:border-primary/30 transition-all hover:shadow-lg active:scale-[0.98]"
                           onClick={() => {
                             setSelectedMetric({ id: stat.id, label: stat.title });
-                            setShowDetailModal(true);
+                            setActiveTab('dashboard-view');
                           }}
                         >
                           <div className="flex items-start justify-between mb-4">
@@ -620,6 +621,23 @@ const CRM = () => {
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === 'dashboard-view' && selectedMetric && (
+            <DashboardDetailView
+              metric={selectedMetric.id}
+              metricLabel={selectedMetric.label}
+              dateRange={dateRange}
+              onBack={() => setActiveTab('dashboard')}
+              onEditOrder={(order) => {
+                setSelectedOrder(order);
+                setShowOrderForm(true);
+              }}
+              onEditClient={(client) => {
+                setSelectedClient(client);
+                setShowClientForm(true);
+              }}
+            />
           )}
 
           {activeTab === 'clientes' && (
@@ -699,7 +717,7 @@ const CRM = () => {
           )}
 
 
-          {!['dashboard', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup', 'pacotes', 'servicos', 'config'].includes(activeTab) && (
+          {!['dashboard', 'dashboard-view', 'clientes', 'pedidos', 'locutores', 'faturamento', 'usuarios', 'perfil', 'fornecedores', 'relatorios', 'backup', 'pacotes', 'servicos', 'config'].includes(activeTab) && (
             <div className="p-20 text-center">
               <Package size={48} className="text-muted-foreground mx-auto mb-4 opacity-20" />
               <h3 className="text-xl font-bold text-white mb-2">Módulo em Desenvolvimento</h3>

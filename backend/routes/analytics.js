@@ -24,11 +24,11 @@ router.get('/financial-summary', async (req, res) => {
             if (Object.keys(dateFilter.date).length === 0) delete dateFilter.date;
         }
 
-        // Get all sales (VENDA) in the period
+        // Get all relevant orders
         const orders = await prisma.order.findMany({
             where: {
                 ...dateFilter,
-                status: 'VENDA'
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] }
             },
             include: {
                 locutorObj: true
@@ -36,7 +36,9 @@ router.get('/financial-summary', async (req, res) => {
         });
 
         // Calculate KPIs
-        const totalRevenue = orders.reduce((sum, order) => sum + Number(order.vendaValor), 0);
+        const totalRevenue = orders
+            .filter(o => ['VENDA', 'FATURADO'].includes(o.status))
+            .reduce((sum, order) => sum + Number(order.vendaValor), 0);
 
         // Dynamic cache calculation (similar to OrderList logic)
         // We need to handle fixed-fee locutores correctly
@@ -64,7 +66,7 @@ router.get('/financial-summary', async (req, res) => {
         });
 
         const pendingReceivables = orders
-            .filter(o => !o.faturado)
+            .filter(o => ['VENDA', 'ENTREGUE'].includes(o.status) && !o.faturado)
             .reduce((sum, order) => sum + Number(order.vendaValor), 0);
 
         let commissionableProfit = 0;
@@ -132,7 +134,7 @@ router.get('/sales-trends', async (req, res) => {
 
         const orders = await prisma.order.findMany({
             where: {
-                status: 'VENDA',
+                status: { in: ['VENDA', 'FATURADO'] },
                 ...dateFilter
             },
             orderBy: { date: 'asc' }
@@ -171,7 +173,7 @@ router.get('/top-clients', async (req, res) => {
         const clients = await prisma.client.findMany({
             include: {
                 orders: {
-                    where: { status: 'VENDA' }
+                    where: { status: { in: ['VENDA', 'FATURADO', 'ENTREGUE'] } }
                 }
             }
         });
@@ -215,7 +217,7 @@ router.get('/performance-metrics', async (req, res) => {
             by: ['tipo'],
             _count: true,
             where: {
-                status: 'VENDA',
+                status: { in: ['VENDA', 'FATURADO', 'ENTREGUE'] },
                 ...dateFilter
             }
         });
@@ -262,7 +264,7 @@ router.get('/cache-report', async (req, res) => {
         const orders = await prisma.order.findMany({
             where: {
                 ...dateFilter,
-                status: 'VENDA', // Only sales generate cache payments
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] }, // Only processed orders generate cache payments
                 cacheValor: { gt: 0 },
                 locutorId: { not: null },
                 locutorObj: {
