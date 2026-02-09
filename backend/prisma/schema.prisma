@@ -228,6 +228,7 @@ model ClientPackage {
   active         Boolean     @default(true)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
+  autoRenewal    Boolean     @default(false)
   billingOrderId String?     @unique
   clientCode     String?
   billingOrder   Order?      @relation("PackageBilling", fields: [billingOrderId], references: [id])
@@ -288,6 +289,17 @@ model OrderCommission {
   createdAt DateTime @default(now())
 
   @@unique([orderId, userId])
+}
+
+model Notification {
+  id         String   @id @default(uuid())
+  type       String   // 'RENEWAL', 'BILLING', 'SYSTEM'
+  title      String
+  message    String
+  targetRole String   // 'ATENDIMENTO', 'FINANCEIRO', 'ADMIN'
+  link       String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }
 
 enum Role {

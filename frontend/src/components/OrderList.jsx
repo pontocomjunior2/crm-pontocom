@@ -32,13 +32,14 @@ import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 import CommissionModal from './CommissionModal';
 import { useAuth } from '../contexts/AuthContext';
 
-const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger }) => {
+const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, initialFilters }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filters, setFilters] = useState({
         type: '',
-        status: ''
+        status: '',
+        id: '' // Add ID filter support
     });
     const [pagination, setPagination] = useState({
         page: 1,
@@ -98,6 +99,18 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger }) =
     useEffect(() => {
         fetchOrders();
     }, [pagination.page, pagination.limit, sortConfig, refreshTrigger]); // Incluído refreshTrigger para recarregar sem desmontar
+
+    // Handle initial filters
+    useEffect(() => {
+        if (initialFilters?.id) {
+            setFilters(prev => ({ ...prev, id: initialFilters.id }));
+            // Optionally set search to trigger highlight?
+            // The API should handle ID filtering if we verify backend.
+            // If backend doesn't support 'id' in filters, we might need to rely on 'search' if ID works there.
+            // Assuming backend (orders.js) handles 'id' or we pass it via search.
+            // Let's assume for now we set it in filters and update backend if needed.
+        }
+    }, [initialFilters]);
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();
@@ -316,6 +329,34 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger }) =
                     </div>
                 </div>
             </div>
+
+            {/* Active Filters Badges */}
+            {(filters.status || filters.type || filters.id) && (
+                <div className="flex items-center gap-2 mb-4 animate-in fade-in slide-in-from-top-2">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground mr-1">Filtros Ativos:</span>
+
+                    {filters.id && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/20 border border-primary/30 text-primary text-xs font-bold">
+                            <span>ID: {filters.id.substring(0, 8)}...</span>
+                            <button onClick={() => setFilters(prev => ({ ...prev, id: '' }))} className="hover:text-foreground transition-colors"><X size={12} /></button>
+                        </div>
+                    )}
+
+                    {filters.status && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/20 border border-primary/30 text-primary text-xs font-bold">
+                            <span>Status: {filters.status}</span>
+                            <button onClick={() => setFilters(prev => ({ ...prev, status: '' }))} className="hover:text-foreground transition-colors"><X size={12} /></button>
+                        </div>
+                    )}
+
+                    {filters.type && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/20 border border-primary/30 text-primary text-xs font-bold">
+                            <span>Tipo: {filters.type}</span>
+                            <button onClick={() => setFilters(prev => ({ ...prev, type: '' }))} className="hover:text-foreground transition-colors"><X size={12} /></button>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Table Content */}
             <div className="flex-1 bg-white/5 rounded-2xl border border-white/5 overflow-hidden flex flex-col min-h-0">

@@ -44,6 +44,7 @@ import Relatorios from './components/Relatorios';
 import PackageList from './components/PackageList';
 import PackageOrderForm from './components/PackageOrderForm';
 import RecurringServiceList from './components/RecurringServiceList';
+import NotificationPanel from './components/NotificationPanel';
 
 import AdminSettings from './components/AdminSettings';
 import DashboardDetailModal from './components/DashboardDetailModal';
@@ -71,6 +72,7 @@ const CRM = () => {
   const [showPackageOrderForm, setShowPackageOrderForm] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [initialOrderStatus, setInitialOrderStatus] = useState('PEDIDO');
+  const [navParams, setNavParams] = useState(null);
 
   // Mobile Menu State
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -432,10 +434,11 @@ const CRM = () => {
                 className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all"
               />
             </div>
-            <button className="relative p-2 rounded-lg hover:bg-accent transition-colors">
-              <Bell className="w-5 h-5 text-foreground" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full"></span>
-            </button>
+
+            <NotificationPanel onNavigate={(tab, params) => {
+              setActiveTab(tab);
+              if (params) setNavParams(params);
+            }} />
             <div className="flex items-center gap-3 pl-4 border-l border-border">
               <div className="text-right hidden xl:block">
                 <p className="text-sm text-foreground font-black tracking-tight">{user.name}</p>
@@ -648,7 +651,7 @@ const CRM = () => {
 
           {activeTab === 'pedidos' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <OrderList refreshTrigger={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'PEDIDO'); setShowOrderForm(true); }} onNavigate={setActiveTab} />
+              <OrderList refreshTrigger={refreshTrigger} initialFilters={navParams} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'PEDIDO'); setShowOrderForm(true); }} onNavigate={setActiveTab} />
             </div>
           )}
 
@@ -666,7 +669,7 @@ const CRM = () => {
 
           {activeTab === 'faturamento' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <FaturamentoList refreshTrigger={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'VENDA'); setShowOrderForm(true); }} />
+              <FaturamentoList refreshTrigger={refreshTrigger} initialFilters={navParams} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'VENDA'); setShowOrderForm(true); }} />
             </div>
           )}
 
@@ -696,7 +699,7 @@ const CRM = () => {
 
           {activeTab === 'pacotes' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <PackageList refreshTrigger={refreshTrigger} onAddNewOrder={(pkg) => {
+              <PackageList refreshTrigger={refreshTrigger} initialFilters={navParams} onAddNewOrder={(pkg) => {
                 setSelectedPackage(pkg);
                 setShowPackageOrderForm(true);
               }} />

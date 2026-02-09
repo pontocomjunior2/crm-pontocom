@@ -28,7 +28,7 @@ import {
 import { orderAPI, STORAGE_URL } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 
-const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger }) => {
+const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger, initialFilters }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +52,20 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger }) => {
         key: 'date',
         order: 'desc'
     });
+
+    // Handle initial filters
+    useEffect(() => {
+        if (initialFilters) {
+            if (initialFilters.date) {
+                setDateFrom(initialFilters.date);
+                setDateTo(initialFilters.date);
+                setShowFilters(true);
+            }
+            if (initialFilters.status) {
+                setStatusFilter(initialFilters.status);
+            }
+        }
+    }, [initialFilters]);
 
     const handleSelectOrder = (id) => {
         setSelectedOrders(prev => {

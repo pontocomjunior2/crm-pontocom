@@ -476,6 +476,12 @@ export const scheduleAPI = {
     }),
 };
 
+export const notificationAPI = {
+    list: async (targetRole) => fetchAPI(`/notifications?targetRole=${targetRole}`),
+    markAsRead: async (id) => fetchAPI(`/notifications/${id}/read`, { method: 'PUT' }),
+    getSummary: async (targetRole) => fetchAPI(`/notifications/summary?targetRole=${targetRole}`),
+};
+
 // Recurring Service API calls
 export const recurringServiceAPI = {
     list: async (params = {}) => {

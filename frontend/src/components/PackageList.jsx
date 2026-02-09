@@ -36,7 +36,7 @@ import { showToast } from '../utils/toast';
 import PackageOrderForm from './PackageOrderForm';
 import PackageBatchUploadModal from './PackageBatchUploadModal';
 
-const PackageList = ({ onAddNewOrder, refreshTrigger }) => {
+const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
     // Tab system
     const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'packages'
 
@@ -286,8 +286,12 @@ const PackageList = ({ onAddNewOrder, refreshTrigger }) => {
             pkg.client?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             pkg.clientCode?.toLowerCase().includes(searchTerm.toLowerCase());
 
+        const matchesClient = clientIdFilter ? pkg.clientId === clientIdFilter : true;
+
         const expired = isExpired(pkg);
         const limit = isLimitReached(pkg);
+
+        if (!matchesClient) return false;
 
         if (packageStatusFilter === 'active') return matchesSearch && !expired && !limit && pkg.active;
         if (packageStatusFilter === 'expired') return matchesSearch && expired;
@@ -751,6 +755,19 @@ const PackageList = ({ onAddNewOrder, refreshTrigger }) => {
                             />
                         </div>
                     </div>
+
+                    {/* Clear Client Filter Badge */}
+                    {clientIdFilter && (
+                        <div className="flex items-center gap-2 bg-primary/20 p-2 rounded-xl border border-primary/30 h-fit shrink-0 animate-in fade-in">
+                            <span className="text-xs font-bold text-primary">Filtro: Cliente Específico</span>
+                            <button
+                                onClick={() => setClientIdFilter(null)}
+                                className="p-1 hover:bg-primary/20 rounded-full text-primary transition-colors"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Status Filter */}
                     <div className="flex items-center gap-2 bg-white/5 p-1 rounded-xl border border-white/5 h-fit shrink-0">

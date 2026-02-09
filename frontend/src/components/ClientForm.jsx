@@ -56,7 +56,8 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
         extraAudioFee: 0,
         startDate: getLocalISODate(),
         endDate: getLocalISODate(new Date(new Date().setMonth(new Date().getMonth() + 1))),
-        active: true
+        active: true,
+        autoRenewal: false
     });
 
     useEffect(() => {
@@ -406,6 +407,26 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                         <label htmlFor="pkg-active" className="text-sm font-medium text-foreground cursor-pointer">
                             Ativar pacote imediatamente (isto desativará outros pacotes deste cliente)
                         </label>
+                    </div>
+
+                    <div className="flex items-center space-x-2 mt-4 p-3 bg-secondary/10 rounded-lg border border-secondary/20">
+                        <input
+                            type="checkbox"
+                            id="pkg-autoRenewal"
+                            name="autoRenewal"
+                            checked={packageFormData.autoRenewal}
+                            onChange={(e) => setPackageFormData(prev => ({ ...prev, autoRenewal: e.target.checked }))}
+                            className="w-5 h-5 rounded border-border bg-input-background text-primary focus:ring-primary/20"
+                        />
+                        <div className="flex flex-col">
+                            <label htmlFor="pkg-autoRenewal" className="text-sm font-medium text-foreground cursor-pointer flex items-center gap-2">
+                                Renovação Automática
+                                <span className="px-2 py-0.5 text-[10px] bg-primary/20 text-primary rounded-full">NOVIO</span>
+                            </label>
+                            <span className="text-xs text-muted-foreground">
+                                O sistema alertará o atendimento quando for hora de renovar este pacote.
+                            </span>
+                        </div>
                     </div>
                 </div>
 

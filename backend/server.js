@@ -115,6 +115,7 @@ app.use('/api/tiers', authMiddleware, tierRoutes);
 app.use('/api/backups', authMiddleware, backupRoutes);
 app.use('/api/client-packages', authMiddleware, clientPackageRoutes);
 app.use('/api/recurring-services', authMiddleware, recurringServicesRoutes);
+app.use('/api/notifications', authMiddleware, require('./routes/notifications'));
 app.use('/api/admin', authMiddleware, adminConfigRoutes);
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 
@@ -141,4 +142,8 @@ app.listen(PORT, async () => {
 
   // Initialize Recurring Services Automation
   await recurringAutomationService.initialize();
+
+  // Initialize System Alerts (Notifications)
+  const systemAlertService = require('./services/systemAlertService');
+  await systemAlertService.initialize();
 });

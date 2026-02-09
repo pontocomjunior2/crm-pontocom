@@ -81,7 +81,8 @@ router.get('/', async (req, res) => {
             search = '',
             sortBy = 'date',
             sortOrder = 'desc',
-            serviceType = ''
+            serviceType = '',
+            id = ''
         } = req.query;
 
         const skip = (parseInt(page) - 1) * parseInt(limit);
@@ -94,6 +95,15 @@ router.get('/', async (req, res) => {
         // Client filter
         if (clientId) {
             where.clientId = clientId;
+        }
+
+        // ID filter
+        if (id) {
+            where.id = id;
+            // When filtering by ID, we might want to bypass the packageId: null restriction?
+            // Actually, stagnant orders are regular orders (OFF/SPOT), not usually package orders.
+            // But just in case, if ID is provided, it's a specific lookup.
+            delete where.packageId;
         }
 
         // Type filter

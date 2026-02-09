@@ -134,7 +134,8 @@ router.post('/', checkPermission('accessPacotes'), async (req, res) => {
             extraAudioFee,
             startDate,
             endDate,
-            clientCode
+            clientCode,
+            autoRenewal
         } = req.body;
 
         // Desativar pacotes anteriores do mesmo cliente (opcional, dependendo da regra de ter apenas um ativo)
@@ -155,7 +156,8 @@ router.post('/', checkPermission('accessPacotes'), async (req, res) => {
                 startDate: new Date(startDate + 'T12:00:00'),
                 endDate: new Date(endDate + 'T12:00:00'),
                 active: true,
-                clientCode: clientCode || null
+                clientCode: clientCode || null,
+                autoRenewal: !!autoRenewal
             }
         });
 
