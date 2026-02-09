@@ -477,21 +477,14 @@ export const scheduleAPI = {
 };
 
 export const notificationAPI = {
-    list: async (targetRole, userRole) => {
+    list: async (targetRole) => {
         const url = targetRole ? `/notifications?targetRole=${targetRole}` : '/notifications';
-        return fetchAPI(url, {
-            headers: {
-                'x-user-role': userRole
-            }
-        });
+        return fetchAPI(url);
     },
     markAsRead: async (id) => fetchAPI(`/notifications/${id}/read`, { method: 'PUT' }),
-    getSummary: async (targetRole, userRole) => {
-        return fetchAPI(`/notifications/summary?targetRole=${targetRole}`, {
-            headers: {
-                'x-user-role': userRole
-            }
-        });
+    getSummary: async (targetRole) => {
+        const url = targetRole ? `/notifications/summary?targetRole=${targetRole}` : '/notifications/summary';
+        return fetchAPI(url);
     },
 };
 

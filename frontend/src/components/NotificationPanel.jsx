@@ -40,8 +40,8 @@ const NotificationPanel = ({ onNavigate }) => {
         if (!user) return;
 
         try {
-            // Makes only ONE call. The backend will decide what to return based on user.role
-            const data = await notificationAPI.list(null, user.role);
+            // Makes only ONE call. The backend will decide what to return based on user.role/tier
+            const data = await notificationAPI.list();
 
             // Dedup and sort
             const uniqueNotes = Array.from(new Map(data.map(item => [item.id, item])).values())
