@@ -36,7 +36,7 @@ import { showToast } from '../utils/toast';
 import PackageOrderForm from './PackageOrderForm';
 import PackageBatchUploadModal from './PackageBatchUploadModal';
 
-const PackageList = ({ onAddNewOrder }) => {
+const PackageList = ({ onAddNewOrder, refreshTrigger }) => {
     // Tab system
     const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'packages'
 
@@ -136,7 +136,7 @@ const PackageList = ({ onAddNewOrder }) => {
         fetchAllOrders();
         fetchPackages();
         fetchLocutores();
-    }, []);
+    }, [refreshTrigger]);
 
     const handleSort = (key) => {
         let direction = 'asc';

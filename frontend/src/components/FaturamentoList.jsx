@@ -28,7 +28,7 @@ import {
 import { orderAPI, STORAGE_URL } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 
-const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
+const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -155,7 +155,7 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder }) => {
     // Removed automatic debounce - now using explicit "Filtrar" button
     useEffect(() => {
         fetchOrders();
-    }, [statusFilter, sortConfig, pagination.page, pagination.limit]);
+    }, [statusFilter, sortConfig, pagination.page, pagination.limit, refreshTrigger]);
 
     const filteredOrders = orders;
 

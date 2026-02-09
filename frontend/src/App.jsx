@@ -642,19 +642,19 @@ const CRM = () => {
 
           {activeTab === 'clientes' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <ClientList key={refreshTrigger} onEditClient={(c) => { setSelectedClient(c); setShowClientForm(true); }} onAddNewClient={() => { setSelectedClient(null); setShowClientForm(true); }} />
+              <ClientList refreshTrigger={refreshTrigger} onEditClient={(c) => { setSelectedClient(c); setShowClientForm(true); }} onAddNewClient={() => { setSelectedClient(null); setShowClientForm(true); }} />
             </div>
           )}
 
           {activeTab === 'pedidos' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <OrderList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'PEDIDO'); setShowOrderForm(true); }} onNavigate={setActiveTab} />
+              <OrderList refreshTrigger={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'PEDIDO'); setShowOrderForm(true); }} onNavigate={setActiveTab} />
             </div>
           )}
 
           {activeTab === 'locutores' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              {viewingLocutorHistory ? <LocutorHistory locutor={viewingLocutorHistory} onBack={() => setViewingLocutorHistory(null)} /> : <LocutorList key={refreshTrigger} onEditLocutor={(l) => { setSelectedLocutor(l); setShowLocutorForm(true); }} onAddNewLocutor={() => { setSelectedLocutor(null); setShowLocutorForm(true); }} onViewHistory={setViewingLocutorHistory} />}
+              {viewingLocutorHistory ? <LocutorHistory locutor={viewingLocutorHistory} onBack={() => setViewingLocutorHistory(null)} /> : <LocutorList refreshTrigger={refreshTrigger} onEditLocutor={(l) => { setSelectedLocutor(l); setShowLocutorForm(true); }} onAddNewLocutor={() => { setSelectedLocutor(null); setShowLocutorForm(true); }} onViewHistory={setViewingLocutorHistory} />}
             </div>
           )}
 
@@ -666,7 +666,7 @@ const CRM = () => {
 
           {activeTab === 'faturamento' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <FaturamentoList key={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'VENDA'); setShowOrderForm(true); }} />
+              <FaturamentoList refreshTrigger={refreshTrigger} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'VENDA'); setShowOrderForm(true); }} />
             </div>
           )}
 
@@ -696,7 +696,7 @@ const CRM = () => {
 
           {activeTab === 'pacotes' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <PackageList key={refreshTrigger} onAddNewOrder={(pkg) => {
+              <PackageList refreshTrigger={refreshTrigger} onAddNewOrder={(pkg) => {
                 setSelectedPackage(pkg);
                 setShowPackageOrderForm(true);
               }} />

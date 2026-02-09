@@ -5,7 +5,7 @@ const prisma = require('../db');
 // Get all locutores
 router.get('/', async (req, res) => {
     try {
-        const { search, status, sortBy = 'name', sortOrder = 'asc' } = req.query;
+        const { search, status, sortBy = 'name', sortOrder = 'asc', selection } = req.query;
         const where = {};
 
         if (search) {
@@ -17,6 +17,32 @@ router.get('/', async (req, res) => {
 
         if (status) {
             where.status = status;
+        }
+
+        // Se for apenas para seleção no formulário, retornamos dados mínimos e sem histórico de áudios
+        if (selection === 'true') {
+            const locutores = await prisma.locutor.findMany({
+                where,
+                orderBy: { [sortBy]: sortOrder },
+                select: {
+                    id: true,
+                    name: true,
+                    realName: true,
+                    status: true,
+                    priceOff: true,
+                    priceProduzido: true,
+                    valorFixoMensal: true,
+                    suppliers: {
+                        include: {
+                            packages: {
+                                orderBy: { purchaseDate: 'desc' },
+                                take: 1
+                            }
+                        }
+                    }
+                }
+            });
+            return res.json(locutores);
         }
 
         const locutores = await prisma.locutor.findMany({
@@ -33,7 +59,8 @@ router.get('/', async (req, res) => {
                         date: true,
                         status: true
                     },
-                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }]
+                    orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+                    take: 10 // Limita o histórico pesado apenas para os últimos 10
                 },
                 suppliers: {
                     include: {

@@ -32,7 +32,7 @@ import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 import CommissionModal from './CommissionModal';
 import { useAuth } from '../contexts/AuthContext';
 
-const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
+const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -97,7 +97,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate }) => {
 
     useEffect(() => {
         fetchOrders();
-    }, [pagination.page, pagination.limit, sortConfig]); // search and filters removed to prevent real-time search
+    }, [pagination.page, pagination.limit, sortConfig, refreshTrigger]); // Incluído refreshTrigger para recarregar sem desmontar
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();

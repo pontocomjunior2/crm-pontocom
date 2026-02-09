@@ -46,7 +46,7 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
 
     const loadLocutores = async () => {
         try {
-            const data = await locutorAPI.list({ status: 'DISPONIVEL' });
+            const data = await locutorAPI.list({ status: 'DISPONIVEL', selection: 'true' });
             let allLocutores = data || [];
 
             // Se estamos editando e o locutor atual não está na lista (ex: inativo), precisamos buscá-lo ou adicioná-lo

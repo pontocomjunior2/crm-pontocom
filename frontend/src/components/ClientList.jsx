@@ -24,7 +24,7 @@ import {
 import { clientAPI, importAPI } from '../services/api';
 import { formatCNPJ, formatPhone, formatCurrency } from '../utils/formatters';
 
-const ClientList = ({ onEditClient, onAddNewClient }) => {
+const ClientList = ({ onEditClient, onAddNewClient, refreshTrigger }) => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -52,7 +52,7 @@ const ClientList = ({ onEditClient, onAddNewClient }) => {
 
     useEffect(() => {
         fetchClients();
-    }, [pagination.page, pagination.limit, sortConfig]); // statusFilter and packageFilter removed to prevent real-time search
+    }, [pagination.page, pagination.limit, sortConfig, refreshTrigger]); // statusFilter and packageFilter removed to prevent real-time search
 
     const fetchClients = async () => {
         setLoading(true);

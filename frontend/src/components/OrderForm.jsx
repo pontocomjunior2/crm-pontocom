@@ -219,8 +219,24 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
 
     const loadLocutores = async () => {
         try {
-            const data = await locutorAPI.list({ status: 'DISPONIVEL' });
-            setLocutores(data || []);
+            // Usamos selection: true para carregar apenas dados básicos e de forma ultra rápida
+            const data = await locutorAPI.list({ status: 'DISPONIVEL', selection: 'true' });
+            let finalLocutores = data || [];
+
+            // Segurança: Se for uma edição e o locutor do pedido não estiver na lista (ex: está inativo ou em férias)
+            // nós buscamos ele individualmente para garantir que o nome apareça no formulário
+            if (order?.locutorId && !finalLocutores.find(l => l.id === order.locutorId)) {
+                try {
+                    const currentLocutor = await locutorAPI.get(order.locutorId);
+                    if (currentLocutor) {
+                        finalLocutores = [...finalLocutores, currentLocutor];
+                    }
+                } catch (err) {
+                    console.error('Error fetching current order locutor:', err);
+                }
+            }
+
+            setLocutores(finalLocutores);
         } catch (error) {
             console.error('Error loading locutores:', error);
         } finally {
