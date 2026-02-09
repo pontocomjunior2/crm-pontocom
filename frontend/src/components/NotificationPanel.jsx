@@ -30,8 +30,8 @@ const NotificationPanel = ({ onNavigate }) => {
         const roles = [];
         if (user?.role === 'ADMIN') return ['ADMIN', 'ATENDIMENTO', 'FINANCEIRO'];
 
-        if (user?.tier?.accessDashboard || user?.tier?.accessPedidos) roles.push('ATENDIMENTO');
-        if (user?.tier?.accessFaturamento) roles.push('FINANCEIRO');
+        // If not ADMIN, user only sees notifications for THEIR exact role
+        if (user?.role) roles.push(user.role);
 
         return roles;
     };
@@ -39,18 +39,13 @@ const NotificationPanel = ({ onNavigate }) => {
     const fetchNotifications = async () => {
         if (!user) return;
 
-        const roles = getTargetRoles();
-        if (roles.length === 0) return;
-
         try {
-            const promises = roles.map(role => notificationAPI.list(role));
-            const results = await Promise.all(promises);
+            // Makes only ONE call. The backend will decide what to return based on user.role
+            const data = await notificationAPI.list(null, user.role);
 
-            // Merge and dedup
-            const allNotes = results.flat().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-            // Remove duplicates (by ID) just in case
-            const uniqueNotes = Array.from(new Map(allNotes.map(item => [item.id, item])).values());
+            // Dedup and sort
+            const uniqueNotes = Array.from(new Map(data.map(item => [item.id, item])).values())
+                .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
             setNotifications(uniqueNotes);
             setUnreadCount(uniqueNotes.length);
@@ -145,9 +140,9 @@ const NotificationPanel = ({ onNavigate }) => {
                                     >
                                         <div className="flex gap-3">
                                             <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 shadow-sm ${note.type === 'RENEWAL' ? 'bg-amber-500 shadow-amber-500/50' :
-                                                    note.type === 'BILLING' || note.type === 'DAILY_BILLING_SUMMARY' ? 'bg-green-500 shadow-green-500/50' :
-                                                        note.type === 'OVERDUE_BILLING' || note.type === 'STAGNANT_ORDER' ? 'bg-red-500 shadow-red-500/50' :
-                                                            'bg-blue-500'
+                                                note.type === 'BILLING' || note.type === 'DAILY_BILLING_SUMMARY' ? 'bg-green-500 shadow-green-500/50' :
+                                                    note.type === 'OVERDUE_BILLING' || note.type === 'STAGNANT_ORDER' ? 'bg-red-500 shadow-red-500/50' :
+                                                        'bg-blue-500'
                                                 }`} />
                                             <div className="flex-1">
                                                 <h4 className="text-sm font-medium text-foreground mb-1 pr-6">{note.title}</h4>

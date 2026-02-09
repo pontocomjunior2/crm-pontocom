@@ -6,16 +6,24 @@ const prisma = require('../db');
 router.get('/', async (req, res) => {
     try {
         const { targetRole } = req.query;
+        const userRole = req.headers['x-user-role'];
 
-        if (!targetRole) {
-            return res.status(400).json({ error: 'Role alvo é obrigatória' });
+        let where = { read: false };
+
+        if (userRole === 'ADMIN') {
+            // Admin vê tudo de todas as roles se não filtrar
+            if (targetRole) {
+                where.targetRole = targetRole;
+            }
+        } else if (userRole) {
+            // Usuário comum vê apenas o que é da role dele
+            where.targetRole = userRole;
+        } else {
+            return res.status(401).json({ error: 'Não autorizado' });
         }
 
         const notifications = await prisma.notification.findMany({
-            where: {
-                targetRole: targetRole,
-                read: false
-            },
+            where,
             orderBy: { createdAt: 'desc' }
         });
 
@@ -45,16 +53,20 @@ router.put('/:id/read', async (req, res) => {
 router.get('/summary', async (req, res) => {
     try {
         const { targetRole } = req.query;
+        const userRole = req.headers['x-user-role'];
 
-        if (!targetRole) {
-            return res.status(400).json({ error: 'Role alvo é obrigatória' });
+        let where = { read: false };
+
+        if (userRole === 'ADMIN') {
+            if (targetRole) where.targetRole = targetRole;
+        } else if (userRole) {
+            where.targetRole = userRole;
+        } else {
+            return res.status(401).json({ error: 'Não autorizado' });
         }
 
         const count = await prisma.notification.count({
-            where: {
-                targetRole: targetRole,
-                read: false
-            }
+            where
         });
 
         res.json({ count });

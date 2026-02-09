@@ -81,7 +81,7 @@ class SystemAlertService {
                         where: {
                             targetRole: 'ATENDIMENTO',
                             type: 'RENEWAL',
-                            link: `/pacotes?clientId=${pkg.clientId}`, // Link inteligente para filtrar
+                            link: `/pacotes?packageId=${pkg.id}`, // Link para o pacote específico
                             read: false
                         }
                     });
@@ -95,7 +95,7 @@ class SystemAlertService {
                                 message: alertReason === 'VENCIDO'
                                     ? `O pacote "${pkg.name}" venceu em ${format(new Date(pkg.endDate), 'dd/MM/yyyy')}.`
                                     : `O pacote "${pkg.name}" atingiu o limite de ${pkg.audioLimit} áudios.`,
-                                link: `/pacotes?clientId=${pkg.clientId}`
+                                link: `/pacotes?packageId=${pkg.id}`
                             }
                         });
                         console.log(`🔔 Alerta gerado: Renovação ${pkg.client.name} (${alertReason})`);
@@ -220,24 +220,26 @@ class SystemAlertService {
             const fiveDaysAgo = new Date();
             fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
 
-            const overdueCount = await prisma.order.count({
+            const overdueOrders = await prisma.order.findMany({
                 where: {
                     faturado: false,
                     OR: [
-                        { status: 'VENDA' }, // Já é venda mas não faturou
-                        { status: 'ENTREGUE' } // Entregue mas não faturou
+                        { status: 'VENDA' },
+                        { status: 'ENTREGUE' }
                     ],
                     dataFaturar: {
                         lt: fiveDaysAgo
                     }
-                }
+                },
+                include: { client: true }
             });
 
-            if (overdueCount > 0) {
+            for (const order of overdueOrders) {
                 const existingNote = await prisma.notification.findFirst({
                     where: {
                         targetRole: 'FINANCEIRO',
                         type: 'OVERDUE_BILLING',
+                        link: `/faturamento?id=${order.id}`,
                         read: false
                     }
                 });
@@ -247,11 +249,12 @@ class SystemAlertService {
                         data: {
                             type: 'OVERDUE_BILLING',
                             targetRole: 'FINANCEIRO',
-                            title: 'Atenção: Atrasos no Faturamento',
-                            message: `Atente-se! Existem ${overdueCount} pedidos lançados há muito tempo sem faturar.`,
-                            link: `/faturamento?status=pendente`
+                            title: `Faturamento Atrasado: ${order.client.name}`,
+                            message: `O pedido ${order.sequentialId} ("${order.title}") deveria ter sido faturado em ${format(new Date(order.dataFaturar), 'dd/MM/yyyy')}.`,
+                            link: `/faturamento?id=${order.id}`
                         }
                     });
+                    console.log(`🔔 Alerta gerado: Faturamento atrasado para ${order.sequentialId}`);
                 }
             }
 

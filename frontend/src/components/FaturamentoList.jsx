@@ -28,7 +28,7 @@ import {
 import { orderAPI, STORAGE_URL } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 
-const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger, initialFilters }) => {
+const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger, initialFilters, onClearFilters }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -64,8 +64,26 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger, initialFi
             if (initialFilters.status) {
                 setStatusFilter(initialFilters.status);
             }
+            if (initialFilters.id) {
+                setIdFilter(initialFilters.id);
+                setShowFilters(true);
+
+                // Auto-open edit modal
+                const checkAndOpen = async () => {
+                    try {
+                        const order = await orderAPI.get(initialFilters.id);
+                        if (order && onEditOrder) {
+                            onEditOrder(order);
+                            if (onClearFilters) onClearFilters();
+                        }
+                    } catch (error) {
+                        console.error('Error fetching order for auto-open:', error);
+                    }
+                };
+                checkAndOpen();
+            }
         }
-    }, [initialFilters]);
+    }, [initialFilters, onEditOrder]);
 
     const handleSelectOrder = (id) => {
         setSelectedOrders(prev => {
@@ -143,9 +161,11 @@ const FaturamentoList = ({ onEditOrder, onAddNewOrder, refreshTrigger, initialFi
                 status: 'VENDA',
                 page: pagination.page,
                 limit: pagination.limit,
+                limit: pagination.limit,
                 sortBy: sortConfig.key,
                 sortOrder: sortConfig.order,
                 search: searchTerm,
+                id: idFilter,
                 clientName: clientFilter,
                 title: titleFilter,
                 numeroVenda: idFilter,

@@ -32,7 +32,7 @@ import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 import CommissionModal from './CommissionModal';
 import { useAuth } from '../contexts/AuthContext';
 
-const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, initialFilters }) => {
+const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, initialFilters, onClearFilters }) => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
@@ -104,13 +104,23 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
     useEffect(() => {
         if (initialFilters?.id) {
             setFilters(prev => ({ ...prev, id: initialFilters.id }));
-            // Optionally set search to trigger highlight?
-            // The API should handle ID filtering if we verify backend.
-            // If backend doesn't support 'id' in filters, we might need to rely on 'search' if ID works there.
-            // Assuming backend (orders.js) handles 'id' or we pass it via search.
-            // Let's assume for now we set it in filters and update backend if needed.
+
+            // Auto-open edit modal if it's a direct ID link
+            const checkAndOpen = async () => {
+                try {
+                    const order = await orderAPI.get(initialFilters.id);
+                    if (order && onEditOrder) {
+                        onEditOrder(order);
+                        // Clean up filters after opening to prevent re-opening
+                        if (onClearFilters) onClearFilters();
+                    }
+                } catch (error) {
+                    console.error('Error fetching order for auto-open:', error);
+                }
+            };
+            checkAndOpen();
         }
-    }, [initialFilters]);
+    }, [initialFilters, onEditOrder]);
 
     const handleSearchSubmit = (e) => {
         e.preventDefault();

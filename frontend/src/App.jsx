@@ -436,8 +436,13 @@ const CRM = () => {
             </div>
 
             <NotificationPanel onNavigate={(tab, params) => {
+              // Reset nav params before setting new ones
+              setNavParams(null);
               setActiveTab(tab);
-              if (params) setNavParams(params);
+              if (params) {
+                // Delay setting params to ensure component is mounted and effect is fresh
+                setTimeout(() => setNavParams(params), 50);
+              }
             }} />
             <div className="flex items-center gap-3 pl-4 border-l border-border">
               <div className="text-right hidden xl:block">
@@ -651,7 +656,14 @@ const CRM = () => {
 
           {activeTab === 'pedidos' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <OrderList refreshTrigger={refreshTrigger} initialFilters={navParams} onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }} onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'PEDIDO'); setShowOrderForm(true); }} onNavigate={setActiveTab} />
+              <OrderList
+                refreshTrigger={refreshTrigger}
+                initialFilters={activeTab === 'pedidos' ? navParams : null}
+                onEditOrder={(o) => { setSelectedOrder(o); setShowOrderForm(true); }}
+                onAddNewOrder={(s) => { setSelectedOrder(null); setInitialOrderStatus(typeof s === 'string' ? s : 'PEDIDO'); setShowOrderForm(true); }}
+                onNavigate={(tab, params) => { setActiveTab(tab); setNavParams(params); }}
+                onClearFilters={() => setNavParams(null)}
+              />
             </div>
           )}
 

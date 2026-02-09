@@ -8,8 +8,11 @@ const router = express.Router();
 // GET /api/client-packages - Listar todos os pacotes ativos globalmente
 router.get('/', checkPermission('accessPacotes'), async (req, res) => {
     try {
+        const { id } = req.query;
+        const where = id ? { id } : {};
+
         const packages = await prisma.clientPackage.findMany({
-            where: {},
+            where,
             include: {
                 client: {
                     select: {
@@ -31,12 +34,19 @@ router.get('/', checkPermission('accessPacotes'), async (req, res) => {
 // GET /api/client-packages/all/orders - Listar TODOS os pedidos de pacotes (lista universal)
 router.get('/all/orders', checkPermission('accessPacotes'), async (req, res) => {
     try {
+        const { id } = req.query;
         // Buscar todos os pedidos que estão vinculados a pacotes
+        const where = {
+            packageId: { not: null },
+            status: { not: 'CANCELADO' }
+        };
+
+        if (id) {
+            where.id = id;
+        }
+
         const orders = await prisma.order.findMany({
-            where: {
-                packageId: { not: null },
-                status: { not: 'CANCELADO' }
-            },
+            where,
             include: {
                 client: {
                     select: {

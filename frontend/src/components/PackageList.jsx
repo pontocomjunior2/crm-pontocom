@@ -89,6 +89,8 @@ const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
         active: true
     });
 
+    const [clientIdFilter, setClientIdFilter] = useState('');
+
     // Locutores for bulk modal
     const [locutores, setLocutores] = useState([]);
     const [loadingLocutores, setLoadingLocutores] = useState(false);
@@ -137,6 +139,48 @@ const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
         fetchPackages();
         fetchLocutores();
     }, [refreshTrigger]);
+
+    // Handle initial filters for notifications
+    useEffect(() => {
+        if (initialFilters) {
+            if (initialFilters.packageId) {
+                setActiveTab('packages');
+                const pkg = packages.find(p => p.id === initialFilters.packageId);
+                if (pkg) {
+                    handleOpenPackageEdit(pkg);
+                } else {
+                    // If not loaded yet, try to fetch specific package
+                    const fetchSpecific = async () => {
+                        try {
+                            const data = await clientPackageAPI.listAll({ id: initialFilters.packageId });
+                            if (data && data.length > 0) {
+                                handleOpenPackageEdit(data[0]);
+                            }
+                        } catch (e) {
+                            console.error("Error auto-opening package:", e);
+                        }
+                    };
+                    fetchSpecific();
+                }
+            } else if (initialFilters.orderId) {
+                setActiveTab('orders');
+                // Open edit for specific package order
+                const fetchOrderAndOpen = async () => {
+                    try {
+                        const order = await orderAPI.get(initialFilters.orderId);
+                        if (order && order.packageId) {
+                            handleEditUniversal(order);
+                        }
+                    } catch (e) {
+                        console.error("Error auto-opening order:", e);
+                    }
+                };
+                fetchOrderAndOpen();
+            } else if (initialFilters.clientId) {
+                setClientIdFilter(initialFilters.clientId);
+            }
+        }
+    }, [initialFilters, packages, activeTab]);
 
     const handleSort = (key) => {
         let direction = 'asc';
