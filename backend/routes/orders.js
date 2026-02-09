@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const prisma = require('../db');
 const storageService = require('../services/storageService');
+const PackageService = require('../services/packageService');
 
 const router = express.Router();
 
@@ -423,6 +424,7 @@ router.post('/', async (req, res) => {
 
         // --- Lógica de Pacote Mensal ---
         let finalVendaValor = vendaValor !== undefined ? parseFloat(vendaValor) : 0;
+        let packageIdSnapshot = packageId; // Store for sync after creation
 
         // Se for bonificação, força valor 0 e ignora pacote
         if (isBonus) {
@@ -486,81 +488,9 @@ router.post('/', async (req, res) => {
                 }
             }
 
-            // 3. Cálculo de Valor Extra e Consolidação no Faturamento (billingOrder)
-            if (pkg.type === 'FIXO_SOB_DEMANDA' && usageAfter > pkg.audioLimit) {
-                const usageBefore = pkg.usedAudios;
-                const extras = Math.max(0, usageAfter - Math.max(pkg.audioLimit, usageBefore));
-                const extraValue = extras * parseFloat(pkg.extraAudioFee);
-
-                // Se não existe um pedido de faturamento vinculado ao pacote (ex: valor fixo era 0)
-                if (!pkg.billingOrderId && extraValue > 0) {
-                    try {
-                        const lastSale = await prisma.order.findFirst({
-                            where: { numeroVenda: { not: null } },
-                            orderBy: { numeroVenda: 'desc' }
-                        });
-                        const lastId = lastSale?.numeroVenda || 42531;
-                        const nextNumeroVenda = lastId + 1;
-
-                        const billingOrder = await prisma.order.create({
-                            data: {
-                                clientId: pkg.clientId,
-                                title: pkg.name,
-                                locutor: 'Sistema',
-                                tipo: 'PRODUZIDO',
-                                serviceType: 'PLANO MENSAL',
-                                vendaValor: 0,
-                                cacheValor: 0,
-                                status: 'VENDA',
-                                faturado: false,
-                                date: new Date(),
-                                numeroVenda: nextNumeroVenda,
-                                comentarios: `Faturamento consolidado: ${pkg.name}`
-                            }
-                        });
-
-                        await prisma.clientPackage.update({
-                            where: { id: pkg.id },
-                            data: { billingOrderId: billingOrder.id }
-                        });
-                        pkg.billingOrderId = billingOrder.id;
-                    } catch (createError) {
-                        console.error('Erro ao criar faturamento dinâmico:', createError);
-                    }
-                }
-
-                if (pkg.billingOrderId && extraValue > 0) {
-                    try {
-                        const currentBilling = await prisma.order.findUnique({
-                            where: { id: pkg.billingOrderId }
-                        });
-
-                        if (currentBilling) {
-                            const newVendaValor = parseFloat(currentBilling.vendaValor) + extraValue;
-                            const totalExtras = usageAfter - pkg.audioLimit;
-
-                            await prisma.order.update({
-                                where: { id: pkg.billingOrderId },
-                                data: {
-                                    vendaValor: newVendaValor,
-                                    comentarios: `Lançamento automático referente ao pacote: ${pkg.name}. Áudios extras: ${totalExtras}.`
-                                }
-                            });
-                        }
-                    } catch (billError) {
-                        console.error('Erro ao consolidar extra no faturamento:', billError);
-                    }
-                }
-            }
-
             // O pedido individual de consumo SEMPRE terá valor 0 para faturamento
             finalVendaValor = 0;
-
-            // Incrementar uso no pacote
-            await prisma.clientPackage.update({
-                where: { id: packageId },
-                data: { usedAudios: usageAfter }
-            });
+            packageIdSnapshot = packageId;
 
             // --- GERAÇÃO DO CONSUMPTION ID (PC-XXXX) ---
             let consumptionId = null;
@@ -686,6 +616,11 @@ router.post('/', async (req, res) => {
             }
         });
 
+        // Sync package credits and billing if applicable
+        if (packageIdSnapshot) {
+            await PackageService.syncPackage(packageIdSnapshot);
+        }
+
         res.status(201).json(order);
     } catch (error) {
         console.error('Error creating order:', error);
@@ -790,59 +725,6 @@ router.put('/:id', async (req, res) => {
         const newCreditsToConsume = (creditsConsumed !== undefined ? parseInt(creditsConsumed) : existing.creditsConsumed) || 1;
         const newPackageId = req.body.packageId !== undefined ? req.body.packageId : existing.packageId;
 
-        // Caso 1: Estava em pacote e SUCEDE uma mudança (virou avulso/bônus ou trocou de pacote)
-        if (wasPackageOrder) {
-            const pkgChanged = newPackageId !== existing.packageId;
-            const typeChanged = !willBePackageOrder;
-
-            if (pkgChanged || typeChanged) {
-                // Estorna créditos do pacote antigo
-                try {
-                    await prisma.clientPackage.update({
-                        where: { id: existing.packageId },
-                        data: { usedAudios: { decrement: oldCredits } }
-                    });
-                } catch (e) {
-                    console.error('Erro ao estornar pacote antigo:', e);
-                }
-
-                // Se trocou de pacote e continua sendo pedido de pacote, precisamos debitar no novo
-                if (pkgChanged && willBePackageOrder && newPackageId) {
-                    try {
-                        await prisma.clientPackage.update({
-                            where: { id: newPackageId },
-                            data: { usedAudios: { increment: newCreditsToConsume } }
-                        });
-                    } catch (e) {
-                        console.error('Erro ao debitar novo pacote:', e);
-                    }
-                }
-            }
-            // Caso 1.1: Mesmo pacote, mas mudou a quantidade de créditos
-            else if (newCreditsToConsume !== oldCredits) {
-                try {
-                    const diff = newCreditsToConsume - oldCredits;
-                    await prisma.clientPackage.update({
-                        where: { id: existing.packageId },
-                        data: { usedAudios: { increment: diff } }
-                    });
-                } catch (e) {
-                    console.error('Erro ao atualizar diferença de créditos:', e);
-                }
-            }
-        }
-        // Caso 2: Não estava em pacote e AGORA vai entrar em um
-        else if (willBePackageOrder && newPackageId) {
-            try {
-                await prisma.clientPackage.update({
-                    where: { id: newPackageId },
-                    data: { usedAudios: { increment: newCreditsToConsume } }
-                });
-            } catch (e) {
-                console.error('Erro ao debitar novo pacote (vindo de avulso):', e);
-            }
-        }
-
         const order = await prisma.order.update({
             where: { id },
             data: {
@@ -892,6 +774,12 @@ router.put('/:id', async (req, res) => {
             }
         });
 
+        // Sync old and new package if changed
+        if (existing.packageId) await PackageService.syncPackage(existing.packageId);
+        if (req.body.packageId && req.body.packageId !== existing.packageId) {
+            await PackageService.syncPackage(req.body.packageId);
+        }
+
         res.json(order);
     } catch (error) {
         console.error('Error updating order:', error);
@@ -924,23 +812,14 @@ router.patch('/:id/convert', async (req, res) => {
             data: {
                 status: 'VENDA',
                 entregue: true,
-                numeroVenda: nextVendaId // Will be undefined if not generating new
+                numeroVenda: nextVendaId
             },
             include: { client: true }
         });
 
-        // Lógica de Débito de Pacote se for consumo (vendaValor 0)
-        if (order.packageId && Number(order.vendaValor) === 0 && !order.isBonus) {
-            try {
-                const creditsToUse = order.creditsConsumed || 1;
-                await prisma.clientPackage.update({
-                    where: { id: order.packageId },
-                    data: { usedAudios: { increment: creditsToUse } }
-                });
-            } catch (pkgError) {
-                console.error('Erro ao debitar crédito do pacote na conversão:', pkgError);
-                // Não travamos a conversão, mas logamos o erro específico
-            }
+        // Sync package credits and billing
+        if (order.packageId) {
+            await PackageService.syncPackage(order.packageId);
         }
 
         res.json(order);
@@ -964,17 +843,9 @@ router.patch('/:id/revert', async (req, res) => {
             include: { client: true }
         });
 
-        // Lógica de Estorno de Pacote se era consumo (vendaValor 0)
-        if (order.packageId && Number(order.vendaValor) === 0 && !order.isBonus) {
-            try {
-                const creditsToRefund = order.creditsConsumed || 1;
-                await prisma.clientPackage.update({
-                    where: { id: order.packageId },
-                    data: { usedAudios: { decrement: creditsToRefund } }
-                });
-            } catch (pkgError) {
-                console.error('Erro ao estornar crédito do pacote na reversão:', pkgError);
-            }
+        // Sync package credits and billing
+        if (order.packageId) {
+            await PackageService.syncPackage(order.packageId);
         }
 
         res.json(order);
@@ -1033,17 +904,9 @@ router.post('/:id/clone', async (req, res) => {
             }
         });
 
-        // Débito de crédito se vinculado a pacote
-        if (clonedOrder.packageId && Number(clonedOrder.vendaValor) === 0 && !clonedOrder.isBonus) {
-            try {
-                const creditsToUse = clonedOrder.creditsConsumed || 1;
-                await prisma.clientPackage.update({
-                    where: { id: clonedOrder.packageId },
-                    data: { usedAudios: { increment: creditsToUse } }
-                });
-            } catch (pkgError) {
-                console.error('Erro ao debitar crédito do pacote na duplicação:', pkgError);
-            }
+        // Sync package credits and billing
+        if (clonedOrder.packageId) {
+            await PackageService.syncPackage(clonedOrder.packageId);
         }
 
         res.status(201).json(clonedOrder);
@@ -1141,14 +1004,11 @@ router.post('/batch-create', async (req, res) => {
                 results.push(newOrder);
             }
 
-            // Update package credits
-            await tx.clientPackage.update({
-                where: { id: packageId },
-                data: { usedAudios: { increment: totalCreditsToUse } }
-            });
-
             return results;
         });
+
+        // Sync package credits and billing
+        await PackageService.syncPackage(packageId);
 
         res.status(201).json({ success: true, count: createdOrders.length, orders: createdOrders });
     } catch (error) {
@@ -1165,19 +1025,20 @@ router.post('/bulk-update', async (req, res) => {
             return res.status(400).json({ error: 'IDs array is required' });
         }
 
-        const updateData = {};
-
-        // Allowed fields for bulk update
-        if (data.locutorId !== undefined) updateData.locutorId = data.locutorId;
-        if (data.locutor !== undefined) updateData.locutor = data.locutor;
-        if (data.supplierId !== undefined) updateData.supplierId = data.supplierId;
-        if (data.entregue !== undefined) updateData.entregue = data.entregue;
-        if (data.status !== undefined) updateData.status = data.status;
-
         await prisma.order.updateMany({
             where: { id: { in: ids } },
             data: updateData
         });
+
+        // Sync all affected packages (simplified: sync each package found in the updated orders)
+        const affectedOrders = await prisma.order.findMany({
+            where: { id: { in: ids } },
+            select: { packageId: true }
+        });
+        const packageIds = [...new Set(affectedOrders.map(o => o.packageId).filter(Boolean))];
+        for (const pid of packageIds) {
+            await PackageService.syncPackage(pid);
+        }
 
         res.json({ success: true, message: `${ids.length} orders updated` });
     } catch (error) {
@@ -1198,25 +1059,15 @@ router.post('/bulk-delete', async (req, res) => {
             where: { id: { in: ids } },
             select: { id: true, packageId: true }
         });
-
-        // Estorno de créditos de pacote
-        for (const order of ordersToDelete) {
-            if (order.packageId && Number(order.vendaValor) === 0 && !order.isBonus) {
-                try {
-                    const creditsToRefund = order.creditsConsumed || 1;
-                    await prisma.clientPackage.update({
-                        where: { id: order.packageId },
-                        data: { usedAudios: { decrement: creditsToRefund } }
-                    });
-                } catch (pkgError) {
-                    console.error('Erro ao estornar crédito do pacote no bulk-delete:', pkgError);
-                }
-            }
-        }
-
         await prisma.order.deleteMany({
             where: { id: { in: ids } }
         });
+
+        // Sync affected packages
+        const packageIdsToSync = [...new Set(ordersToDelete.map(o => o.packageId).filter(Boolean))];
+        for (const pid of packageIdsToSync) {
+            await PackageService.syncPackage(pid);
+        }
 
         res.json({ success: true, message: `${ids.length} orders deleted` });
     } catch (error) {
@@ -1235,23 +1086,12 @@ router.delete('/:id', async (req, res) => {
             return res.status(404).json({ error: 'Order not found' });
         }
 
-        // Estorno de crédito se vinculado a pacote
-        if (order.packageId) {
-            const pkg = await prisma.clientPackage.findUnique({
-                where: { id: order.packageId }
-            });
-            if (pkg) {
-                const creditsToRefund = order.creditsConsumed || 1;
-                // Decrement use, ensuring it doesn't go below 0 handled by logic or db check
-                // Using decrement is safer for concurrency
-                await prisma.clientPackage.update({
-                    where: { id: pkg.id },
-                    data: { usedAudios: { decrement: creditsToRefund } }
-                });
-            }
-        }
-
         await prisma.order.delete({ where: { id } });
+
+        // Sync package credits and billing
+        if (order.packageId) {
+            await PackageService.syncPackage(order.packageId);
+        }
 
         res.json({ message: 'Order deleted successfully' });
     } catch (error) {

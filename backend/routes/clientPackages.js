@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../db');
 const { checkPermission } = require('../utils/permissions');
+const PackageService = require('../services/packageService');
 
 const router = express.Router();
 
@@ -8,7 +9,7 @@ const router = express.Router();
 router.get('/', checkPermission('accessPacotes'), async (req, res) => {
     try {
         const packages = await prisma.clientPackage.findMany({
-            where: { active: true },
+            where: {},
             include: {
                 client: {
                     select: {
@@ -272,6 +273,9 @@ router.put('/:id', checkPermission('accessPacotes'), async (req, res) => {
                 });
             }
         }
+
+        // Sincronizar créditos e faturamento consolidado
+        await PackageService.syncPackage(id);
 
         res.json(updated);
     } catch (error) {
