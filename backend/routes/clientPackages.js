@@ -159,9 +159,11 @@ router.post('/', checkPermission('accessPacotes'), async (req, res) => {
             }
         });
 
-        // Automação Financeira: Criar registro de Venda para a mensalidade fixa
+        // Automação Financeira: Criar registro de Venda para a mensalidade fixa ou variável
         let billingOrderId = null;
-        if (parseFloat(fixedFee) > 0) {
+        const isVariableBilling = ['FIXO_SOB_DEMANDA', 'SOB_DEMANDA_AVULSO'].includes(type) || (type === 'FIXO_COM_LIMITE' && parseFloat(extraAudioFee) > 0);
+
+        if (parseFloat(fixedFee) > 0 || isVariableBilling) {
             try {
                 // Auto-generate numeroVenda
                 const lastSale = await prisma.order.findFirst({
@@ -248,33 +250,72 @@ router.put('/:id', checkPermission('accessPacotes'), async (req, res) => {
             data: updateData
         });
 
-        // Sincronizar com a venda automática se existir
-        if (currentPackage.billingOrderId) {
+        // Automação Financeira na Edição:
+        // Se o pacote agora deve ter faturamento (ex: mudou para AVULSO ou tem taxa fixa) mas ainda não possui billingOrderId
+        let updatedBillingOrderId = currentPackage.billingOrderId;
+
+        if (!updatedBillingOrderId) {
+            const isVariableBilling = ['FIXO_SOB_DEMANDA', 'SOB_DEMANDA_AVULSO'].includes(updated.type) || (updated.type === 'FIXO_COM_LIMITE' && parseFloat(updated.extraAudioFee) > 0);
+
+            if (parseFloat(updated.fixedFee) > 0 || isVariableBilling) {
+                try {
+                    // Buscar o maior numeroVenda atual
+                    const lastOrder = await prisma.order.findFirst({
+                        where: { numeroVenda: { not: null } },
+                        orderBy: { numeroVenda: 'desc' }
+                    });
+                    const nextNumeroVenda = (lastOrder?.numeroVenda || 1000) + 1;
+
+                    const newBillingResponse = await prisma.order.create({
+                        data: {
+                            clientId: updated.clientId,
+                            title: updated.name,
+                            vendaValor: updated.fixedFee,
+                            date: updated.startDate,
+                            dataFaturar: new Date(updated.endDate.getTime() + 86400000),
+                            status: 'PENDENTE',
+                            serviceType: 'MENSALIDADE',
+                            numeroVenda: nextNumeroVenda,
+                            locutor: 'SISTEMA',
+                            tipo: 'OFF',
+                            cacheValor: 0
+                        }
+                    });
+
+                    updatedBillingOrderId = newBillingResponse.id;
+                    await prisma.clientPackage.update({
+                        where: { id: updated.id },
+                        data: { billingOrderId: updatedBillingOrderId }
+                    });
+                } catch (err) {
+                    console.error('[BillingAuto] Error creating billingOrder on edit:', err);
+                }
+            }
+        } else {
+            // Sincronizar com a venda automática se ela já existir
             const orderUpdateData = {};
             if (updateData.name) orderUpdateData.title = updateData.name;
-            if (updateData.fixedFee) orderUpdateData.vendaValor = updateData.fixedFee;
+            if (updateData.fixedFee !== undefined) orderUpdateData.vendaValor = updateData.fixedFee;
             if (updateData.startDate) orderUpdateData.date = updateData.startDate;
 
-            // Sincronizar dataFaturar quando endDate mudar
             if (updateData.endDate) {
                 orderUpdateData.dataFaturar = new Date(updateData.endDate.getTime() + 86400000);
             }
 
-            // Se forceUpdate = true e estava faturado, reverter para não faturado
             if (forceUpdate && currentPackage.billingOrder?.faturado) {
                 orderUpdateData.faturado = false;
-                orderUpdateData.wasReopened = true; // Marcar como reaberto
+                orderUpdateData.wasReopened = true;
             }
 
             if (Object.keys(orderUpdateData).length > 0) {
                 await prisma.order.update({
-                    where: { id: currentPackage.billingOrderId },
+                    where: { id: updatedBillingOrderId },
                     data: orderUpdateData
                 });
             }
         }
 
-        // Sincronizar créditos e faturamento consolidado
+        // Sincronizar créditos e faturamento consolidado (RECALCULA TUDO RETROATIVAMENTE)
         await PackageService.syncPackage(id);
 
         res.json(updated);

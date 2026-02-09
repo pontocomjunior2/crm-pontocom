@@ -1,0 +1,31 @@
+--- TESTE DE FATURAMENTO AVULSO ---
+PrismaClientValidationError: 
+Invalid `prisma.order.create()` invocation in
+D:\Projetos\crm-pontocom\backend\test-avulso-billing.js:25:45
+
+  22 endDate.setMonth(endDate.getMonth() + 1);
+  23 
+  24 // Criar a billingOrder primeiro para simular o comportamento da rota
+ÔåÆ 25 const billingOrder = await prisma.order.create({
+       data: {
+         clientId: "364bb97f-a60d-4d2b-8e8d-d5c5bf88bb5b",
+         title: "FATURAMENTO AVULSO TESTE",
+         status: "PENDENTE",
+         vendaValor: 0,
+         locutor: "SISTEMA",
+         tipo: "OFF",
+         serviceType: "MENSALIDADE",
+         date: new Date("2026-02-09T14:37:39.631Z"),
+     +   cacheValor: Decimal
+       }
+     })
+
+Argument `cacheValor` is missing.
+    at wn (D:\Projetos\crm-pontocom\backend\node_modules\@prisma\client\runtime\library.js:29:1363)
+    at qn.handleRequestError (D:\Projetos\crm-pontocom\backend\node_modules\@prisma\client\runtime\library.js:121:6958)
+    at qn.handleAndLogRequestError (D:\Projetos\crm-pontocom\backend\node_modules\@prisma\client\runtime\library.js:121:6640)
+    at qn.request (D:\Projetos\crm-pontocom\backend\node_modules\@prisma\client\runtime\library.js:121:6347)
+    at async l (D:\Projetos\crm-pontocom\backend\node_modules\@prisma\client\runtime\library.js:130:9616)
+    at async testAvulsoBilling (D:\Projetos\crm-pontocom\backend\test-avulso-billing.js:25:26) {
+  clientVersion: '6.1.0'
+}

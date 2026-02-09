@@ -300,6 +300,7 @@ enum PackageType {
   FIXO_COM_LIMITE
   FIXO_COM_LIMITE_VENCIMENTO
   FIXO_SOB_DEMANDA
+  SOB_DEMANDA_AVULSO
 }
 
 enum ServiceRecurrence {

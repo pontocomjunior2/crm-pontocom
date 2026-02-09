@@ -476,7 +476,7 @@ router.post('/', async (req, res) => {
             const usageAfter = pkg.usedAudios + creditsToUse;
 
             // 2. Verificar Limites (Regra 3) - Avisar sobre quota excedida
-            if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA') {
+            if (!['FIXO_ILIMITADO', 'FIXO_SOB_DEMANDA', 'SOB_DEMANDA_AVULSO'].includes(pkg.type)) {
                 if (usageAfter > pkg.audioLimit) {
                     return res.status(400).json({
                         error: 'PACKAGE_LIMIT_REACHED',
@@ -948,7 +948,7 @@ router.post('/batch-create', async (req, res) => {
 
         const totalCreditsToUse = items.length; // Default 1 per item
 
-        if (pkg.type !== 'FIXO_ILIMITADO' && pkg.type !== 'FIXO_SOB_DEMANDA') {
+        if (!['FIXO_ILIMITADO', 'FIXO_SOB_DEMANDA', 'SOB_DEMANDA_AVULSO'].includes(pkg.type)) {
             if (pkg.usedAudios + totalCreditsToUse > pkg.audioLimit) {
                 return res.status(400).json({
                     error: 'PACKAGE_LIMIT_REACHED',

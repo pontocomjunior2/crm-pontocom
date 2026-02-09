@@ -261,7 +261,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
             };
 
             if (editingPackage) {
-                await clientPackageAPI.update(editingPackage.id, packageFormData);
+                await clientPackageAPI.update(editingPackage.id, data);
                 showToast.success('Pacote atualizado com sucesso!');
             } else {
                 await clientPackageAPI.create({ ...packageFormData, clientId: client.id });
@@ -333,6 +333,7 @@ const ClientForm = ({ client = null, onClose, onSuccess }) => {
                             <option value="FIXO_COM_LIMITE">Fixo com Limite</option>
                             <option value="FIXO_COM_LIMITE_VENCIMENTO">Fixo com Limite e Vencimento</option>
                             <option value="FIXO_SOB_DEMANDA">Fixo + Sob Demanda</option>
+                            <option value="SOB_DEMANDA_AVULSO">Sob Demanda (Avulso)</option>
                         </select>
                     </div>
 

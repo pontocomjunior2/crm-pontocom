@@ -57,7 +57,10 @@ class PackageService {
                 let extraValue = 0;
                 let totalExtras = 0;
 
-                if (pkg.type === 'FIXO_SOB_DEMANDA' || (pkg.type === 'FIXO_COM_LIMITE' && totalUsage > limit)) {
+                if (pkg.type === 'SOB_DEMANDA_AVULSO') {
+                    totalExtras = totalUsage;
+                    extraValue = totalExtras * extraFee;
+                } else if (pkg.type === 'FIXO_SOB_DEMANDA' || (pkg.type === 'FIXO_COM_LIMITE' && totalUsage > limit)) {
                     totalExtras = Math.max(0, totalUsage - limit);
                     extraValue = totalExtras * extraFee;
                 }
