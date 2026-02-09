@@ -96,7 +96,18 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         try {
             const pkg = await clientPackageAPI.getActive(clientId);
             setActivePackage(pkg);
-            setFormData(prev => ({ ...prev, packageId: pkg?.id || null }));
+
+            // SECURITY CHECK: Se for edição de um pedido que NÃO tinha pacote (Serviço Extra)
+            // ou se o pedido atual tem valor de venda > 0, NÃO associa ao pacote ativo do cliente.
+            setFormData(prev => {
+                const isExtraService = Number(prev.vendaValor) > 0 || prev.isBonus;
+                const wasNotPackaged = order && !order.packageId;
+
+                if (isExtraService || wasNotPackaged) {
+                    return { ...prev, packageId: null };
+                }
+                return { ...prev, packageId: pkg?.id || null };
+            });
         } catch (error) {
             console.error('Error fetching client package:', error);
         } finally {

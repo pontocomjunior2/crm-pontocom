@@ -95,10 +95,10 @@ class RecurringServicesController {
                 });
             }
 
-            const startDateObj = startDate ? new Date(startDate) : new Date();
+            const startDateObj = startDate ? new Date(startDate + 'T12:00:00') : new Date();
             // Se o usuário já enviou uma próxima execução na criação (opcional)
             const nextExecutionDate = req.body.nextExecution
-                ? new Date(req.body.nextExecution)
+                ? new Date(req.body.nextExecution + 'T12:00:00')
                 : RecurrenceService.calculateNextExecution(startDateObj, recurrence);
 
             const service = await prisma.recurringService.create({
@@ -142,8 +142,8 @@ class RecurringServicesController {
             const updateData = { ...data };
 
             if (updateData.value) updateData.value = parseFloat(updateData.value);
-            if (updateData.startDate) updateData.startDate = new Date(updateData.startDate);
-            if (updateData.nextExecution) updateData.nextExecution = new Date(updateData.nextExecution);
+            if (updateData.startDate) updateData.startDate = new Date(updateData.startDate + 'T12:00:00');
+            if (updateData.nextExecution) updateData.nextExecution = new Date(updateData.nextExecution + 'T12:00:00');
             if (updateData.lastExecution) updateData.lastExecution = new Date(updateData.lastExecution);
 
             // Se a recorrência mudou e não foi enviada uma nova data de execução, recalcula

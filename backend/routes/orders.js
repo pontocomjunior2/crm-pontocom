@@ -733,7 +733,14 @@ router.put('/:id', async (req, res) => {
 
         const oldCredits = existing.creditsConsumed || 1;
         const newCreditsToConsume = (creditsConsumed !== undefined ? parseInt(creditsConsumed) : existing.creditsConsumed) || 1;
-        const newPackageId = req.body.packageId !== undefined ? req.body.packageId : existing.packageId;
+
+        let newPackageId = req.body.packageId !== undefined ? req.body.packageId : existing.packageId;
+
+        // --- TRAVA DE SEGURANÇA: SERVIÇOS EXTRAS ---
+        // Se houver valor de venda ou for bônus, não pode estar atrelado a pacote
+        if (newIsBonus || (newVendaValor !== undefined && newVendaValor > 0) || (newVendaValor === undefined && Number(existing.vendaValor) > 0)) {
+            newPackageId = null;
+        }
 
         const order = await prisma.order.update({
             where: { id },
@@ -763,7 +770,7 @@ router.put('/:id', async (req, res) => {
                 numeroOS,
                 arquivoOS,
                 supplierId: supplierId || null, // Convert empty string to null
-                packageId: req.body.packageId, // Allow explicit packageId update
+                packageId: newPackageId, // Use the sanitized packageId
                 cachePago: cachePago !== undefined ? cachePago : undefined,
                 creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
                 creditsConsumedSupplier: creditsConsumedSupplier !== undefined ? parseInt(creditsConsumedSupplier) : undefined,
