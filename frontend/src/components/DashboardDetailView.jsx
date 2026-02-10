@@ -62,16 +62,16 @@ const DashboardDetailView = ({ metric, metricLabel, dateRange, onBack, onEditOrd
         );
     });
 
+
     const handleAction = async (item) => {
         if (metric === 'activeClients' || item.tipo === 'CLIENTE') {
-            // For clients, we might need to fetch the full object if item only has basic info
-            // But usually the ID is enough to trigger the edit modal
             onEditClient({ id: item.id });
-        } else if (item.id && !item.id.toString().startsWith('FIXED-')) {
-            // It's an order
+        } else if (item.id && !item.id.toString().startsWith('FIXED-') && !item.id.toString().startsWith('EXTERNAL-')) {
+            // It's a real individual order
             onEditOrder({ id: item.id });
         }
     };
+
 
     const isCurrency = !['activeClients', 'activeOrders'].includes(metric);
 

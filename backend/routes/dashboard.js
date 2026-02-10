@@ -42,8 +42,19 @@ router.get('/', async (req, res) => {
             }
         });
 
+        // Active Clients: Status 'ativado' AND at least one order in the last 90 days
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
         const totalClientsCount = await prisma.client.count({
-            where: { status: 'ativado' }
+            where: {
+                status: 'ativado',
+                orders: {
+                    some: {
+                        date: { gte: ninetyDaysAgo }
+                    }
+                }
+            }
         });
 
         // 1. Calculate main KPIs
@@ -57,6 +68,7 @@ router.get('/', async (req, res) => {
                 status: { in: ['VENDA', 'FATURADO'] }
             }
         });
+
 
         // Cache involves everything that is already "done" or "sold"
         const cacheSums = await prisma.order.aggregate({
@@ -88,6 +100,7 @@ router.get('/', async (req, res) => {
             }
         });
 
+
         // 1.2 Calculate Package Metrics
         const packageRevenueSum = await prisma.order.aggregate({
             _sum: { vendaValor: true },
@@ -97,7 +110,8 @@ router.get('/', async (req, res) => {
                 vendaValor: { gt: 0 },
                 OR: [
                     { packageId: { not: null } },
-                    { packageBilling: { isNot: null } }
+                    { packageBilling: { isNot: null } },
+                    { packageName: { not: null } }
                 ]
             }
         });
@@ -109,10 +123,49 @@ router.get('/', async (req, res) => {
                 status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
                 OR: [
                     { packageId: { not: null } },
-                    { packageBilling: { isNot: null } }
+                    { packageBilling: { isNot: null } },
+                    { packageName: { not: null } }
                 ]
             }
         });
+
+        // 1.3 Calculate Recurring Cache (variable only)
+        const recurringVariableCacheSum = await prisma.order.aggregate({
+            _sum: { cacheValor: true },
+            where: {
+                ...dateFilter,
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
+                serviceType: 'SERVIÇO RECORRENTE',
+                // Ensure we don't count it as recurring if it's somehow linked to a package
+                packageId: null,
+                packageBilling: null,
+                packageName: null
+            }
+        });
+
+
+        // 1.4 Calculate Order (Avulso) Cache - Catch-all for everything else
+        const orderCacheSum = await prisma.order.aggregate({
+            _sum: { cacheValor: true },
+            where: {
+                ...dateFilter,
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
+                // NOT in Package
+                NOT: {
+                    OR: [
+                        { packageId: { not: null } },
+                        { packageBilling: { isNot: null } },
+                        { packageName: { not: null } }
+                    ]
+                },
+                // NOT in Recurring (Handle NULL correctly)
+                OR: [
+                    { serviceType: { not: 'SERVIÇO RECORRENTE' } },
+                    { serviceType: null }
+                ]
+            }
+        });
+
 
         const totalRevenue = Number(revenueSums._sum.vendaValor || 0);
         const recurringRevenue = Number(recurringRevenueSum._sum.vendaValor || 0);
@@ -135,15 +188,23 @@ router.get('/', async (req, res) => {
 
         const totalFixedFees = locutoresWithOrders.reduce((sum, loc) => sum + Number(loc.valorFixoMensal), 0);
 
-        // Cache Calculations
+        // Cache Calculations - DEFINITIVO
         const totalVariableCache = Number(cacheSums._sum.cacheValor || 0);
-        const recurringVariableCache = Number(recurringCacheSum._sum.cacheValor || 0);
+        const recurringVariableCache = Number(recurringVariableCacheSum._sum.cacheValor || 0);
         const packageVariableCache = Number(packageCacheSum._sum.cacheValor || 0);
+        const orderVariableCache = Number(orderCacheSum._sum.cacheValor || 0);
 
-        const recurringCache = recurringVariableCache + totalFixedFees;
+        // KPIs de Custos:
+        // - packageCache: todos os pedidos vinculados a pacotes (link direto ou por nome)
+        // - recurringCache: serviços recorrentes + taxas fixas (custo operacional fixo)
+        // - orderCache: pedidos estritamente avulsos
+        // - adjustedTotalCache: Soma total absoluta (Pacote + Avulso + Recorrente = Total)
         const packageCache = packageVariableCache;
-        const orderCache = totalVariableCache - recurringVariableCache - packageVariableCache;
-        const adjustedTotalCache = totalVariableCache + totalFixedFees;
+        const orderCache = orderVariableCache;
+        const recurringCache = recurringVariableCache + totalFixedFees;
+        const adjustedTotalCache = packageVariableCache + orderVariableCache + recurringCache;
+
+
 
         // 2. Recent Orders (Last 5 within filter or global if no filter?)
         // Usually "Recent" implies global recent, but if filtering by "Last Year", we might want top 5 of that year?
@@ -289,8 +350,18 @@ router.get('/details', async (req, res) => {
                 break;
 
             case 'activeClients':
+                const activeClientDateLimit = new Date();
+                activeClientDateLimit.setDate(activeClientDateLimit.getDate() - 90);
+
                 data = await prisma.client.findMany({
-                    where: { status: 'ativado' },
+                    where: {
+                        status: 'ativado',
+                        orders: {
+                            some: {
+                                date: { gte: activeClientDateLimit }
+                            }
+                        }
+                    },
                     orderBy: { name: 'asc' }
                 });
                 data = data.map(c => ({
@@ -304,6 +375,7 @@ router.get('/details', async (req, res) => {
                 }));
                 break;
 
+
             case 'packageCache':
                 const packageOrders = await prisma.order.findMany({
                     where: {
@@ -311,7 +383,8 @@ router.get('/details', async (req, res) => {
                         status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
                         OR: [
                             { packageId: { not: null } },
-                            { packageBilling: { isNot: null } }
+                            { packageBilling: { isNot: null } },
+                            { packageName: { not: null } }
                         ]
                     },
                     include: {
@@ -323,12 +396,13 @@ router.get('/details', async (req, res) => {
 
                 const groupedPackages = {};
                 packageOrders.forEach(order => {
-                    const pkg = order.package || order.packageBilling;
+                    const pkg = order.package || order.packageBilling || (order.packageName ? { id: 'EXTERNAL-' + order.packageName, name: order.packageName } : null);
                     if (!pkg) return;
 
-                    if (!groupedPackages[pkg.id]) {
-                        groupedPackages[pkg.id] = {
-                            id: pkg.id,
+                    const pkgKey = pkg.id;
+                    if (!groupedPackages[pkgKey]) {
+                        groupedPackages[pkgKey] = {
+                            id: pkgKey,
                             title: `Pacote: ${pkg.name}`,
                             client: order.client.name,
                             value: 0,
@@ -337,9 +411,9 @@ router.get('/details', async (req, res) => {
                             type: 'Custo Consolidado'
                         };
                     }
-                    groupedPackages[pkg.id].value += Number(order.cacheValor);
-                    if (new Date(order.date) > new Date(groupedPackages[pkg.id].date)) {
-                        groupedPackages[pkg.id].date = order.date;
+                    groupedPackages[pkgKey].value += Number(order.cacheValor);
+                    if (new Date(order.date) > new Date(groupedPackages[pkgKey].date)) {
+                        groupedPackages[pkgKey].date = order.date;
                     }
                 });
                 data = Object.values(groupedPackages);
@@ -363,12 +437,27 @@ router.get('/details', async (req, res) => {
                     cacheValor: { gt: 0 }
                 };
 
+
                 if (metric === 'orderCache') {
-                    cacheWhere.packageId = null;
-                    cacheWhere.packageBilling = null;
-                    cacheWhere.serviceType = { not: 'SERVIÇO RECORRENTE' };
+                    // NOT in Package
+                    cacheWhere.NOT = {
+                        OR: [
+                            { packageId: { not: null } },
+                            { packageBilling: { isNot: null } },
+                            { packageName: { not: null } }
+                        ]
+                    };
+                    // NOT in Recurring (Handle NULL correctly)
+                    cacheWhere.OR = [
+                        { serviceType: { not: 'SERVIÇO RECORRENTE' } },
+                        { serviceType: null }
+                    ];
                 } else if (metric === 'recurringCache') {
                     cacheWhere.serviceType = 'SERVIÇO RECORRENTE';
+                    // Optional: also filter out if it's somehow in a package
+                    cacheWhere.packageId = null;
+                    cacheWhere.packageBilling = null;
+                    cacheWhere.packageName = null;
                 }
 
                 const dataList = await prisma.order.findMany({
@@ -381,6 +470,7 @@ router.get('/details', async (req, res) => {
                     ...o,
                     displayValue: Number(o.cacheValor)
                 }));
+
 
                 if (metric === 'totalCache' || metric === 'recurringCache') {
                     const locutoresWithFixed = await prisma.locutor.findMany({

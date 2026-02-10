@@ -338,6 +338,17 @@ const CRM = () => {
       bgColor: 'bg-rose-500/10',
       textColor: 'text-rose-500'
     },
+    {
+      id: 'recurringCache',
+      title: 'Custo Extras/Recor.',
+      value: formatCurrency(dashboardData.metrics.recurringCache || 0),
+      trend: `${Math.round((dashboardData.metrics.recurringCache / dashboardData.metrics.recurringRevenue) * 100 || 0)}%`,
+      sub: 'serviços e fixos',
+      icon: <RotateCcw size={20} />,
+      color: 'from-indigo-500 to-indigo-600',
+      bgColor: 'bg-indigo-500/10',
+      textColor: 'text-indigo-500'
+    },
   ] : [];
 
   const recentOrders = dashboardData?.recentOrders || [];
