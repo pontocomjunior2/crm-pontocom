@@ -94,6 +94,7 @@ router.get('/', async (req, res) => {
             where: {
                 ...dateFilter,
                 status: { in: ['VENDA', 'FATURADO'] },
+                vendaValor: { gt: 0 },
                 OR: [
                     { packageId: { not: null } },
                     { packageBilling: { isNot: null } }
@@ -273,6 +274,7 @@ router.get('/details', async (req, res) => {
                 } else if (metric === 'recurringRevenue') {
                     revenueWhere.serviceType = 'SERVIÇO RECORRENTE';
                 } else if (metric === 'packageRevenue') {
+                    revenueWhere.vendaValor = { gt: 0 };
                     revenueWhere.OR = [
                         { packageId: { not: null } },
                         { packageBilling: { isNot: null } }
@@ -357,7 +359,8 @@ router.get('/details', async (req, res) => {
             case 'recurringCache':
                 const cacheWhere = {
                     ...dateFilter,
-                    status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] }
+                    status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
+                    cacheValor: { gt: 0 }
                 };
 
                 if (metric === 'orderCache') {
