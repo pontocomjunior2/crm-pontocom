@@ -132,7 +132,7 @@ const Relatorios = () => {
     const COLORS = ['#FB923C', '#22D3EE', '#818CF8', '#A78BFA', '#F472B6'];
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-700">
+        <div className="space-y-8 animate-in fade-in duration-700 max-h-screen overflow-y-auto custom-scrollbar pr-2">
             {/* Header with improved controls */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-card-background/50 p-6 rounded-3xl border border-border shadow-soft">
                 <div className="flex items-center gap-6">

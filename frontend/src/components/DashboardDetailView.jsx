@@ -76,7 +76,7 @@ const DashboardDetailView = ({ metric, metricLabel, dateRange, onBack, onEditOrd
     const isCurrency = !['activeClients', 'activeOrders'].includes(metric);
 
     return (
-        <div className="flex-1 overflow-hidden flex flex-col bg-background animate-in fade-in slide-in-from-right-4 duration-500 p-6">
+        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col bg-background animate-in fade-in slide-in-from-right-4 duration-500 p-6">
             <div className="max-w-[1600px] mx-auto w-full flex-1 flex flex-col gap-6">
 
                 {/* Header Section */}
