@@ -337,17 +337,6 @@ const CRM = () => {
       bgColor: 'bg-rose-500/10',
       textColor: 'text-rose-500'
     },
-    {
-      id: 'activeOrders',
-      title: 'Pedidos Ativos',
-      value: dashboardData.metrics.activeOrders.toString(),
-      trend: 'ESTÁVEL',
-      sub: 'em produção',
-      icon: <FileText size={20} />,
-      color: 'from-blue-500 to-blue-600',
-      bgColor: 'bg-blue-500/10',
-      textColor: 'text-blue-500'
-    },
   ] : [];
 
   const recentOrders = dashboardData?.recentOrders || [];
