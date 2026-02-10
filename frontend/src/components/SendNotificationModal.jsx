@@ -54,8 +54,7 @@ const SendNotificationModal = ({ isOpen, onClose, initialData = {} }) => {
                         <select
                             className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none transition-all"
                             value={formData.targetRole}
-                            onChange={(e) => setFormData({ ...formData, targetRole: e.targetRole })}
-                        // Note: targetRole is simplified here. In a real scenario, could be multiple.
+                            onChange={(e) => setFormData({ ...formData, targetRole: e.target.value })}
                         >
                             <option value="ATENDIMENTO">Atendimento</option>
                             <option value="FINANCEIRO">Financeiro</option>

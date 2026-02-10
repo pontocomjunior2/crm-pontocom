@@ -25,7 +25,8 @@ import {
     MessageSquare,
     X,
     FileText,
-    Users
+    Users,
+    Send
 } from 'lucide-react';
 import { orderAPI, STORAGE_URL } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';

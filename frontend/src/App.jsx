@@ -45,6 +45,7 @@ import PackageList from './components/PackageList';
 import PackageOrderForm from './components/PackageOrderForm';
 import RecurringServiceList from './components/RecurringServiceList';
 import NotificationPanel from './components/NotificationPanel';
+import RevenueDistributionChart from './components/RevenueDistributionChart';
 
 import AdminSettings from './components/AdminSettings';
 import DashboardDetailModal from './components/DashboardDetailModal';
@@ -538,82 +539,57 @@ const CRM = () => {
                       {stats.map((stat, i) => (
                         <div
                           key={i}
-                          className="card-dark p-6 group cursor-pointer hover:border-primary/30 transition-all hover:shadow-lg active:scale-[0.98]"
+                          className="card-dark p-6 group cursor-pointer hover:border-primary/50 transition-all hover:shadow-xl hover:shadow-primary/10 active:scale-[0.98]"
                           onClick={() => {
                             setSelectedMetric({ id: stat.id, label: stat.title });
                             setActiveTab('dashboard-view');
                           }}
                         >
-                          <div className="flex items-start justify-between mb-4">
-                            <div>
-                              <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block mb-2">{stat.title}</span>
-                              <h3 className="text-3xl font-bold text-foreground mb-1">{stat.value}</h3>
-                              <div className="flex items-center gap-1.5">
-                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${stat.trend.includes('+') ? 'bg-emerald-500/20 text-emerald-500' : 'text-foreground'}`}>{stat.trend}</span>
-                                <span className="text-[11px] text-muted-foreground font-medium">{stat.sub}</span>
-                              </div>
-                            </div>
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stat.bgColor} ${stat.textColor} group-hover:scale-110 transition-transform`}>{stat.icon}</div>
+                          <div className="flex items-start justify-between mb-3">
+                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{stat.title}</span>
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${stat.bgColor} ${stat.textColor} group-hover:scale-110 group-hover:shadow-lg transition-all`}>{stat.icon}</div>
                           </div>
-                          <div className={`h-1 rounded-full bg-gradient-to-r ${stat.color} opacity-50`}></div>
+                          <div className="space-y-2">
+                            <h3 className="text-4xl font-black text-foreground tracking-tight">{stat.value}</h3>
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-muted-foreground">{stat.trend.includes('+') || stat.trend.includes('↑') ? '↑' : ''} {stat.trend}</span>
+                              <span className="text-muted-foreground/60">•</span>
+                              <span className="text-muted-foreground/80 text-xs">{stat.sub}</span>
+                            </div>
+                          </div>
                         </div>
                       ))}
                     </div>
 
-                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-                      <div className="xl:col-span-2 card-dark p-6">
-                        <div className="flex items-center justify-between mb-6">
-                          <div>
-                            <h3 className="text-lg font-bold text-foreground mb-1">Pedidos Recentes</h3>
-                            <p className="text-xs text-muted-foreground">Últimas atividades de produção</p>
-                          </div>
+                    <div className="card-dark p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="text-lg font-bold text-white mb-1">Faturamento Pendente</h3>
+                          <p className="text-xs text-muted-foreground">Clientes com faturas em aberto</p>
                         </div>
-                        <div className="space-y-4">
-                          {recentOrders.map((order, i) => (
-                            <div key={i} className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/5 transition-all cursor-pointer group border border-white/0 hover:border-white/10">
-                              <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center text-white text-xs font-black shadow-md glow-teal"><Mic2 size={18} /></div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="text-sm font-bold text-white group-hover:text-primary transition-colors truncate">{order.title}</h4>
-                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-white/5 text-muted-foreground uppercase">{order.type}</span>
-                                </div>
-                                <p className="text-xs text-muted-foreground mb-1">{order.client} • {order.locutor}</p>
-                              </div>
-                              <div className="text-right">
-                                <span className={`block ${order.statusColor} mb-2 text-[10px] font-black uppercase`}>{order.status}</span>
-                                <span className="block text-sm font-bold text-foreground mb-1">{order.value}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        <button onClick={() => setActiveTab('faturamento')} className="btn-primary px-4 py-2 rounded-lg flex items-center gap-2 text-xs font-bold hover:shadow-lg hover:shadow-primary/20 transition-all">
+                          <DollarSign size={16} />
+                          IR PARA FATURAMENTO
+                        </button>
                       </div>
-
-                      <div className="card-dark p-6">
-                        <div className="mb-6">
-                          <h3 className="text-lg font-bold text-white mb-1">Pendentes</h3>
-                          <p className="text-xs text-muted-foreground">Faturamento pendente</p>
-                        </div>
-                        <div className="space-y-4 mb-6">
-                          {pendingInvoices.map((invoice, i) => (
-                            <div key={i} className="relative pl-6 border-l border-white/5">
-                              <div className={`absolute -left-[6.5px] top-1.5 w-3 h-3 rounded-full border-2 border-background ${invoice.priority === 'high' ? 'bg-red-500' : 'bg-primary'}`}></div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {pendingInvoices.map((invoice, i) => (
+                          <div key={i} className="relative p-4 rounded-xl border border-border hover:border-primary/30 transition-all cursor-pointer group">
+                            <div className={`absolute top-4 left-4 w-2 h-2 rounded-full ${invoice.priority === 'high' ? 'bg-red-500 animate-pulse' : 'bg-primary'}`}></div>
+                            <div className="pl-4">
                               <span className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">{invoice.dueDate}</span>
-                              <h4 className="text-sm font-bold text-white mb-1 truncate">{invoice.client}</h4>
+                              <h4 className="text-sm font-bold text-white mb-2 truncate group-hover:text-primary transition-colors">{invoice.client}</h4>
                               <div className="flex items-center justify-between">
                                 <span className="text-xs text-muted-foreground">{invoice.orders} pedidos</span>
-                                <span className="text-sm font-bold text-primary">{invoice.total}</span>
+                                <span className="text-base font-bold text-primary">{invoice.total}</span>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                        <div className="border-t border-white/5 pt-4">
-                          <button onClick={() => setActiveTab('faturamento')} className="w-full btn-primary py-3 rounded-xl flex items-center justify-center gap-2 text-xs font-bold">
-                            <DollarSign size={16} />
-                            IR PARA FATURAMENTO
-                          </button>
-                        </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
+
+                    <RevenueDistributionChart data={dashboardData.metrics} />
                   </>
                 )}
               </div>
