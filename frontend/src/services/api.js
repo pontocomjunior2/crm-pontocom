@@ -486,6 +486,10 @@ export const notificationAPI = {
         const url = targetRole ? `/notifications/summary?targetRole=${targetRole}` : '/notifications/summary';
         return fetchAPI(url);
     },
+    create: async (data) => fetchAPI('/notifications', {
+        method: 'POST',
+        body: JSON.stringify(data)
+    }),
 };
 
 // Recurring Service API calls

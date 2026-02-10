@@ -51,6 +51,33 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Criar nova notificação (Manual/Interna)
+router.post('/', async (req, res) => {
+    try {
+        const { targetRole, title, message, link, type } = req.body;
+
+        if (!targetRole || !title || !message) {
+            return res.status(400).json({ error: 'Campos obrigatórios: targetRole, title, message' });
+        }
+
+        const notification = await prisma.notification.create({
+            data: {
+                targetRole,
+                title,
+                message,
+                link: link || null,
+                type: type || 'MANUAL',
+                read: false
+            }
+        });
+
+        res.status(201).json(notification);
+    } catch (error) {
+        console.error('Erro ao criar notificação:', error);
+        res.status(500).json({ error: 'Erro ao criar notificação' });
+    }
+});
+
 // Marcar como lida
 router.put('/:id/read', async (req, res) => {
     try {

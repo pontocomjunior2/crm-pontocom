@@ -30,6 +30,7 @@ import {
 import { orderAPI, STORAGE_URL } from '../services/api';
 import { formatCurrency, formatDisplayDate } from '../utils/formatters';
 import CommissionModal from './CommissionModal';
+import SendNotificationModal from './SendNotificationModal';
 import { useAuth } from '../contexts/AuthContext';
 
 const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, initialFilters, onClearFilters }) => {
@@ -61,6 +62,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
     const [deleting, setDeleting] = useState(false);
     const [observationModal, setObservationModal] = useState(null);
     const [pendencyModal, setPendencyModal] = useState(null);
+    const [notificationModal, setNotificationModal] = useState(null);
 
     const [stats, setStats] = useState({
         total: 0,
@@ -662,6 +664,18 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
                                                     <Edit size={16} />
                                                 </button>
                                                 <button
+                                                    onClick={() => setNotificationModal({
+                                                        targetRole: 'FINANCEIRO',
+                                                        title: `Alerta: Pedido ${order.sequentialId}`,
+                                                        message: `Assunto sobre o pedido "${order.title}": `,
+                                                        link: `/pedidos?id=${order.id}`
+                                                    })}
+                                                    className="p-2 hover:bg-blue-500/20 rounded-lg text-[#999999] hover:text-blue-400 transition-all shadow-sm"
+                                                    title="Enviar Alerta Interno"
+                                                >
+                                                    <Send size={16} />
+                                                </button>
+                                                <button
                                                     onClick={() => setDeleteConfirm(order)}
                                                     className="p-2 hover:bg-red-500/20 rounded-lg text-[#999999] hover:text-red-400 transition-all shadow-sm"
                                                     title="Excluir"
@@ -857,6 +871,12 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
                 open={showCommissionModal}
                 onClose={() => setShowCommissionModal(false)}
                 onSave={handleBulkCommission}
+            />
+            {/* Notification Modal */}
+            <SendNotificationModal
+                isOpen={!!notificationModal}
+                onClose={() => setNotificationModal(null)}
+                initialData={notificationModal || {}}
             />
         </div>
     );
