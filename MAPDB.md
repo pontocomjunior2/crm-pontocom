@@ -87,3 +87,20 @@
 **Conexões:**
 - Herdado do campo `hasCommission` da tabela `RecurringService` durante o lançamento automático.
 - Utilizado na rota `/api/analytics/financial-summary` para o cálculo de `commission`.
+ 
+ ---
+ 
+ ## 2026-02-11 - Detalhes de Pagamento do Cachê
+ 
+ **Tabela Alvo:** `Order`
+ 
+ **Mudança:**
+ - Adicionada coluna `cachePaymentDate` (DateTime, Opcional).
+ - Adicionada coluna `cacheBank` (String, Opcional).
+ 
+ **Motivo:**
+ - Registrar a data exata e o banco utilizado para o pagamento do cachê ao locutor em pedidos avulsos, quando a opção "Cachê Já Pago" é marcada.
+ 
+ **Conexões:**
+ - Campos visíveis apenas quando `cachePago` é `true`.
+

@@ -50,7 +50,10 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         cachePago: order?.cachePago || false,
         packageId: order?.packageId || null,
         isBonus: order?.isBonus || false,
-        date: order?.date ? getLocalISODate(new Date(order.date)) : getLocalISODate()
+        isBonus: order?.isBonus || false,
+        date: order?.date ? getLocalISODate(new Date(order.date)) : getLocalISODate(),
+        cachePaymentDate: order?.cachePaymentDate ? getLocalISODate(new Date(order.cachePaymentDate)) : '',
+        cacheBank: order?.cacheBank || ''
     });
 
     const [activePackage, setActivePackage] = useState(null);
@@ -515,6 +518,14 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 // So sending null/empty string might be interpreted as "use provided empty value" if not careful.
                 // Let's send only if truthy.
             };
+
+            if (formData.cachePago) {
+                dataToSend.cachePaymentDate = formData.cachePaymentDate || null;
+                dataToSend.cacheBank = formData.cacheBank || null;
+            } else {
+                dataToSend.cachePaymentDate = null;
+                dataToSend.cacheBank = null;
+            }
 
             if (formData.date) {
                 // Form data date is YYYY-MM-DD
@@ -1388,6 +1399,36 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                     <span className="text-[11px] text-muted-foreground">Sinalize se o locutor já recebeu este cachê (ex: pagamento antecipado)</span>
                                 </div>
                             </label>
+
+                            {formData.cachePago && (
+                                <div className="mt-4 pt-4 border-t border-emerald-500/20 grid grid-cols-1 gap-4 animate-in slide-in-from-top-2">
+                                    <div>
+                                        <label className="block text-xs font-bold text-emerald-600 mb-1.5 uppercase tracking-wider">
+                                            Data do Pagamento
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="cachePaymentDate"
+                                            value={formData.cachePaymentDate || ''}
+                                            onChange={handleChange}
+                                            className="w-full bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-emerald-600 mb-1.5 uppercase tracking-wider">
+                                            Banco de Origem
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="cacheBank"
+                                            value={formData.cacheBank || ''}
+                                            onChange={handleChange}
+                                            placeholder="Ex: Nubank, Inter..."
+                                            className="w-full bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all"
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 

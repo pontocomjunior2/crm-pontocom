@@ -612,7 +612,9 @@ router.post('/', async (req, res) => {
                 // Custom Date Logic: Use provided date or default to now() (handled by Prisma default or backend logic if needed, but Prisma has @default(now()))
                 // However, we want to ensure explicit dates are respected.
                 // Custom Date Logic: Use T12:00:00 to avoid timezone regression
-                ...(req.body.date ? { date: new Date(req.body.date + 'T12:00:00') } : {})
+                ...(req.body.date ? { date: new Date(req.body.date + 'T12:00:00') } : {}),
+                cachePaymentDate: req.body.cachePaymentDate ? new Date(req.body.cachePaymentDate + 'T12:00:00') : null,
+                cacheBank: req.body.cacheBank || null
             },
             include: {
                 client: {
@@ -777,7 +779,9 @@ router.put('/:id', async (req, res) => {
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,
                 isBonus: isBonus !== undefined ? isBonus : undefined,
                 serviceType: serviceType !== undefined ? serviceType : undefined,
-                date: req.body.date ? new Date(req.body.date + 'T12:00:00') : undefined
+                date: req.body.date ? new Date(req.body.date + 'T12:00:00') : undefined,
+                cachePaymentDate: req.body.cachePaymentDate ? new Date(req.body.cachePaymentDate + 'T12:00:00') : (req.body.cachePaymentDate === null ? null : undefined),
+                cacheBank: req.body.cacheBank !== undefined ? req.body.cacheBank : undefined
             },
             include: {
                 client: {

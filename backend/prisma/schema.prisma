@@ -81,6 +81,8 @@ model Order {
   isBonus                 Boolean        @default(false)
   consumptionId           String?
   packageName             String?
+  cachePaymentDate        DateTime?
+  cacheBank               String?
   creditsConsumedSupplier Int            @default(0)
   hasCommission           Boolean        @default(false)
   packageBilling          ClientPackage? @relation("PackageBilling")
