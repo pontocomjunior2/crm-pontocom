@@ -447,264 +447,162 @@ const Relatorios = () => {
                     </div>
                 </>
             ) : (
-                /* Cache Management View */
                 <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="card-dark p-6 lg:col-span-1">
-                            <h3 className="text-lg font-bold text-foreground mb-2 flex items-center gap-2">
-                                <DollarSign size={20} className="text-primary" />
-                                Resumo de Cachês
-                            </h3>
-                            <p className="text-xs text-muted-foreground mb-6">Valores residuais de locutores avulsos no período</p>
+                    <div className="card-dark overflow-hidden">
+                        <div className="p-6 border-b border-border flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="flex items-center gap-4">
+                                <h3 className="text-lg font-bold text-foreground">Gestão de Cachês</h3>
+                                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+                                    <button
+                                        onClick={() => setCacheStatusFilter('pending')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'pending' ? 'bg-amber-500 text-black' : 'text-muted-foreground hover:text-white'}`}
+                                    >
+                                        Pendentes
+                                    </button>
+                                    <button
+                                        onClick={() => setCacheStatusFilter('paid')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'paid' ? 'bg-emerald-500 text-white' : 'text-muted-foreground hover:text-white'}`}
+                                    >
+                                        Pagos (Lançados)
+                                    </button>
+                                    <button
+                                        onClick={() => setCacheStatusFilter('all')}
+                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'all' ? 'bg-white/10 text-white' : 'text-muted-foreground hover:text-white'}`}
+                                    >
+                                        Todos
+                                    </button>
+                                </div>
+                            </div >
 
-                            <div className="space-y-4">
-                                <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total a Pagar</p>
-                                    <h4 className="text-2xl font-black text-amber-500">
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Pendente</p>
+                                    <p className="text-xl font-black text-amber-500">
                                         {formatCurrency(cacheData.reduce((acc, curr) => acc + curr.pendingValue, 0))}
-                                    </h4>
+                                    </p>
                                 </div>
-                                <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Total Pago (No Período)</p>
-                                    <h4 className="text-2xl font-black text-emerald-500">
+                                <div className="h-8 w-px bg-white/10"></div>
+                                <div className="text-right">
+                                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Total Pago</p>
+                                    <p className="text-xl font-black text-emerald-500">
                                         {formatCurrency(cacheData.reduce((acc, curr) => acc + curr.paidValue, 0))}
-                                    </h4>
-                                </div>
-                                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Locutores Ativos</p>
-                                    <h4 className="text-xl font-black text-white">{cacheData.length}</h4>
+                                    </p>
                                 </div>
                             </div>
+                        </div >
 
-                            <div className="mt-8 p-4 bg-orange-500/5 border border-orange-500/10 rounded-xl">
-                                <p className="text-xs text-orange-200 leading-relaxed font-medium">
-                                    <AlertCircle size={14} className="inline mr-2" />
-                                    Locutores de pacote (Fornecedores) são pré-pagos e não são listados nesta reconciliação financeira.
-                                </p>
-                            </div>
-                        </div>
+                        {loadingCaches && <Loader2 size={18} className="animate-spin text-primary m-6" />}
 
-                        <div className="lg:col-span-2 card-dark overflow-hidden">
-                            <div className="p-6 border-b border-border flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <h3 className="text-lg font-bold text-foreground">Detalhamento Financeiro</h3>
-                                    <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
-                                        <button
-                                            onClick={() => setCacheStatusFilter('pending')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'pending' ? 'bg-amber-500 text-black' : 'text-muted-foreground hover:text-white'}`}
-                                        >
-                                            Pendentes
-                                        </button>
-                                        <button
-                                            onClick={() => setCacheStatusFilter('paid')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'paid' ? 'bg-emerald-500 text-white' : 'text-muted-foreground hover:text-white'}`}
-                                        >
-                                            Pagos
-                                        </button>
-                                        <button
-                                            onClick={() => setCacheStatusFilter('all')}
-                                            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${cacheStatusFilter === 'all' ? 'bg-white/10 text-white' : 'text-muted-foreground hover:text-white'}`}
-                                        >
-                                            Todos
-                                        </button>
-                                    </div>
-                                </div>
-                                {loadingCaches && <Loader2 size={18} className="animate-spin text-primary" />}
-                            </div>
-                            <div className="overflow-x-auto min-h-[300px]">
-                                <table className="w-full text-left">
-                                    <thead>
-                                        <tr className="bg-white/5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest">
-                                            <th className="px-8 py-4">Locutor</th>
-                                            <th className="px-4 py-4">Dados de Pagamento</th>
-                                            <th className="px-4 py-4 text-center">Produções</th>
-                                            <th className="px-8 py-4 text-right">Valor Pendente</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {cacheData
-                                            .filter(item => {
-                                                if (cacheStatusFilter === 'pending') return item.pendingValue > 0;
-                                                if (cacheStatusFilter === 'paid') return item.paidValue > 0;
-                                                return true;
-                                            })
-                                            .length === 0 ? (
-                                            <tr>
-                                                <td colSpan="4" className="px-8 py-20 text-center text-muted-foreground text-sm italic">
-                                                    Nenhum registro encontrado para este filtro.
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-white/5 text-[10px] uppercase font-bold text-muted-foreground tracking-widest border-b border-border">
+                                        <th className="px-6 py-4 w-[100px]">Data</th>
+                                        <th className="px-6 py-4 w-[80px]">Pedido</th>
+                                        <th className="px-6 py-4">Locutor (Nome Real)</th>
+                                        <th className="px-6 py-4">Título</th>
+                                        <th className="px-6 py-4 text-right w-[120px]">Valor</th>
+                                        <th className="px-6 py-4 text-center w-[100px]">Lançado?</th>
+                                        <th className="px-6 py-4 text-center w-[120px]">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                    {(() => {
+                                        // Flatten the list
+                                        const flatList = cacheData.flatMap(locutor =>
+                                            locutor.orders.map(order => ({
+                                                ...order,
+                                                locutorName: locutor.name,
+                                                locutorRealName: locutor.realName,
+                                                locutorId: locutor.locutorId
+                                            }))
+                                        ).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                                        const filteredList = flatList.filter(item => {
+                                            if (cacheStatusFilter === 'pending') return !item.paid;
+                                            if (cacheStatusFilter === 'paid') return item.paid;
+                                            return true;
+                                        });
+
+                                        if (filteredList.length === 0) {
+                                            return (
+                                                <tr>
+                                                    <td colSpan="7" className="px-6 py-20 text-center text-muted-foreground text-sm italic">
+                                                        Nenhum registro encontrado para este filtro.
+                                                    </td>
+                                                </tr>
+                                            );
+                                        }
+
+                                        return filteredList.map((item) => (
+                                            <tr key={item.id} className={`hover:bg-white/5 transition-colors group ${item.paid ? 'opacity-60 hover:opacity-100' : ''}`}>
+                                                <td className="px-6 py-3">
+                                                    <span className="text-xs font-mono text-muted-foreground">
+                                                        {formatDisplayDate(item.date)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    <span className="text-xs font-black text-white bg-white/5 px-2 py-1 rounded">
+                                                        {item.numeroVenda || item.sequentialId || '-'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-bold text-foreground">
+                                                            {item.locutorRealName || item.locutorName}
+                                                        </span>
+                                                        <span className="text-[10px] text-muted-foreground">
+                                                            ({item.locutorName})
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-3">
+                                                    <span className="text-xs text-foreground font-medium line-clamp-1" title={item.title}>
+                                                        {item.title}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-right">
+                                                    <span className={`text-sm font-bold ${item.paid ? 'text-emerald-500' : 'text-amber-500'}`}>
+                                                        {formatCurrency(item.value)}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-3 text-center">
+                                                    <button
+                                                        onClick={() => handleMarkCacheAsPaid(item.id)}
+                                                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${item.paid
+                                                            ? 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30'
+                                                            : 'bg-white/5 text-muted-foreground hover:bg-emerald-500/20 hover:text-emerald-500'
+                                                            }`}
+                                                        title={item.paid ? "Marcar como Pendente (Não implementado)" : "Marcar como Lançado/Pago"}
+                                                    >
+                                                        {item.paid ? <CheckCircle2 size={18} /> : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground group-hover:border-emerald-500" />}
+                                                    </button>
+                                                </td>
+                                                <td className="px-6 py-3 text-center">
+                                                    <button
+                                                        onClick={() => {
+                                                            const textToCopy = `${item.numeroVenda || item.sequentialId || '?'} - ${item.title} (${formatCurrency(item.value)})`;
+                                                            handleCopyTitle(textToCopy, item.id);
+                                                        }}
+                                                        className={`p-2 rounded-lg transition-all flex items-center justify-center gap-2 w-full ${copiedId === item.id ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-primary/20 text-muted-foreground hover:text-primary'}`}
+                                                        title="Copiar para Área de Transferência"
+                                                    >
+                                                        {copiedId === item.id ? <Check size={14} /> : <Copy size={14} />}
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest">
+                                                            {copiedId === item.id ? 'COPIADO' : 'COPIAR'}
+                                                        </span>
+                                                    </button>
                                                 </td>
                                             </tr>
-                                        ) : (
-                                            cacheData
-                                                .filter(item => {
-                                                    if (cacheStatusFilter === 'pending') return item.pendingValue > 0;
-                                                    if (cacheStatusFilter === 'paid') return item.paidValue > 0;
-                                                    return true;
-                                                })
-                                                .map((item) => (
-                                                    <tr key={item.locutorId} className="hover:bg-white/5 transition-colors group">
-                                                        <td className="px-8 py-4">
-                                                            <button
-                                                                onClick={() => setSelectedLocutorCache(item)}
-                                                                className="flex flex-col text-left group/name"
-                                                            >
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-sm font-bold text-foreground group-hover/name:text-primary transition-colors underline-offset-4 decoration-primary/30 group-hover/name:underline decoration-2">{item.name}</span>
-                                                                    {item.pendingValue === 0 && (
-                                                                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest">QUITADO</span>
-                                                                    )}
-                                                                </div>
-                                                                <span className="text-[10px] text-muted-foreground">{item.orderCount} produções no período</span>
-                                                            </button>
-                                                        </td>
-                                                        <td className="px-4 py-4">
-                                                            <div className="flex flex-col gap-1">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 text-white font-mono uppercase">{item.pixType || 'PIX'}</span>
-                                                                    <span className="text-xs font-mono text-muted-foreground truncate max-w-[150px]">{item.pixKey || 'Não cadastrado'}</span>
-                                                                </div>
-                                                                {item.bank && <span className="text-[10px] text-muted-foreground italic">{item.bank}</span>}
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-4 py-4 text-center">
-                                                            <div className="flex flex-col items-center">
-                                                                <div className="flex flex-col gap-1 items-center">
-                                                                    <div className="flex -space-x-2">
-                                                                        {item.orders.slice(0, 3).map((order, idx) => (
-                                                                            <div key={idx} className={`w-6 h-6 rounded-full border flex items-center justify-center text-[8px] font-bold ${order.paid ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' : 'bg-amber-500/20 border-amber-500/30 text-amber-400'}`} title={order.title}>
-                                                                                {idx + 1}
-                                                                            </div>
-                                                                        ))}
-                                                                        {item.orderCount > 3 && (
-                                                                            <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[8px] font-bold text-muted-foreground">
-                                                                                +{item.orderCount - 3}
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-4 text-right">
-                                                            <div className="flex flex-col items-end">
-                                                                {item.pendingValue > 0 && (
-                                                                    <span className="text-sm font-black text-amber-500">{formatCurrency(item.pendingValue)}</span>
-                                                                )}
-                                                                {item.paidValue > 0 && (
-                                                                    <span className={`font-black text-emerald-500 ${item.pendingValue > 0 ? 'text-[10px] opacity-60' : 'text-sm'}`}>
-                                                                        {item.pendingValue > 0 ? 'Pago: ' : ''}{formatCurrency(item.paidValue)}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                        ));
+                                    })()}
+                                </tbody>
+                            </table>
                         </div>
-                    </div>
-                </div>
+                    </div >
+                </div >
             )}
-            {selectedLocutorCache && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-card rounded-3xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden border border-border animate-in zoom-in-95 duration-200">
-                        {/* Header */}
-                        <div className="p-6 border-b border-border flex items-center justify-between">
-                            <div>
-                                <h2 className="text-xl font-bold text-foreground">{selectedLocutorCache.name}</h2>
-                                <p className="text-xs text-muted-foreground mt-1">Detalhamento de produções pendentes</p>
-                            </div>
-                            <button
-                                onClick={() => setSelectedLocutorCache(null)}
-                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-muted-foreground hover:text-foreground"
-                            >
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Summary Info */}
-                        <div className="p-4 bg-white/5 border-b border-border flex items-center justify-around text-center">
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-1">Total Produções</p>
-                                <p className="text-lg font-black text-primary">{selectedLocutorCache.orderCount}</p>
-                            </div>
-                            <div className="w-px h-8 bg-border" />
-                            <div>
-                                <p className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest mb-1">Valor Total</p>
-                                <p className="text-lg font-black text-white">{formatCurrency(selectedLocutorCache.pendingValue)}</p>
-                            </div>
-                        </div>
-
-                        {/* List */}
-                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
-                            <div className="space-y-3">
-                                {selectedLocutorCache.orders.map((order) => (
-                                    <div key={order.id} className="p-4 rounded-xl bg-white/5 border border-border hover:border-primary/30 transition-all group/item">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1 min-w-0 pr-4">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <Calendar size={12} className="text-muted-foreground" />
-                                                    <span className="text-[10px] text-muted-foreground">{formatDisplayDate(order.date)}</span>
-                                                    {order.paid ? (
-                                                        <span className="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
-                                                            <CheckCircle2 size={8} /> PAGO
-                                                        </span>
-                                                    ) : (
-                                                        <span className="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-1">
-                                                            <Clock size={8} /> PENDENTE
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <h4 className="text-sm font-bold text-foreground truncate">
-                                                    {order.numeroVenda ? `${order.numeroVenda} - ` : ''}{order.title.toUpperCase()} ({formatCurrency(order.value)})
-                                                </h4>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {!order.paid && (
-                                                    <button
-                                                        onClick={() => handleMarkCacheAsPaid(order.id)}
-                                                        className="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg hover:bg-emerald-500/20 transition-all flex items-center gap-2"
-                                                        title="Marcar como Pago"
-                                                    >
-                                                        <DollarSign size={16} />
-                                                        <span className="text-[10px] font-black uppercase tracking-widest">Pagar</span>
-                                                    </button>
-                                                )}
-                                                <button
-                                                    onClick={() => handleCopyTitle(order.title, order.id)}
-                                                    className={`p-2 rounded-lg transition-all flex items-center gap-2 ${copiedId === order.id ? 'bg-green-500/20 text-green-400' : 'bg-white/5 hover:bg-primary/20 text-muted-foreground hover:text-primary'}`}
-                                                    title="Copiar Título"
-                                                >
-                                                    {copiedId === order.id ? (
-                                                        <Check size={16} />
-                                                    ) : (
-                                                        <Copy size={16} />
-                                                    )}
-                                                    <span className="text-[10px] font-bold uppercase tracking-widest">
-                                                        {copiedId === order.id ? 'Copiado!' : 'Copiar'}
-                                                    </span>
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="p-4 bg-white/5 border-t border-border flex justify-end">
-                            <button
-                                onClick={() => setSelectedLocutorCache(null)}
-                                className="px-6 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-sm font-bold transition-all border border-border"
-                            >
-                                Fechar
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+        </div >
     );
 };
 

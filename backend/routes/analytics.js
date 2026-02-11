@@ -308,10 +308,19 @@ router.get('/cache-report', async (req, res) => {
                 date: order.date,
                 value: order.cacheValor,
                 numeroVenda: order.numeroVenda,
+                sequentialId: order.sequentialId,
                 paid: order.cachePago
             });
             return acc;
         }, {});
+
+        // Add realName mapping
+        Object.values(cacheGroups).forEach(group => {
+            const locutor = orders.find(o => o.locutorId === group.locutorId)?.locutorObj;
+            if (locutor) {
+                group.realName = locutor.realName;
+            }
+        });
 
         res.json(Object.values(cacheGroups));
     } catch (error) {
