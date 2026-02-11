@@ -72,10 +72,12 @@ const SupplierList = () => {
 
     const openPackageModal = (supplier) => {
         setSelectedSupplier(supplier);
-        setPackageForm(prev => ({
-            ...prev,
-            name: `Pacote ${new Date().toLocaleString('default', { month: 'long' })}/${new Date().getFullYear()}`
-        }));
+        setPackageForm({
+            name: `Pacote ${new Date().toLocaleString('default', { month: 'long' })}/${new Date().getFullYear()}`,
+            price: '',
+            credits: '',
+            purchaseDate: getLocalISODate()
+        });
         setShowNewPackageModal(true);
     };
 
@@ -127,12 +129,12 @@ const SupplierList = () => {
                                         <button
                                             onClick={() => {
                                                 setSelectedSupplier(supplier);
-                                                setPackageForm(prev => ({
-                                                    ...prev,
-                                                    price: '0', // Adjust mode trigger
+                                                setPackageForm({
                                                     name: '',
+                                                    price: '0', // Mode trigger
                                                     credits: '',
-                                                }));
+                                                    purchaseDate: getLocalISODate()
+                                                });
                                                 setShowNewPackageModal(true);
                                             }}
                                             className="px-3 py-2 text-xs font-bold flex items-center gap-2 rounded-lg bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 transition-colors"
@@ -273,17 +275,17 @@ const SupplierList = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-border p-6 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                         <h3 className="text-xl font-bold text-foreground mb-1">
-                            {Number(packageForm.price) === 0 ? 'Ajuste Manual de Saldo' : 'Novo Pacote de Créditos'}
+                            {packageForm.price === '0' ? 'Ajuste Manual de Saldo' : 'Novo Pacote de Créditos'}
                         </h3>
                         <p className="text-sm text-muted-foreground mb-6">
-                            {Number(packageForm.price) === 0
+                            {packageForm.price === '0'
                                 ? `Corrigir saldo de ${selectedSupplier?.name}`
                                 : `Adicionar pacote para ${selectedSupplier?.name}`}
                         </p>
 
                         <form onSubmit={handleAddPackage} className="flex flex-col flex-1 overflow-hidden">
                             <div className="space-y-4 mb-6 flex-1 overflow-y-auto custom-scrollbar px-1">
-                                {Number(packageForm.price) !== 0 && (
+                                {packageForm.price !== '0' && (
                                     <>
                                         <div>
                                             <label className="block text-xs font-medium text-muted-foreground mb-1">Nome do Pacote</label>
@@ -324,7 +326,7 @@ const SupplierList = () => {
                                     </>
                                 )}
 
-                                {Number(packageForm.price) === 0 && (
+                                {packageForm.price === '0' && (
                                     <>
                                         <div>
                                             <label className="block text-xs font-medium text-muted-foreground mb-1">Quantidade de Créditos (+ ou -)</label>
@@ -387,7 +389,7 @@ const SupplierList = () => {
                                     type="submit"
                                     className="btn-primary px-6 py-2"
                                 >
-                                    {Number(packageForm.price) === 0 ? 'Salvar Ajuste' : 'Adicionar Pacote'}
+                                    {packageForm.price === '0' ? 'Salvar Ajuste' : 'Adicionar Pacote'}
                                 </button>
                             </div>
                         </form>

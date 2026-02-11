@@ -58,6 +58,72 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
 
     const [activePackage, setActivePackage] = useState(null);
     const [fetchingPackage, setFetchingPackage] = useState(false);
+    const [loadingFullOrder, setLoadingFullOrder] = useState(false);
+
+    // Effect to fetch full order details if we only received an ID (e.g. from Dashboard Detail View)
+    useEffect(() => {
+        const fetchFullDetails = async () => {
+            // Check if we have an order with ID but missing title (key field)
+            if (order && order.id && !order.title) {
+                setLoadingFullOrder(true);
+                try {
+                    const fullOrder = await orderAPI.get(order.id);
+                    if (fullOrder) {
+                        setFormData({
+                            clientId: fullOrder.clientId || '',
+                            title: fullOrder.title || '',
+                            fileName: fullOrder.fileName || '',
+                            locutor: fullOrder.locutor || '',
+                            locutorId: fullOrder.locutorId || '',
+                            tipo: fullOrder.tipo || 'OFF',
+                            cacheValor: fullOrder.cacheValor ? Number(fullOrder.cacheValor) : 0,
+                            vendaValor: fullOrder.vendaValor ? Number(fullOrder.vendaValor) : 0,
+                            comentarios: fullOrder.comentarios || '',
+                            status: fullOrder.status || 'PEDIDO',
+                            urgency: fullOrder.urgency || 'NORMAL',
+                            faturado: fullOrder.faturado || false,
+                            entregue: fullOrder.entregue || false,
+                            dispensaNF: fullOrder.dispensaNF || false,
+                            emiteBoleto: fullOrder.emiteBoleto || false,
+                            dataFaturar: fullOrder.dataFaturar ? getLocalISODate(new Date(fullOrder.dataFaturar)) : '',
+                            vencimento: fullOrder.vencimento ? getLocalISODate(new Date(fullOrder.vencimento)) : '',
+                            pago: fullOrder.pago || false,
+                            pendenciaFinanceiro: fullOrder.pendenciaFinanceiro || false,
+                            pendenciaMotivo: fullOrder.pendenciaMotivo || '',
+                            numeroOS: fullOrder.numeroOS || '',
+                            arquivoOS: fullOrder.arquivoOS || '',
+                            serviceType: fullOrder.serviceType || '',
+                            numeroVenda: fullOrder.numeroVenda ? String(fullOrder.numeroVenda) : '',
+                            creditsConsumed: fullOrder.creditsConsumed || 1,
+                            creditsConsumedSupplier: fullOrder.creditsConsumedSupplier || fullOrder.creditsConsumed || 1,
+                            costPerCreditSnapshot: fullOrder.costPerCreditSnapshot || null,
+                            supplierId: fullOrder.supplierId || '',
+                            cachePago: fullOrder.cachePago || false,
+                            packageId: fullOrder.packageId || null,
+                            isBonus: fullOrder.isBonus || false,
+                            date: fullOrder.date ? getLocalISODate(new Date(fullOrder.date)) : getLocalISODate(),
+                            cachePaymentDate: fullOrder.cachePaymentDate ? getLocalISODate(new Date(fullOrder.cachePaymentDate)) : '',
+                            cacheBank: fullOrder.cacheBank || ''
+                        });
+
+                        // Need to trigger client search update too
+                        if (fullOrder.clientId) {
+                            // We rely on the existing useEffect [formData.clientId] to fetch package
+                            // But we need to set valid loaded clients if not loaded yet?
+                            // loadClients() is called on mount.
+                        }
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch full order details:", error);
+                    showToast.error("Erro ao carregar detalhes completos do pedido.");
+                } finally {
+                    setLoadingFullOrder(false);
+                }
+            }
+        };
+
+        fetchFullDetails();
+    }, [order]);
 
     const [osFile, setOsFile] = useState(null);
     const [fileConflict, setFileConflict] = useState(null); // { exists: true, name: '', newName: '' }
@@ -621,998 +687,1005 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 custom-scrollbar min-h-0" onPaste={handlePaste}>
-
-                    {/* Client Selection (Searchable) */}
-                    <div className="mb-6 relative">
-                        <label className="block text-sm font-medium text-muted-foreground mb-2">
-                            Cliente <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                <Search size={18} />
-                            </div>
-                            <input
-                                type="text"
-                                value={clientSearch}
-                                onChange={(e) => {
-                                    setClientSearch(e.target.value);
-                                    setShowClientDropdown(true);
-                                    if (formData.clientId) {
-                                        // Clear selection if user starts typing a new search
-                                        setFormData(prev => ({ ...prev, clientId: '' }));
-                                    }
-                                }}
-                                onFocus={() => setShowClientDropdown(true)}
-                                placeholder={loadingClients ? "Carregando clientes..." : "Pesquise o cliente..."}
-                                className={`w-full bg-input-background border ${errors.clientId ? 'border-red-500' : 'border-border'} rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                                disabled={loadingClients}
-                            />
-                            {formData.clientId && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setFormData(prev => ({ ...prev, clientId: '' }));
-                                        setClientSearch('');
-                                    }}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500"
-                                >
-                                    <X size={16} />
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Commission Button (Admin Only) */}
-                        {isAdmin && (
-                            <div className="flex justify-end mb-4">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCommissionModal(true)}
-                                    className="text-xs flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-medium bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20"
-                                >
-                                    <Users size={14} />
-                                    {pendingCommissions.length > 0
-                                        ? `Comissões Definidas (${pendingCommissions.length})`
-                                        : 'Definir Comissões Compartilhadas'}
-                                </button>
-                            </div>
-                        )}
-
-                        {/* Package Info Alert */}
-                        {formData.clientId && (
-                            <div className="mt-4">
-                                {fetchingPackage ? (
-                                    <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
-                                        <Loader2 size={14} className="animate-spin" />
-                                        Buscando informações do pacote...
-                                    </div>
-                                ) : activePackage ? (
-                                    <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/10 border-red-500/30' : 'bg-primary/5 border-primary/20'} `}>
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'} `}>
-                                                <TrendingUp size={20} />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-sm font-bold text-foreground">{activePackage.name}</h4>
-                                                <p className="text-xs text-muted-foreground">
-                                                    Vence em: {new Date(activePackage.endDate).toLocaleDateString()}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-6">
-                                            <div className="text-center md:text-right">
-                                                <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumo</p>
-                                                <p className="text-sm font-bold text-foreground">
-                                                    {activePackage.usedAudios} / {activePackage.audioLimit || '∞'}
-                                                </p>
-                                            </div>
-
-                                            {new Date(activePackage.endDate) < new Date() ? (
-                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30">
-                                                    <AlertCircle size={14} />
-                                                    <span className="text-[10px] font-bold uppercase">Pacote Expirado</span>
-                                                </div>
-                                            ) : (activePackage.audioLimit > 0 && activePackage.usedAudios >= activePackage.audioLimit) ? (
-                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30">
-                                                    <AlertCircle size={14} />
-                                                    <span className="text-[10px] font-bold uppercase">Limite Atingido</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30">
-                                                    <CheckCircle2 size={14} />
-                                                    <span className="text-[10px] font-bold uppercase">Pacote Ativo</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="p-4 rounded-2xl border border-dashed border-border bg-muted/20 flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground">
-                                            <AlertCircle size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-foreground">Sem pacote ativo</p>
-                                            <p className="text-xs text-muted-foreground">Este cliente será cobrado de forma avulsa.</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {/* Dropdown Results */}
-                        {showClientDropdown && (
-                            <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">
-                                {filteredClients.length > 0 ? (
-                                    filteredClients.map(client => (
-                                        <button
-                                            key={client.id}
-                                            type="button"
-                                            onClick={() => handleSelectClient(client)}
-                                            className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors flex flex-col border-b border-white/5 last:border-0"
-                                        >
-                                            <span className="font-bold text-foreground text-sm">{client.name}</span>
-                                            {client.razaoSocial && (
-                                                <span className="text-[10px] text-muted-foreground">{client.razaoSocial}</span>
-                                            )}
-                                        </button>
-                                    ))
-                                ) : (
-                                    <div className="p-4 text-center text-muted-foreground text-sm">
-                                        Nenhum cliente encontrado.
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                        {errors.clientId && <p className="text-red-400 text-xs mt-1">{errors.clientId}</p>}
+                {loadingFullOrder ? (
+                    <div className="flex-1 flex flex-col items-center justify-center p-12">
+                        <Loader2 className="animate-spin text-primary mb-4" size={48} />
+                        <p className="text-muted-foreground font-medium">Carregando detalhes do pedido...</p>
                     </div>
+                ) : (
+                    <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1 custom-scrollbar min-h-0" onPaste={handlePaste}>
 
-                    {/* Order Number (numeroVenda) - Only for Sales/Finance */}
-                    {formData.status === 'VENDA' && (
-                        <div className="mb-6">
+                        {/* Client Selection (Searchable) */}
+                        <div className="mb-6 relative">
                             <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Número do Pedido / Venda
+                                Cliente <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
                                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                    <Calculator size={18} />
+                                    <Search size={18} />
                                 </div>
                                 <input
                                     type="text"
-                                    name="numeroVenda"
-                                    value={formData.numeroVenda || ''}
+                                    value={clientSearch}
                                     onChange={(e) => {
-                                        const val = e.target.value.replace(/\D/g, '');
-                                        setFormData(prev => ({ ...prev, numeroVenda: val }));
+                                        setClientSearch(e.target.value);
+                                        setShowClientDropdown(true);
+                                        if (formData.clientId) {
+                                            // Clear selection if user starts typing a new search
+                                            setFormData(prev => ({ ...prev, clientId: '' }));
+                                        }
                                     }}
-                                    className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-mono"
-                                    placeholder="Deixe em branco para gerar automático..."
+                                    onFocus={() => setShowClientDropdown(true)}
+                                    placeholder={loadingClients ? "Carregando clientes..." : "Pesquise o cliente..."}
+                                    className={`w-full bg-input-background border ${errors.clientId ? 'border-red-500' : 'border-border'} rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                    disabled={loadingClients}
                                 />
+                                {formData.clientId && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setFormData(prev => ({ ...prev, clientId: '' }));
+                                            setClientSearch('');
+                                        }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-red-500"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
                             </div>
-                            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1 italic">
-                                * Se deixado em branco, o sistema gerará o próximo número da sequência automaticamente.
-                            </p>
-                        </div>
-                    )}
 
-                    {/* Order Details */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                        <div className={initialStatus === 'VENDA' ? "md:col-span-2" : "md:col-span-2"}>
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                {initialStatus === 'VENDA' ? 'Título' : 'Título do Áudio'} <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                                type="text"
-                                name="title"
-                                value={formData.title}
-                                onChange={handleChange}
-                                className={`w-full bg-input-background border ${errors.title ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
-                                placeholder={initialStatus === 'VENDA' ? "Ex: Mensalidade Janeiro" : "Ex: Spot Black Friday 30s"}
-                            />
-                            {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
-                        </div>
+                            {/* Commission Button (Admin Only) */}
+                            {isAdmin && (
+                                <div className="flex justify-end mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCommissionModal(true)}
+                                        className="text-xs flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors font-medium bg-primary/10 px-3 py-1.5 rounded-lg border border-primary/20"
+                                    >
+                                        <Users size={14} />
+                                        {pendingCommissions.length > 0
+                                            ? `Comissões Definidas (${pendingCommissions.length})`
+                                            : 'Definir Comissões Compartilhadas'}
+                                    </button>
+                                </div>
+                            )}
 
-                        {/* Date Field */}
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                                <Calendar size={16} />
-                                Data de Competência
-                            </label>
-                            <input
-                                type="date"
-                                name="date"
-                                value={formData.date}
-                                onChange={handleChange}
-                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-medium"
-                            />
-                            <p className="text-[10px] text-muted-foreground mt-1 ml-1">
-                                * Deixe em branco para usar a data de hoje.
-                            </p>
-                        </div>
-
-                        {initialStatus === 'VENDA' ? (
-                            <div className="md:col-span-2 relative">
-                                <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Tipo de Serviço / Categoria
-                                </label>
-                                <div className="flex gap-2">
-                                    <div className="relative flex-1">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                            <Search size={16} />
+                            {/* Package Info Alert */}
+                            {formData.clientId && (
+                                <div className="mt-4">
+                                    {fetchingPackage ? (
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                                            <Loader2 size={14} className="animate-spin" />
+                                            Buscando informações do pacote...
                                         </div>
-                                        <input
-                                            type="text"
-                                            value={serviceSearch}
-                                            onChange={(e) => {
-                                                setServiceSearch(e.target.value);
-                                                setShowServiceDropdown(true);
-                                            }}
-                                            onFocus={() => setShowServiceDropdown(true)}
-                                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all text-sm"
-                                            placeholder="Busque ou digite novo serviço..."
-                                        />
+                                    ) : activePackage ? (
+                                        <div className={`p-4 rounded-2xl border flex flex-col md:flex-row md:items-center justify-between gap-4 ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/10 border-red-500/30' : 'bg-primary/5 border-primary/20'} `}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${new Date(activePackage.endDate) < new Date() ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'} `}>
+                                                    <TrendingUp size={20} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-sm font-bold text-foreground">{activePackage.name}</h4>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Vence em: {new Date(activePackage.endDate).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                                        {showServiceDropdown && (
-                                            <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
-                                                {serviceTypes
-                                                    .filter(t => t.name.toLowerCase().includes(serviceSearch.toLowerCase()))
-                                                    .map(type => (
-                                                        <button
-                                                            key={type.id}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setFormData(prev => ({ ...prev, serviceType: type.name }));
-                                                                setServiceSearch(type.name);
-                                                                setShowServiceDropdown(false);
-                                                            }}
-                                                            className="w-full text-left px-4 py-3 text-sm hover:bg-white/5 transition-colors border-b border-border last:border-0"
-                                                        >
-                                                            {type.name}
-                                                        </button>
-                                                    ))}
-                                                {serviceSearch.trim() && !serviceTypes.find(t => t.name.toUpperCase() === serviceSearch.trim().toUpperCase()) && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleAddServiceType}
-                                                        className="w-full text-left px-4 py-3 text-sm text-primary font-bold hover:bg-primary/5 transition-colors"
-                                                    >
-                                                        + Adicionar "{serviceSearch.toUpperCase()}"
-                                                    </button>
+                                            <div className="flex items-center gap-6">
+                                                <div className="text-center md:text-right">
+                                                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Consumo</p>
+                                                    <p className="text-sm font-bold text-foreground">
+                                                        {activePackage.usedAudios} / {activePackage.audioLimit || '∞'}
+                                                    </p>
+                                                </div>
+
+                                                {new Date(activePackage.endDate) < new Date() ? (
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30">
+                                                        <AlertCircle size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Pacote Expirado</span>
+                                                    </div>
+                                                ) : (activePackage.audioLimit > 0 && activePackage.usedAudios >= activePackage.audioLimit) ? (
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-500/20 text-orange-400 border border-orange-500/30">
+                                                        <AlertCircle size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Limite Atingido</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 border border-green-500/30">
+                                                        <CheckCircle2 size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Pacote Ativo</span>
+                                                    </div>
                                                 )}
                                             </div>
-                                        )}
-                                    </div>
-                                    {serviceSearch.trim() && !serviceTypes.find(t => t.name.toUpperCase() === serviceSearch.trim().toUpperCase()) && (
-                                        <button
-                                            type="button"
-                                            onClick={handleAddServiceType}
-                                            className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl hover:bg-primary/20 transition-all font-bold text-xs"
-                                        >
-                                            CADASTRAR
-                                        </button>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 rounded-2xl border border-dashed border-border bg-muted/20 flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-muted/30 flex items-center justify-center text-muted-foreground">
+                                                <AlertCircle size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-foreground">Sem pacote ativo</p>
+                                                <p className="text-xs text-muted-foreground">Este cliente será cobrado de forma avulsa.</p>
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="md:col-span-2">
+                            )}
+                            {/* Dropdown Results */}
+                            {showClientDropdown && (
+                                <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl max-h-60 overflow-y-auto custom-scrollbar animate-in zoom-in-95 duration-200">
+                                    {filteredClients.length > 0 ? (
+                                        filteredClients.map(client => (
+                                            <button
+                                                key={client.id}
+                                                type="button"
+                                                onClick={() => handleSelectClient(client)}
+                                                className="w-full text-left px-4 py-3 hover:bg-white/5 transition-colors flex flex-col border-b border-white/5 last:border-0"
+                                            >
+                                                <span className="font-bold text-foreground text-sm">{client.name}</span>
+                                                {client.razaoSocial && (
+                                                    <span className="text-[10px] text-muted-foreground">{client.razaoSocial}</span>
+                                                )}
+                                            </button>
+                                        ))
+                                    ) : (
+                                        <div className="p-4 text-center text-muted-foreground text-sm">
+                                            Nenhum cliente encontrado.
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            {errors.clientId && <p className="text-red-400 text-xs mt-1">{errors.clientId}</p>}
+                        </div>
+
+                        {/* Order Number (numeroVenda) - Only for Sales/Finance */}
+                        {formData.status === 'VENDA' && (
+                            <div className="mb-6">
                                 <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Nome do Arquivo
+                                    Número do Pedido / Venda
                                 </label>
                                 <div className="relative">
                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                                        <Paperclip size={18} />
+                                        <Calculator size={18} />
                                     </div>
                                     <input
                                         type="text"
-                                        name="fileName"
-                                        value={formData.fileName}
-                                        onChange={handleChange}
-                                        className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono text-sm"
-                                        placeholder="Ex: spot_natal_v1.mp3"
+                                        name="numeroVenda"
+                                        value={formData.numeroVenda || ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            setFormData(prev => ({ ...prev, numeroVenda: val }));
+                                        }}
+                                        className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-mono"
+                                        placeholder="Deixe em branco para gerar automático..."
                                     />
                                 </div>
+                                <p className="text-[10px] text-muted-foreground mt-1.5 ml-1 italic">
+                                    * Se deixado em branco, o sistema gerará o próximo número da sequência automaticamente.
+                                </p>
                             </div>
                         )}
 
-                        {initialStatus !== 'VENDA' && (
-                            <>
-                                <div>
-                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                        Locutor / Voz
-                                    </label>
-                                    <select
-                                        name="locutorId"
-                                        value={formData.locutorId}
-                                        onChange={handleChange}
-                                        disabled={loadingLocutores}
-                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
-                                    >
-                                        <option value="">Selecione um locutor...</option>
-                                        {locutores.map(l => (
-                                            <option key={l.id} value={l.id}>{l.name}</option>
-                                        ))}
-                                        <option value="OUTRO">-- Outro (Livre) --</option>
-                                    </select>
+                        {/* Order Details */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                            <div className={initialStatus === 'VENDA' ? "md:col-span-2" : "md:col-span-2"}>
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                    {initialStatus === 'VENDA' ? 'Título' : 'Título do Áudio'} <span className="text-red-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleChange}
+                                    className={`w-full bg-input-background border ${errors.title ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all`}
+                                    placeholder={initialStatus === 'VENDA' ? "Ex: Mensalidade Janeiro" : "Ex: Spot Black Friday 30s"}
+                                />
+                                {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
+                            </div>
 
-                                    {formData.locutorId === 'OUTRO' && (
+                            {/* Date Field */}
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                                    <Calendar size={16} />
+                                    Data de Competência
+                                </label>
+                                <input
+                                    type="date"
+                                    name="date"
+                                    value={formData.date}
+                                    onChange={handleChange}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-medium"
+                                />
+                                <p className="text-[10px] text-muted-foreground mt-1 ml-1">
+                                    * Deixe em branco para usar a data de hoje.
+                                </p>
+                            </div>
+
+                            {initialStatus === 'VENDA' ? (
+                                <div className="md:col-span-2 relative">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                        Tipo de Serviço / Categoria
+                                    </label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                                <Search size={16} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                value={serviceSearch}
+                                                onChange={(e) => {
+                                                    setServiceSearch(e.target.value);
+                                                    setShowServiceDropdown(true);
+                                                }}
+                                                onFocus={() => setShowServiceDropdown(true)}
+                                                className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all text-sm"
+                                                placeholder="Busque ou digite novo serviço..."
+                                            />
+
+                                            {showServiceDropdown && (
+                                                <div className="absolute z-50 w-full mt-2 bg-card border border-border rounded-xl shadow-2xl overflow-hidden max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                                                    {serviceTypes
+                                                        .filter(t => t.name.toLowerCase().includes(serviceSearch.toLowerCase()))
+                                                        .map(type => (
+                                                            <button
+                                                                key={type.id}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    setFormData(prev => ({ ...prev, serviceType: type.name }));
+                                                                    setServiceSearch(type.name);
+                                                                    setShowServiceDropdown(false);
+                                                                }}
+                                                                className="w-full text-left px-4 py-3 text-sm hover:bg-white/5 transition-colors border-b border-border last:border-0"
+                                                            >
+                                                                {type.name}
+                                                            </button>
+                                                        ))}
+                                                    {serviceSearch.trim() && !serviceTypes.find(t => t.name.toUpperCase() === serviceSearch.trim().toUpperCase()) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleAddServiceType}
+                                                            className="w-full text-left px-4 py-3 text-sm text-primary font-bold hover:bg-primary/5 transition-colors"
+                                                        >
+                                                            + Adicionar "{serviceSearch.toUpperCase()}"
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {serviceSearch.trim() && !serviceTypes.find(t => t.name.toUpperCase() === serviceSearch.trim().toUpperCase()) && (
+                                            <button
+                                                type="button"
+                                                onClick={handleAddServiceType}
+                                                className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-xl hover:bg-primary/20 transition-all font-bold text-xs"
+                                            >
+                                                CADASTRAR
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="md:col-span-2">
+                                    <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                        Nome do Arquivo
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                            <Paperclip size={18} />
+                                        </div>
                                         <input
                                             type="text"
-                                            name="locutor"
-                                            value={formData.locutor}
+                                            name="fileName"
+                                            value={formData.fileName}
                                             onChange={handleChange}
-                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground mt-2 focus:outline-none focus:border-primary/50 transition-all"
-                                            placeholder="Digite o nome do locutor..."
+                                            className="w-full bg-input-background border border-border rounded-xl pl-12 pr-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono text-sm"
+                                            placeholder="Ex: spot_natal_v1.mp3"
                                         />
-                                    )}
+                                    </div>
                                 </div>
+                            )}
 
-                                {/* Supplier Selection for Locutor */}
-                                {locutores.find(l => l.id === formData.locutorId)?.suppliers?.length > 0 && (
-                                    <div className="animate-in fade-in slide-in-from-top-2">
+                            {initialStatus !== 'VENDA' && (
+                                <>
+                                    <div>
                                         <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                            Fornecedor (Origem do áudio)
+                                            Locutor / Voz
                                         </label>
                                         <select
-                                            name="supplierId"
-                                            value={formData.supplierId}
+                                            name="locutorId"
+                                            value={formData.locutorId}
                                             onChange={handleChange}
-                                            required
-                                            className={`w-full bg-input-background border ${errors.supplierId ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-medium`}
+                                            disabled={loadingLocutores}
+                                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-medium"
                                         >
-                                            <option value="">Selecione o fornecedor...</option>
-                                            {locutores.find(l => l.id === formData.locutorId).suppliers.map(s => (
-                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            <option value="">Selecione um locutor...</option>
+                                            {locutores.map(l => (
+                                                <option key={l.id} value={l.id}>{l.name}</option>
                                             ))}
+                                            <option value="OUTRO">-- Outro (Livre) --</option>
                                         </select>
-                                        {errors.supplierId && <p className="text-red-400 text-xs mt-1">{errors.supplierId}</p>}
-                                    </div>
-                                )}
 
-                                {formData.supplierId && (
-                                    <div className="animate-in fade-in slide-in-from-top-2 bg-primary/5 p-5 rounded-2xl border border-primary/20 shadow-inner">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                            <div className="flex flex-col">
-                                                <label className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
-                                                    <ShoppingCart size={12} className="mr-2" /> Créditos Venda (Cliente)
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    name="creditsConsumed"
-                                                    value={formData.creditsConsumed}
-                                                    onChange={handleChange}
-                                                    min="1"
-                                                    className="w-full bg-input-background border border-green-500/20 rounded-xl px-4 py-3 text-green-400 focus:outline-none focus:border-green-500/50 transition-all font-bold text-sm"
-                                                />
-                                                <p className="text-[10px] text-muted-foreground mt-2 leading-tight">Quantidade debitada do pacote do cliente</p>
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
-                                                    <Hash size={12} className="mr-2" /> Créditos Fornecedor (Custo)
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    name="creditsConsumedSupplier"
-                                                    value={formData.creditsConsumedSupplier}
-                                                    onChange={handleChange}
-                                                    min="0"
-                                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-bold text-sm"
-                                                />
-                                                <div className="flex justify-between items-start mt-2 gap-2">
-                                                    <p className="text-[10px] text-muted-foreground leading-tight">Base para custo e saldo do locutor</p>
-                                                    <div className="text-[10px] font-black text-primary/70 whitespace-nowrap text-right uppercase tracking-tighter">
-                                                        Custo: R$ {parseFloat(locutores.find(l => l.id === formData.locutorId)?.suppliers?.find(s => s.id === formData.supplierId)?.packages[0]?.costPerCredit || 0).toFixed(2)}/un
+                                        {formData.locutorId === 'OUTRO' && (
+                                            <input
+                                                type="text"
+                                                name="locutor"
+                                                value={formData.locutor}
+                                                onChange={handleChange}
+                                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground mt-2 focus:outline-none focus:border-primary/50 transition-all"
+                                                placeholder="Digite o nome do locutor..."
+                                            />
+                                        )}
+                                    </div>
+
+                                    {/* Supplier Selection for Locutor */}
+                                    {locutores.find(l => l.id === formData.locutorId)?.suppliers?.length > 0 && (
+                                        <div className="animate-in fade-in slide-in-from-top-2">
+                                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                                Fornecedor (Origem do áudio)
+                                            </label>
+                                            <select
+                                                name="supplierId"
+                                                value={formData.supplierId}
+                                                onChange={handleChange}
+                                                required
+                                                className={`w-full bg-input-background border ${errors.supplierId ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-medium`}
+                                            >
+                                                <option value="">Selecione o fornecedor...</option>
+                                                {locutores.find(l => l.id === formData.locutorId).suppliers.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name}</option>
+                                                ))}
+                                            </select>
+                                            {errors.supplierId && <p className="text-red-400 text-xs mt-1">{errors.supplierId}</p>}
+                                        </div>
+                                    )}
+
+                                    {formData.supplierId && (
+                                        <div className="animate-in fade-in slide-in-from-top-2 bg-primary/5 p-5 rounded-2xl border border-primary/20 shadow-inner">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                <div className="flex flex-col">
+                                                    <label className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                                        <ShoppingCart size={12} className="mr-2" /> Créditos Venda (Cliente)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        name="creditsConsumed"
+                                                        value={formData.creditsConsumed}
+                                                        onChange={handleChange}
+                                                        min="1"
+                                                        className="w-full bg-input-background border border-green-500/20 rounded-xl px-4 py-3 text-green-400 focus:outline-none focus:border-green-500/50 transition-all font-bold text-sm"
+                                                    />
+                                                    <p className="text-[10px] text-muted-foreground mt-2 leading-tight">Quantidade debitada do pacote do cliente</p>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <label className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-2.5 h-4 flex items-center">
+                                                        <Hash size={12} className="mr-2" /> Créditos Fornecedor (Custo)
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        name="creditsConsumedSupplier"
+                                                        value={formData.creditsConsumedSupplier}
+                                                        onChange={handleChange}
+                                                        min="0"
+                                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 transition-all font-bold text-sm"
+                                                    />
+                                                    <div className="flex justify-between items-start mt-2 gap-2">
+                                                        <p className="text-[10px] text-muted-foreground leading-tight">Base para custo e saldo do locutor</p>
+                                                        <div className="text-[10px] font-black text-primary/70 whitespace-nowrap text-right uppercase tracking-tighter">
+                                                            Custo: R$ {parseFloat(locutores.find(l => l.id === formData.locutorId)?.suppliers?.find(s => s.id === formData.supplierId)?.packages[0]?.costPerCredit || 0).toFixed(2)}/un
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
+                                    )}
+                                    <div>
+                                        <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                            Tipo <span className="text-red-500">*</span>
+                                        </label>
+                                        <div className="flex gap-4">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="tipo"
+                                                    value="OFF"
+                                                    checked={formData.tipo === 'OFF'}
+                                                    onChange={handleChange}
+                                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
+                                                />
+                                                <span className="text-foreground text-sm">OFF (Locução)</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="radio"
+                                                    name="tipo"
+                                                    value="PRODUZIDO"
+                                                    checked={formData.tipo === 'PRODUZIDO'}
+                                                    onChange={handleChange}
+                                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
+                                                />
+                                                <span className="text-foreground text-sm">PRODUZIDO (Com trilha)</span>
+                                            </label>
+                                        </div>
                                     </div>
-                                )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Urgency Selection */}
+                        {initialStatus !== 'VENDA' && (
+                            <div className="mb-6">
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                    Nível de Urgência
+                                </label>
+                                <div className="flex gap-4">
+                                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-foreground' : 'bg-input-background border-border text-muted-foreground'} `}>
+                                        <input
+                                            type="radio"
+                                            name="urgency"
+                                            value="NORMAL"
+                                            checked={formData.urgency === 'NORMAL'}
+                                            onChange={handleChange}
+                                            className="hidden"
+                                        />
+                                        <span className="text-sm font-bold">Normal</span>
+                                    </label>
+                                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-input-background border-border text-muted-foreground'} `}>
+                                        <input
+                                            type="radio"
+                                            name="urgency"
+                                            value="ALTA"
+                                            checked={formData.urgency === 'ALTA'}
+                                            onChange={handleChange}
+                                            className="hidden"
+                                        />
+                                        <AlertCircle size={16} />
+                                        <span className="text-sm font-bold">Alta</span>
+                                    </label>
+                                    <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-input-background border-border text-muted-foreground'} `}>
+                                        <input
+                                            type="radio"
+                                            name="urgency"
+                                            value="URGENTE"
+                                            checked={formData.urgency === 'URGENTE'}
+                                            onChange={handleChange}
+                                            className="hidden"
+                                        />
+                                        <AlertCircle size={16} />
+                                        <span className="text-sm font-bold">URGENTE!</span>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Financial Values */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                                <DollarSign size={20} className="text-primary" />
+                                Valores Financeiros
+                            </h3>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <label className="block text-sm font-medium text-muted-foreground">
+                                            Valor do Cachê (R$)
+                                        </label>
+                                        {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && (
+                                            <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-primary text-primary-foreground uppercase tracking-widest animate-pulse">
+                                                Fixo Mensal
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            name="cacheValor"
+                                            value={formatCurrency(formData.cacheValor)}
+                                            onChange={handleCurrencyChange}
+                                            className={`w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono ${locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 ? 'text-primary/70' : ''} `}
+                                            placeholder="R$ 0,00"
+                                        />
+                                        {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 && (
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">Incluso no Mensal</span>
+                                            </div>
+
+                                        )}
+                                        {locutores.find(l => l.id === formData.locutorId)?.supplier && (
+                                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                                <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
+                                                    <Calculator size={10} /> Calculado (Créditos)
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div>
                                     <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                        Tipo <span className="text-red-500">*</span>
+                                        Valor da Venda (R$) {!activePackage && <span className="text-red-500">*</span>}
                                     </label>
-                                    <div className="flex gap-4">
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="tipo"
-                                                value="OFF"
-                                                checked={formData.tipo === 'OFF'}
-                                                onChange={handleChange}
-                                                className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
-                                            />
-                                            <span className="text-foreground text-sm">OFF (Locução)</span>
-                                        </label>
-                                        <label className="flex items-center gap-2 cursor-pointer">
-                                            <input
-                                                type="radio"
-                                                name="tipo"
-                                                value="PRODUZIDO"
-                                                checked={formData.tipo === 'PRODUZIDO'}
-                                                onChange={handleChange}
-                                                className="w-4 h-4 text-primary focus:ring-primary focus:ring-2"
-                                            />
-                                            <span className="text-foreground text-sm">PRODUZIDO (Com trilha)</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Urgency Selection */}
-                    {initialStatus !== 'VENDA' && (
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Nível de Urgência
-                            </label>
-                            <div className="flex gap-4">
-                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'NORMAL' ? 'bg-white/10 border-white/30 text-foreground' : 'bg-input-background border-border text-muted-foreground'} `}>
-                                    <input
-                                        type="radio"
-                                        name="urgency"
-                                        value="NORMAL"
-                                        checked={formData.urgency === 'NORMAL'}
-                                        onChange={handleChange}
-                                        className="hidden"
-                                    />
-                                    <span className="text-sm font-bold">Normal</span>
-                                </label>
-                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'ALTA' ? 'bg-orange-500/20 border-orange-500/50 text-orange-400' : 'bg-input-background border-border text-muted-foreground'} `}>
-                                    <input
-                                        type="radio"
-                                        name="urgency"
-                                        value="ALTA"
-                                        checked={formData.urgency === 'ALTA'}
-                                        onChange={handleChange}
-                                        className="hidden"
-                                    />
-                                    <AlertCircle size={16} />
-                                    <span className="text-sm font-bold">Alta</span>
-                                </label>
-                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${formData.urgency === 'URGENTE' ? 'bg-red-500/20 border-red-500/50 text-red-500 shadow-[0_0_15px_rgba(239,68,68,0.2)]' : 'bg-input-background border-border text-muted-foreground'} `}>
-                                    <input
-                                        type="radio"
-                                        name="urgency"
-                                        value="URGENTE"
-                                        checked={formData.urgency === 'URGENTE'}
-                                        onChange={handleChange}
-                                        className="hidden"
-                                    />
-                                    <AlertCircle size={16} />
-                                    <span className="text-sm font-bold">URGENTE!</span>
-                                </label>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Financial Values */}
-                    <div className="mb-6">
-                        <h3 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                            <DollarSign size={20} className="text-primary" />
-                            Valores Financeiros
-                        </h3>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <div className="flex items-center justify-between mb-2">
-                                    <label className="block text-sm font-medium text-muted-foreground">
-                                        Valor do Cachê (R$)
-                                    </label>
-                                    {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && (
-                                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-primary text-primary-foreground uppercase tracking-widest animate-pulse">
-                                            Fixo Mensal
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="relative">
                                     <input
                                         type="text"
-                                        name="cacheValor"
-                                        value={formatCurrency(formData.cacheValor)}
+                                        name="vendaValor"
+                                        value={formatCurrency(formData.vendaValor)}
                                         onChange={handleCurrencyChange}
-                                        className={`w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono ${locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 ? 'text-primary/70' : ''} `}
+                                        className={`w-full bg-input-background border ${errors.vendaValor ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono`}
                                         placeholder="R$ 0,00"
                                     />
-                                    {locutores.find(l => l.id === formData.locutorId)?.valorFixoMensal > 0 && formData.cacheValor === 0 && (
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                            <span className="text-[10px] font-bold text-primary/40 uppercase tracking-widest">Incluso no Mensal</span>
-                                        </div>
-
+                                    {errors.vendaValor && <p className="text-red-400 text-xs mt-1">{errors.vendaValor}</p>}
+                                    {activePackage && formData.vendaValor > 0 && (
+                                        <p className="text-orange-400 text-xs mt-1 flex items-center gap-1 font-bold animate-in fade-in slide-in-from-top-1">
+                                            <AlertCircle size={10} />
+                                            Pedido AVULSO: Não consome créditos e aparecerá em "PEDIDOS"
+                                        </p>
                                     )}
-                                    {locutores.find(l => l.id === formData.locutorId)?.supplier && (
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                                            <span className="text-[10px] font-bold text-primary/60 uppercase tracking-widest flex items-center gap-1">
-                                                <Calculator size={10} /> Calculado (Créditos)
-                                            </span>
-                                        </div>
+                                    {activePackage && formData.vendaValor <= 0 && !formData.isBonus && (
+                                        <p className="text-emerald-400 text-xs mt-1 flex items-center gap-1">
+                                            <CheckCircle2 size={10} />
+                                            Valor zero: Será descontado do saldo do pacote
+                                        </p>
+                                    )}
+                                    {formData.isBonus && (
+                                        <p className="text-cyan-400 text-xs mt-1 flex items-center gap-1 font-bold">
+                                            <CheckCircle2 size={10} />
+                                            PEDIDO DE CORTESIA: Não consome créditos
+                                        </p>
                                     )}
                                 </div>
+
+                                <div className="flex items-end pb-3">
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <div className="relative">
+                                            <input
+                                                type="checkbox"
+                                                name="isBonus"
+                                                checked={formData.isBonus}
+                                                onChange={handleChange}
+                                                className="sr-only"
+                                            />
+                                            <div className={`w-10 h-5 rounded-full transition-all duration-300 ${formData.isBonus ? 'bg-cyan-500' : 'bg-white/10'} `}></div>
+                                            <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 ${formData.isBonus ? 'translate-x-5' : 'translate-x-0'} `}></div>
+                                        </div>
+                                        <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${formData.isBonus ? 'text-cyan-400' : 'text-muted-foreground group-hover:text-white'} `}>
+                                            Bonificação / Cortesia
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            {/* Automatic Calculations */}
+                            <div className="mt-6 p-6 bg-input-background border border-primary/20 rounded-2xl">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Calculator size={20} className="text-primary" />
+                                    <h4 className="text-sm font-bold text-foreground uppercase tracking-wider">Cálculos Automáticos</h4>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Imposto (10%)</p>
+                                        <p className="text-lg font-bold text-foreground">{displayCalc.imposto}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Comissão (4%)</p>
+                                        <p className="text-lg font-bold text-foreground">{displayCalc.comissao}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Margem de Lucro</p>
+                                        <div className={`flex items-center gap-1 text-lg font-bold ${Number(calculations.margem) < 0 ? 'text-red-500' : 'text-[#03CC0B]'} `}>
+                                            {Number(calculations.margem) < 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
+                                            {displayCalc.margem}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground mb-1">Margem %</p>
+                                        <p className={`text-lg font-bold ${Number(calculations.margemPercentual) < 0 ? 'text-red-500' : 'text-primary'} `}>
+                                            {displayCalc.margemPercentual}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Comments and Attachments */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                Comentários / Detalhes do Dataset (Ctrl+V para colar imagem)
+                            </label>
+                            <textarea
+                                name="comentarios"
+                                value={formData.comentarios}
+                                onChange={handleChange}
+                                rows={4}
+                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all resize-none"
+                                placeholder="Observações sobre o pedido, detalhes de voz de IA, instruções especiais..."
+                            />
+
+                            {/* File Attachments */}
+                            <div className="mt-4">
+                                <label className="flex items-center gap-2 cursor-pointer w-fit">
+                                    <div className="btn-secondary px-4 py-2 flex items-center gap-2">
+                                        <Paperclip size={18} />
+                                        <span className="text-xs">Anexar Arquivo</span>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        multiple
+                                        accept="image/*,.pdf,.doc,.docx"
+                                        onChange={handleFileChange}
+                                        className="hidden"
+                                    />
+                                </label>
+
+                                {attachments.length > 0 && (
+                                    <div className="mt-4 space-y-2">
+                                        {attachments.map((file, index) => (
+                                            <div key={index} className="flex items-center justify-between p-3 bg-input-background border border-border rounded-xl">
+                                                <div className="flex items-center gap-3">
+                                                    <ImageIcon size={18} className="text-primary" />
+                                                    <span className="text-sm text-foreground">{file.name}</span>
+                                                    <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeAttachment(index)}
+                                                    className="text-red-400 hover:text-red-300 transition-colors"
+                                                >
+                                                    <X size={18} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Status Checkboxes */}
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-foreground mb-4">Status do Pedido</h3>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="entregue"
+                                        checked={formData.entregue}
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
+                                    />
+                                    <span className="text-foreground text-sm">Entregue</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="faturado"
+                                        checked={formData.faturado}
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
+                                    />
+                                    <span className="text-foreground text-sm">Faturado</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="dispensaNF"
+                                        checked={formData.dispensaNF}
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
+                                    />
+                                    <span className="text-foreground text-sm">Dispensa NF</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="emiteBoleto"
+                                        checked={formData.emiteBoleto}
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
+                                    />
+                                    <span className="text-foreground text-sm">Emite Boleto</span>
+                                </label>
+
+                                <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-green-500/10 border border-green-500/20">
+                                    <input
+                                        type="checkbox"
+                                        name="pago"
+                                        checked={formData.pago}
+                                        onChange={handleChange}
+                                        className="w-4 h-4 text-green-500 focus:ring-green-500 focus:ring-2 rounded"
+                                    />
+                                    <span className="text-green-400 font-bold text-sm">Já está PAGO</span>
+                                </label>
+
+                                {order && formData.status === 'PEDIDO' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            if (window.confirm('Deseja transformar este Pedido em Venda agora?')) {
+                                                setFormData(prev => ({ ...prev, status: 'VENDA', entregue: true }));
+                                            }
+                                        }}
+                                        className="flex items-center justify-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-all font-bold text-[10px] uppercase tracking-widest"
+                                    >
+                                        <CheckCircle2 size={14} />
+                                        Transformar em Venda
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Status/Financial Flags */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 h-full">
+                                <label className="flex items-start gap-4 cursor-pointer group">
+                                    <div className="mt-1">
+                                        <input
+                                            type="checkbox"
+                                            name="pendenciaFinanceiro"
+                                            checked={formData.pendenciaFinanceiro}
+                                            onChange={handleChange}
+                                            className="w-5 h-5 rounded-lg bg-input-background border-border text-orange-500 focus:ring-orange-500/20 focus:ring-offset-0 transition-all cursor-pointer"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
+                                            <AlertCircle size={16} />
+                                            Pendência para Financeiro
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground">Marque se faltam informações (OS, aprovação, etc.) para faturar</span>
+                                    </div>
+                                </label>
+
+                                {formData.pendenciaFinanceiro && (
+                                    <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
+                                        <textarea
+                                            name="pendenciaMotivo"
+                                            value={formData.pendenciaMotivo}
+                                            onChange={handleChange}
+                                            placeholder="Descreva o que falta para o faturamento..."
+                                            className="w-full bg-input-background border border-border rounded-xl p-4 text-foreground text-sm focus:border-orange-500 outline-none transition-all min-h-[100px]"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 h-full">
+                                <label className="flex items-start gap-4 cursor-pointer group">
+                                    <div className="mt-1">
+                                        <input
+                                            type="checkbox"
+                                            name="cachePago"
+                                            checked={formData.cachePago}
+                                            onChange={handleChange}
+                                            className="w-5 h-5 rounded-lg bg-input-background border-border text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 transition-all cursor-pointer"
+                                        />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-emerald-400 flex items-center gap-2 mb-1">
+                                            <DollarSign size={16} />
+                                            Cachê já pago?
+                                        </span>
+                                        <span className="text-[11px] text-muted-foreground">Sinalize se o locutor já recebeu este cachê (ex: pagamento antecipado)</span>
+                                    </div>
+                                </label>
+
+                                {formData.cachePago && (
+                                    <div className="mt-4 pt-4 border-t border-emerald-500/20 grid grid-cols-1 gap-4 animate-in slide-in-from-top-2">
+                                        <div>
+                                            <label className="block text-xs font-bold text-emerald-600 mb-1.5 uppercase tracking-wider">
+                                                Data do Pagamento
+                                            </label>
+                                            <input
+                                                type="date"
+                                                name="cachePaymentDate"
+                                                value={formData.cachePaymentDate || ''}
+                                                onChange={handleChange}
+                                                className="w-full bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold text-emerald-600 mb-1.5 uppercase tracking-wider">
+                                                Banco de Origem
+                                            </label>
+                                            <input
+                                                type="text"
+                                                name="cacheBank"
+                                                value={formData.cacheBank || ''}
+                                                onChange={handleChange}
+                                                placeholder="Ex: Nubank, Inter..."
+                                                className="w-full bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all"
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* OS/PP Registration */}
+                        <div className="mb-6 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
+                            <div className="flex items-center gap-2 mb-4">
+                                <FileText size={18} className="text-blue-400" />
+                                <h3 className="text-sm font-bold text-foreground">Registro de OS / PP</h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1.5 ml-1">
+                                        Número da OS / PP
+                                    </label>
+                                    <input
+                                        type="text"
+                                        name="numeroOS"
+                                        value={formData.numeroOS}
+                                        onChange={handleChange}
+                                        placeholder="Ex: 12345/2026"
+                                        className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-xs font-medium text-muted-foreground mb-1.5 ml-1">
+                                        Documento PDF (OS / PP)
+                                    </label>
+                                    <div className="flex items-center gap-2">
+                                        <label className="flex-1">
+                                            <div className={`cursor - pointer w - full flex items - center gap - 2 px - 4 py - 2.5 rounded - xl border border - dashed transition - all ${osFile ? 'bg-blue-500/10 border-blue-500/50' : 'bg-input-background border-border hover:border-blue-500/30'} `}>
+                                                <Paperclip size={16} className={osFile ? 'text-blue-400' : 'text-muted-foreground'} />
+                                                <span className={`text - xs truncate ${osFile ? 'text-blue-400 font-medium' : 'text-muted-foreground'} `}>
+                                                    {osFile ? osFile.name : formData.arquivoOS ? 'Documento anexado' : 'Selecionar PDF'}
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                accept=".pdf,image/*"
+                                                onChange={async (e) => {
+                                                    const file = e.target.files[0];
+                                                    if (file) {
+                                                        setOsFile(file);
+                                                        setCustomFilename('');
+                                                        setFileConflict(null);
+                                                        try {
+                                                            const check = await orderAPI.checkFileExists(file.name);
+                                                            if (check.exists) {
+                                                                setFileConflict({ exists: true, name: file.name });
+                                                                setCustomFilename(file.name);
+                                                            }
+                                                        } catch (err) {
+                                                            console.error('Error checking file existence:', err);
+                                                        }
+                                                    }
+                                                    // Reset input so same file can be selected again
+                                                    e.target.value = '';
+                                                }}
+                                                className="hidden"
+                                            />
+                                        </label>
+
+                                        {/* Action Buttons */}
+                                        <div className="flex items-center gap-2">
+                                            {osFile && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setOsFile(null);
+                                                        setCustomFilename('');
+                                                        setFileConflict(null);
+                                                    }}
+                                                    className="p-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all shrink-0"
+                                                    title="Cancelar seleção"
+                                                >
+                                                    <X size={18} />
+                                                </button>
+                                            )}
+
+                                            {(formData.arquivoOS || osFile) && (
+                                                <>
+                                                    {formData.arquivoOS && (
+                                                        <a
+                                                            href={`${STORAGE_URL}${formData.arquivoOS} `}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500/20 transition-all shrink-0"
+                                                            title="Visualizar PDF atual"
+                                                        >
+                                                            <ArrowUpRight size={18} />
+                                                        </a>
+                                                    )}
+
+                                                    {order?.id && formData.arquivoOS && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={handleRemoveOS}
+                                                            className="p-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all shrink-0"
+                                                            title="Remover anexo"
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {fileConflict && (
+                                <div className="mt-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 animate-in fade-in slide-in-from-top-2">
+                                    <p className="text-sm font-bold text-orange-400 flex items-center gap-2 mb-3">
+                                        <AlertCircle size={16} />
+                                        Atenção: Já existe um arquivo com este nome!
+                                    </p>
+                                    <div className="space-y-4">
+                                        <div className="flex flex-col gap-2">
+                                            <label className="text-xs text-muted-foreground ml-1">Para renomear, altere o campo abaixo:</label>
+                                            <input
+                                                type="text"
+                                                value={customFilename}
+                                                onChange={(e) => setCustomFilename(e.target.value)}
+                                                className="w-full bg-input-background border border-orange-500/30 rounded-lg px-3 py-2 text-sm text-foreground focus:border-orange-500 outline-none transition-all"
+                                                placeholder="Novo nome do arquivo"
+                                            />
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setFileConflict(null);
+                                                    // Keep customFilename as is (user choice)
+                                                }}
+                                                className="px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-all"
+                                            >
+                                                USAR ESTE NOME
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setFileConflict(null);
+                                                    setCustomFilename(''); // Will use original name and overwrite
+                                                }}
+                                                className="px-4 py-2 border border-orange-500/30 text-orange-400 rounded-lg text-xs font-bold hover:bg-orange-500/10 transition-all"
+                                            >
+                                                SOBRESCREVER ORIGINAL
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Financial Dates */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label className="block text-sm font-medium text-muted-foreground mb-2">
+                                    Data para Faturar
+                                </label>
+                                <input
+                                    type="date"
+                                    name="dataFaturar"
+                                    value={formData.dataFaturar}
+                                    onChange={handleChange}
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
+                                />
                             </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                    Valor da Venda (R$) {!activePackage && <span className="text-red-500">*</span>}
+                                    Vencimento
                                 </label>
                                 <input
-                                    type="text"
-                                    name="vendaValor"
-                                    value={formatCurrency(formData.vendaValor)}
-                                    onChange={handleCurrencyChange}
-                                    className={`w-full bg-input-background border ${errors.vendaValor ? 'border-red-500' : 'border-border'} rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all font-mono`}
-                                    placeholder="R$ 0,00"
-                                />
-                                {errors.vendaValor && <p className="text-red-400 text-xs mt-1">{errors.vendaValor}</p>}
-                                {activePackage && formData.vendaValor > 0 && (
-                                    <p className="text-orange-400 text-xs mt-1 flex items-center gap-1 font-bold animate-in fade-in slide-in-from-top-1">
-                                        <AlertCircle size={10} />
-                                        Pedido AVULSO: Não consome créditos e aparecerá em "PEDIDOS"
-                                    </p>
-                                )}
-                                {activePackage && formData.vendaValor <= 0 && !formData.isBonus && (
-                                    <p className="text-emerald-400 text-xs mt-1 flex items-center gap-1">
-                                        <CheckCircle2 size={10} />
-                                        Valor zero: Será descontado do saldo do pacote
-                                    </p>
-                                )}
-                                {formData.isBonus && (
-                                    <p className="text-cyan-400 text-xs mt-1 flex items-center gap-1 font-bold">
-                                        <CheckCircle2 size={10} />
-                                        PEDIDO DE CORTESIA: Não consome créditos
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="flex items-end pb-3">
-                                <label className="flex items-center gap-3 cursor-pointer group">
-                                    <div className="relative">
-                                        <input
-                                            type="checkbox"
-                                            name="isBonus"
-                                            checked={formData.isBonus}
-                                            onChange={handleChange}
-                                            className="sr-only"
-                                        />
-                                        <div className={`w-10 h-5 rounded-full transition-all duration-300 ${formData.isBonus ? 'bg-cyan-500' : 'bg-white/10'} `}></div>
-                                        <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-all duration-300 ${formData.isBonus ? 'translate-x-5' : 'translate-x-0'} `}></div>
-                                    </div>
-                                    <span className={`text-[11px] font-black uppercase tracking-widest transition-colors ${formData.isBonus ? 'text-cyan-400' : 'text-muted-foreground group-hover:text-white'} `}>
-                                        Bonificação / Cortesia
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
-
-                        {/* Automatic Calculations */}
-                        <div className="mt-6 p-6 bg-input-background border border-primary/20 rounded-2xl">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Calculator size={20} className="text-primary" />
-                                <h4 className="text-sm font-bold text-foreground uppercase tracking-wider">Cálculos Automáticos</h4>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Imposto (10%)</p>
-                                    <p className="text-lg font-bold text-foreground">{displayCalc.imposto}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Comissão (4%)</p>
-                                    <p className="text-lg font-bold text-foreground">{displayCalc.comissao}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Margem de Lucro</p>
-                                    <div className={`flex items-center gap-1 text-lg font-bold ${Number(calculations.margem) < 0 ? 'text-red-500' : 'text-[#03CC0B]'} `}>
-                                        {Number(calculations.margem) < 0 ? <TrendingDown size={18} /> : <TrendingUp size={18} />}
-                                        {displayCalc.margem}
-                                    </div>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground mb-1">Margem %</p>
-                                    <p className={`text-lg font-bold ${Number(calculations.margemPercentual) < 0 ? 'text-red-500' : 'text-primary'} `}>
-                                        {displayCalc.margemPercentual}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Comments and Attachments */}
-                    <div className="mb-6">
-                        <label className="block text-sm font-medium text-muted-foreground mb-2">
-                            Comentários / Detalhes do Dataset (Ctrl+V para colar imagem)
-                        </label>
-                        <textarea
-                            name="comentarios"
-                            value={formData.comentarios}
-                            onChange={handleChange}
-                            rows={4}
-                            className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all resize-none"
-                            placeholder="Observações sobre o pedido, detalhes de voz de IA, instruções especiais..."
-                        />
-
-                        {/* File Attachments */}
-                        <div className="mt-4">
-                            <label className="flex items-center gap-2 cursor-pointer w-fit">
-                                <div className="btn-secondary px-4 py-2 flex items-center gap-2">
-                                    <Paperclip size={18} />
-                                    <span className="text-xs">Anexar Arquivo</span>
-                                </div>
-                                <input
-                                    type="file"
-                                    multiple
-                                    accept="image/*,.pdf,.doc,.docx"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
-                            </label>
-
-                            {attachments.length > 0 && (
-                                <div className="mt-4 space-y-2">
-                                    {attachments.map((file, index) => (
-                                        <div key={index} className="flex items-center justify-between p-3 bg-input-background border border-border rounded-xl">
-                                            <div className="flex items-center gap-3">
-                                                <ImageIcon size={18} className="text-primary" />
-                                                <span className="text-sm text-foreground">{file.name}</span>
-                                                <span className="text-xs text-muted-foreground">({(file.size / 1024).toFixed(1)} KB)</span>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeAttachment(index)}
-                                                className="text-red-400 hover:text-red-300 transition-colors"
-                                            >
-                                                <X size={18} />
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Status Checkboxes */}
-                    <div className="mb-6">
-                        <h3 className="text-lg font-bold text-foreground mb-4">Status do Pedido</h3>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    name="entregue"
-                                    checked={formData.entregue}
+                                    type="date"
+                                    name="vencimento"
+                                    value={formData.vencimento}
                                     onChange={handleChange}
-                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
-                                />
-                                <span className="text-foreground text-sm">Entregue</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    name="faturado"
-                                    checked={formData.faturado}
-                                    onChange={handleChange}
-                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
-                                />
-                                <span className="text-foreground text-sm">Faturado</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    name="dispensaNF"
-                                    checked={formData.dispensaNF}
-                                    onChange={handleChange}
-                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
-                                />
-                                <span className="text-foreground text-sm">Dispensa NF</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input
-                                    type="checkbox"
-                                    name="emiteBoleto"
-                                    checked={formData.emiteBoleto}
-                                    onChange={handleChange}
-                                    className="w-4 h-4 text-primary focus:ring-primary focus:ring-2 rounded"
-                                />
-                                <span className="text-foreground text-sm">Emite Boleto</span>
-                            </label>
-
-                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg bg-green-500/10 border border-green-500/20">
-                                <input
-                                    type="checkbox"
-                                    name="pago"
-                                    checked={formData.pago}
-                                    onChange={handleChange}
-                                    className="w-4 h-4 text-green-500 focus:ring-green-500 focus:ring-2 rounded"
-                                />
-                                <span className="text-green-400 font-bold text-sm">Já está PAGO</span>
-                            </label>
-
-                            {order && formData.status === 'PEDIDO' && (
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        if (window.confirm('Deseja transformar este Pedido em Venda agora?')) {
-                                            setFormData(prev => ({ ...prev, status: 'VENDA', entregue: true }));
-                                        }
-                                    }}
-                                    className="flex items-center justify-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 text-green-400 hover:bg-green-500/20 transition-all font-bold text-[10px] uppercase tracking-widest"
-                                >
-                                    <CheckCircle2 size={14} />
-                                    Transformar em Venda
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Status/Financial Flags */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div className="p-4 rounded-2xl bg-orange-500/5 border border-orange-500/10 h-full">
-                            <label className="flex items-start gap-4 cursor-pointer group">
-                                <div className="mt-1">
-                                    <input
-                                        type="checkbox"
-                                        name="pendenciaFinanceiro"
-                                        checked={formData.pendenciaFinanceiro}
-                                        onChange={handleChange}
-                                        className="w-5 h-5 rounded-lg bg-input-background border-border text-orange-500 focus:ring-orange-500/20 focus:ring-offset-0 transition-all cursor-pointer"
-                                    />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-foreground flex items-center gap-2 mb-1">
-                                        <AlertCircle size={16} />
-                                        Pendência para Financeiro
-                                    </span>
-                                    <span className="text-[11px] text-muted-foreground">Marque se faltam informações (OS, aprovação, etc.) para faturar</span>
-                                </div>
-                            </label>
-
-                            {formData.pendenciaFinanceiro && (
-                                <div className="mt-4 animate-in slide-in-from-top-2 duration-200">
-                                    <textarea
-                                        name="pendenciaMotivo"
-                                        value={formData.pendenciaMotivo}
-                                        onChange={handleChange}
-                                        placeholder="Descreva o que falta para o faturamento..."
-                                        className="w-full bg-input-background border border-border rounded-xl p-4 text-foreground text-sm focus:border-orange-500 outline-none transition-all min-h-[100px]"
-                                    />
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 h-full">
-                            <label className="flex items-start gap-4 cursor-pointer group">
-                                <div className="mt-1">
-                                    <input
-                                        type="checkbox"
-                                        name="cachePago"
-                                        checked={formData.cachePago}
-                                        onChange={handleChange}
-                                        className="w-5 h-5 rounded-lg bg-input-background border-border text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 transition-all cursor-pointer"
-                                    />
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-emerald-400 flex items-center gap-2 mb-1">
-                                        <DollarSign size={16} />
-                                        Cachê já pago?
-                                    </span>
-                                    <span className="text-[11px] text-muted-foreground">Sinalize se o locutor já recebeu este cachê (ex: pagamento antecipado)</span>
-                                </div>
-                            </label>
-
-                            {formData.cachePago && (
-                                <div className="mt-4 pt-4 border-t border-emerald-500/20 grid grid-cols-1 gap-4 animate-in slide-in-from-top-2">
-                                    <div>
-                                        <label className="block text-xs font-bold text-emerald-600 mb-1.5 uppercase tracking-wider">
-                                            Data do Pagamento
-                                        </label>
-                                        <input
-                                            type="date"
-                                            name="cachePaymentDate"
-                                            value={formData.cachePaymentDate || ''}
-                                            onChange={handleChange}
-                                            className="w-full bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-emerald-600 mb-1.5 uppercase tracking-wider">
-                                            Banco de Origem
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="cacheBank"
-                                            value={formData.cacheBank || ''}
-                                            onChange={handleChange}
-                                            placeholder="Ex: Nubank, Inter..."
-                                            className="w-full bg-input-background border border-border rounded-xl px-3 py-2 text-sm text-foreground focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/10 transition-all"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* OS/PP Registration */}
-                    <div className="mb-6 p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
-                        <div className="flex items-center gap-2 mb-4">
-                            <FileText size={18} className="text-blue-400" />
-                            <h3 className="text-sm font-bold text-foreground">Registro de OS / PP</h3>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1.5 ml-1">
-                                    Número da OS / PP
-                                </label>
-                                <input
-                                    type="text"
-                                    name="numeroOS"
-                                    value={formData.numeroOS}
-                                    onChange={handleChange}
-                                    placeholder="Ex: 12345/2026"
-                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-2.5 text-sm text-foreground focus:outline-none focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/10 transition-all"
+                                    className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
                                 />
                             </div>
-
-                            <div>
-                                <label className="block text-xs font-medium text-muted-foreground mb-1.5 ml-1">
-                                    Documento PDF (OS / PP)
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <label className="flex-1">
-                                        <div className={`cursor - pointer w - full flex items - center gap - 2 px - 4 py - 2.5 rounded - xl border border - dashed transition - all ${osFile ? 'bg-blue-500/10 border-blue-500/50' : 'bg-input-background border-border hover:border-blue-500/30'} `}>
-                                            <Paperclip size={16} className={osFile ? 'text-blue-400' : 'text-muted-foreground'} />
-                                            <span className={`text - xs truncate ${osFile ? 'text-blue-400 font-medium' : 'text-muted-foreground'} `}>
-                                                {osFile ? osFile.name : formData.arquivoOS ? 'Documento anexado' : 'Selecionar PDF'}
-                                            </span>
-                                        </div>
-                                        <input
-                                            type="file"
-                                            accept=".pdf,image/*"
-                                            onChange={async (e) => {
-                                                const file = e.target.files[0];
-                                                if (file) {
-                                                    setOsFile(file);
-                                                    setCustomFilename('');
-                                                    setFileConflict(null);
-                                                    try {
-                                                        const check = await orderAPI.checkFileExists(file.name);
-                                                        if (check.exists) {
-                                                            setFileConflict({ exists: true, name: file.name });
-                                                            setCustomFilename(file.name);
-                                                        }
-                                                    } catch (err) {
-                                                        console.error('Error checking file existence:', err);
-                                                    }
-                                                }
-                                                // Reset input so same file can be selected again
-                                                e.target.value = '';
-                                            }}
-                                            className="hidden"
-                                        />
-                                    </label>
-
-                                    {/* Action Buttons */}
-                                    <div className="flex items-center gap-2">
-                                        {osFile && (
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setOsFile(null);
-                                                    setCustomFilename('');
-                                                    setFileConflict(null);
-                                                }}
-                                                className="p-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all shrink-0"
-                                                title="Cancelar seleção"
-                                            >
-                                                <X size={18} />
-                                            </button>
-                                        )}
-
-                                        {(formData.arquivoOS || osFile) && (
-                                            <>
-                                                {formData.arquivoOS && (
-                                                    <a
-                                                        href={`${STORAGE_URL}${formData.arquivoOS} `}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl hover:bg-blue-500/20 transition-all shrink-0"
-                                                        title="Visualizar PDF atual"
-                                                    >
-                                                        <ArrowUpRight size={18} />
-                                                    </a>
-                                                )}
-
-                                                {order?.id && formData.arquivoOS && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleRemoveOS}
-                                                        className="p-2.5 bg-red-500/10 text-red-400 rounded-xl hover:bg-red-500/20 transition-all shrink-0"
-                                                        title="Remover anexo"
-                                                    >
-                                                        <Trash2 size={18} />
-                                                    </button>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
                         </div>
-
-                        {fileConflict && (
-                            <div className="mt-4 p-4 rounded-xl bg-orange-500/10 border border-orange-500/20 animate-in fade-in slide-in-from-top-2">
-                                <p className="text-sm font-bold text-orange-400 flex items-center gap-2 mb-3">
-                                    <AlertCircle size={16} />
-                                    Atenção: Já existe um arquivo com este nome!
-                                </p>
-                                <div className="space-y-4">
-                                    <div className="flex flex-col gap-2">
-                                        <label className="text-xs text-muted-foreground ml-1">Para renomear, altere o campo abaixo:</label>
-                                        <input
-                                            type="text"
-                                            value={customFilename}
-                                            onChange={(e) => setCustomFilename(e.target.value)}
-                                            className="w-full bg-input-background border border-orange-500/30 rounded-lg px-3 py-2 text-sm text-foreground focus:border-orange-500 outline-none transition-all"
-                                            placeholder="Novo nome do arquivo"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setFileConflict(null);
-                                                // Keep customFilename as is (user choice)
-                                            }}
-                                            className="px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-bold hover:bg-orange-600 transition-all"
-                                        >
-                                            USAR ESTE NOME
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setFileConflict(null);
-                                                setCustomFilename(''); // Will use original name and overwrite
-                                            }}
-                                            className="px-4 py-2 border border-orange-500/30 text-orange-400 rounded-lg text-xs font-bold hover:bg-orange-500/10 transition-all"
-                                        >
-                                            SOBRESCREVER ORIGINAL
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Financial Dates */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Data para Faturar
-                            </label>
-                            <input
-                                type="date"
-                                name="dataFaturar"
-                                value={formData.dataFaturar}
-                                onChange={handleChange}
-                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-muted-foreground mb-2">
-                                Vencimento
-                            </label>
-                            <input
-                                type="date"
-                                name="vencimento"
-                                value={formData.vencimento}
-                                onChange={handleChange}
-                                className="w-full bg-input-background border border-border rounded-xl px-4 py-3 text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all"
-                            />
-                        </div>
-                    </div>
-                </form >
+                    </form>
+                )}
 
                 {/* Footer Actions */}
                 <div className="flex-none flex items-center justify-between p-6 border-t border-border bg-card">
