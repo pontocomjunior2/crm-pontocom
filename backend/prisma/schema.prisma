@@ -78,6 +78,7 @@ model Order {
   supplierId              String?
   packageId               String?
   wasReopened             Boolean        @default(false)
+  isCachePrePaid          Boolean        @default(false)
   isBonus                 Boolean        @default(false)
   consumptionId           String?
   packageName             String?

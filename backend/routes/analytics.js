@@ -260,34 +260,74 @@ router.get('/cache-report', async (req, res) => {
             if (Object.keys(dateFilter.date).length === 0) delete dateFilter.date;
         }
 
-        // Get orders with caches, excluding supplier-linked locutores
+        // Get ALL orders with caches (including those with locutorId)
         const orders = await prisma.order.findMany({
             where: {
                 ...dateFilter,
-                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] }, // Only processed orders generate cache payments
-                cacheValor: { gt: 0 },
-                locutorId: { not: null },
-                locutorObj: {
-                    suppliers: {
-                        none: {} // Not pre-paid (no suppliers linked)
-                    }
-                }
+                status: { in: ['VENDA', 'ENTREGUE', 'FATURADO'] },
+                cacheValor: { gt: 0 }
             },
             include: {
-                locutorObj: true
+                locutorObj: {
+                    include: {
+                        suppliers: true  // Include supplier relationship
+                    }
+                }
             }
         });
 
-        // Group by locutor
-        const cacheGroups = orders.reduce((acc, order) => {
-            const locId = order.locutorId;
-            if (!acc[locId]) {
-                acc[locId] = {
-                    locutorId: locId,
-                    name: order.locutorObj.name,
-                    pixKey: order.locutorObj.chavePix,
-                    pixType: order.locutorObj.tipoChavePix,
-                    bank: order.locutorObj.banco,
+        // Get ALL locutores with suppliers to create a lookup map
+        const locutoresWithSuppliers = await prisma.locutor.findMany({
+            where: {
+                suppliers: {
+                    some: {}  // Has at least one supplier
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                realName: true
+            }
+        });
+
+        // Create a Set of locutor names that have suppliers (for fast lookup)
+        const locutorNamesWithSuppliers = new Set();
+        locutoresWithSuppliers.forEach(loc => {
+            if (loc.name) locutorNamesWithSuppliers.add(loc.name.toLowerCase().trim());
+            if (loc.realName) locutorNamesWithSuppliers.add(loc.realName.toLowerCase().trim());
+        });
+
+        // Filter OUT orders where the locutor has suppliers (pre-paid via packages)
+        const filteredOrders = orders.filter(order => {
+            // If has locutorObj with suppliers, exclude
+            if (order.locutorObj && order.locutorObj.suppliers.length > 0) {
+                return false;
+            }
+
+            // If no locutorObj but has a string name, check if that name matches a locutor with suppliers
+            if (!order.locutorObj && order.locutor) {
+                const orderLocutorName = order.locutor.toLowerCase().trim();
+                if (locutorNamesWithSuppliers.has(orderLocutorName)) {
+                    return false;  // Exclude: this name matches a locutor with suppliers
+                }
+            }
+
+            // Include: either no locutor match, or locutor without suppliers
+            return true;
+        });
+
+        // Group by locutor name (not ID, since many don't have locutorId)
+        const cacheGroups = filteredOrders.reduce((acc, order) => {
+            // Use locutorId if exists, otherwise use the string name
+            const groupKey = order.locutorId || order.locutor;
+
+            if (!acc[groupKey]) {
+                acc[groupKey] = {
+                    locutorId: order.locutorId,
+                    name: order.locutorObj?.name || order.locutor,
+                    pixKey: order.locutorObj?.chavePix,
+                    pixType: order.locutorObj?.tipoChavePix,
+                    bank: order.locutorObj?.banco,
                     pendingValue: 0,
                     paidValue: 0,
                     orderCount: 0,
@@ -296,20 +336,23 @@ router.get('/cache-report', async (req, res) => {
             }
 
             if (order.cachePago) {
-                acc[locId].paidValue += parseFloat(order.cacheValor);
+                acc[groupKey].paidValue += parseFloat(order.cacheValor);
             } else {
-                acc[locId].pendingValue += parseFloat(order.cacheValor);
+                acc[groupKey].pendingValue += parseFloat(order.cacheValor);
             }
 
-            acc[locId].orderCount += 1;
-            acc[locId].orders.push({
+            acc[groupKey].orderCount += 1;
+            acc[groupKey].orders.push({
                 id: order.id,
                 title: order.title,
                 date: order.date,
                 value: order.cacheValor,
                 numeroVenda: order.numeroVenda,
                 sequentialId: order.sequentialId,
-                paid: order.cachePago
+                paid: order.cachePago,
+                isCachePrePaid: order.isCachePrePaid,
+                paymentDate: order.cachePaymentDate,
+                bank: order.cacheBank || acc[groupKey].bank
             });
             return acc;
         }, {});

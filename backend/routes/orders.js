@@ -605,6 +605,7 @@ router.post('/', async (req, res) => {
                 creditsConsumedSupplier: creditsToConsumeSupplier,
                 costPerCreditSnapshot: costPerCreditVal ? parseFloat(costPerCreditVal) : null,
                 cachePago: cachePago || false,
+                isCachePrePaid: req.body.isCachePrePaid || false,
                 packageId: packageId || null,
                 packageName: req.packageName || null,
                 consumptionId: req.consumptionId || null,
@@ -774,6 +775,7 @@ router.put('/:id', async (req, res) => {
                 supplierId: supplierId || null, // Convert empty string to null
                 packageId: newPackageId, // Use the sanitized packageId
                 cachePago: cachePago !== undefined ? cachePago : undefined,
+                isCachePrePaid: req.body.isCachePrePaid !== undefined ? req.body.isCachePrePaid : undefined,
                 creditsConsumed: creditsConsumed !== undefined ? parseInt(creditsConsumed) : undefined,
                 creditsConsumedSupplier: creditsConsumedSupplier !== undefined ? parseInt(creditsConsumedSupplier) : undefined,
                 costPerCreditSnapshot: costPerCreditSnapshot !== undefined ? parseFloat(costPerCreditSnapshot) : undefined,

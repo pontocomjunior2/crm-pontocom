@@ -57,8 +57,15 @@ const Relatorios = () => {
     const [cacheData, setCacheData] = useState([]);
     const [loadingCaches, setLoadingCaches] = useState(false);
     const [cacheStatusFilter, setCacheStatusFilter] = useState('pending'); // 'pending', 'paid', 'all'
+    const [searchTerm, setSearchTerm] = useState('');
+    const [justToggledIds, setJustToggledIds] = useState(new Set());
     const [selectedLocutorCache, setSelectedLocutorCache] = useState(null);
     const [copiedId, setCopiedId] = useState(null);
+
+    // Clear toggled IDs when switching tabs or changing filters
+    useEffect(() => {
+        setJustToggledIds(new Set());
+    }, [cacheStatusFilter, activeTab]);
 
     useEffect(() => {
         fetchData();
@@ -108,15 +115,20 @@ const Relatorios = () => {
         }
     };
 
-    const handleMarkCacheAsPaid = async (orderId) => {
+    const handleMarkCacheAsPaid = async (orderId, currentStatus) => {
         try {
-            await orderAPI.update(orderId, { cachePago: true });
+            const newStatus = !currentStatus;
+            await orderAPI.update(orderId, { cachePago: newStatus });
+
+            // Track this ID so it doesn't disappear immediately from current filter
+            setJustToggledIds(prev => new Set([...prev, orderId]));
+
             // Refresh local state or re-fetch
             fetchCacheData();
-            showToast.success('Cachê marcado como pago!');
+            showToast.success(newStatus ? 'Cachê marcado como lançado/pago!' : 'Cachê marcado como pendente!');
         } catch (error) {
-            console.error('Error marking cache as paid:', error);
-            showToast.error(error);
+            console.error('Error updating cache status:', error);
+            showToast.error('Erro ao atualizar status do cachê.');
         }
     };
 
@@ -472,6 +484,25 @@ const Relatorios = () => {
                                         Todos
                                     </button>
                                 </div>
+
+                                <div className="relative ml-2">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="text"
+                                        placeholder="Pesquisar..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2 text-xs text-foreground focus:outline-none focus:border-primary/50 focus:bg-white/10 transition-all w-[240px]"
+                                    />
+                                    {searchTerm && (
+                                        <button
+                                            onClick={() => setSearchTerm('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white transition-colors"
+                                        >
+                                            <X size={12} />
+                                        </button>
+                                    )}
+                                </div>
                             </div >
 
                             <div className="flex items-center gap-4">
@@ -508,7 +539,7 @@ const Relatorios = () => {
                                 </thead>
                                 <tbody className="divide-y divide-border">
                                     {(() => {
-                                        // Flatten the list
+                                        // Flatten and filter by search
                                         const flatList = cacheData.flatMap(locutor =>
                                             locutor.orders.map(order => ({
                                                 ...order,
@@ -516,9 +547,22 @@ const Relatorios = () => {
                                                 locutorRealName: locutor.realName,
                                                 locutorId: locutor.locutorId
                                             }))
-                                        ).sort((a, b) => new Date(b.date) - new Date(a.date));
+                                        ).filter(item => {
+                                            if (!searchTerm) return true;
+                                            const search = searchTerm.toLowerCase();
+                                            return (
+                                                item.title?.toLowerCase().includes(search) ||
+                                                item.locutorName?.toLowerCase().includes(search) ||
+                                                item.locutorRealName?.toLowerCase().includes(search) ||
+                                                item.numeroVenda?.toString().includes(search) ||
+                                                item.sequentialId?.toString().includes(search)
+                                            );
+                                        }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
                                         const filteredList = flatList.filter(item => {
+                                            // If just toggled, keep it visible regardless of filter tab
+                                            if (justToggledIds.has(item.id)) return true;
+
                                             if (cacheStatusFilter === 'pending') return !item.paid;
                                             if (cacheStatusFilter === 'paid') return item.paid;
                                             return true;
@@ -567,16 +611,43 @@ const Relatorios = () => {
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-3 text-center">
-                                                    <button
-                                                        onClick={() => handleMarkCacheAsPaid(item.id)}
-                                                        className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${item.paid
-                                                            ? 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30'
-                                                            : 'bg-white/5 text-muted-foreground hover:bg-emerald-500/20 hover:text-emerald-500'
-                                                            }`}
-                                                        title={item.paid ? "Marcar como Pendente (Não implementado)" : "Marcar como Lançado/Pago"}
-                                                    >
-                                                        {item.paid ? <CheckCircle2 size={18} /> : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground group-hover:border-emerald-500" />}
-                                                    </button>
+                                                    <div className="flex flex-col items-center gap-2">
+                                                        <button
+                                                            onClick={() => handleMarkCacheAsPaid(item.id, item.paid)}
+                                                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${item.paid
+                                                                ? 'bg-emerald-500/20 text-emerald-500 hover:bg-emerald-500/30'
+                                                                : (item.isCachePrePaid
+                                                                    ? 'bg-blue-500/10 text-blue-400 hover:bg-emerald-500/20 hover:text-emerald-500 border border-blue-500/30'
+                                                                    : 'bg-white/5 text-muted-foreground hover:bg-emerald-500/20 hover:text-emerald-500')
+                                                                }`}
+                                                            title={item.paid
+                                                                ? "Marcar como Pendente"
+                                                                : (item.isCachePrePaid ? "Pré-Pago pelo Atendimento (Clique para Lançar/Confirmar)" : "Marcar como Lançado/Pago")}
+                                                        >
+                                                            {item.paid ? <CheckCircle2 size={18} /> : (item.isCachePrePaid ? <CheckCircle2 size={18} className="opacity-50" /> : <div className="w-4 h-4 rounded-full border-2 border-muted-foreground group-hover:border-emerald-500" />)}
+                                                        </button>
+
+                                                        {/* Info Display */}
+                                                        {(item.paid || item.isCachePrePaid) && (item.paymentDate || item.bank) && (
+                                                            <div className="flex flex-col items-center">
+                                                                {item.paymentDate && (
+                                                                    <span className={`text-[10px] font-medium ${item.paid ? 'text-emerald-400' : 'text-blue-400'}`}>
+                                                                        {new Date(item.paymentDate).toLocaleDateString('pt-BR')}
+                                                                    </span>
+                                                                )}
+                                                                {item.bank && (
+                                                                    <span className="text-[9px] text-muted-foreground uppercase tracking-wider">
+                                                                        {item.bank}
+                                                                    </span>
+                                                                )}
+                                                                {!item.paid && item.isCachePrePaid && (
+                                                                    <span className="text-[8px] bg-blue-500/10 text-blue-400 px-1 rounded uppercase tracking-widest mt-0.5">
+                                                                        Pré-Pago
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-3 text-center">
                                                     <button

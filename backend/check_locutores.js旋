@@ -1,0 +1,35 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function main() {
+  const locutores = await prisma.locutor.findMany({
+    include: {
+      suppliers: true
+    }
+  });
+
+  console.log('--- LOCUTORES ---');
+  locutores.forEach(l => {
+    console.log(`${l.name} (${l.id}) | Suppliers: ${l.suppliers.length}`);
+  });
+
+  const orders = await prisma.order.findMany({
+    where: { cacheValor: { gt: 0 } },
+    take: 20,
+    orderBy: { createdAt: 'desc' }
+  });
+
+  console.log('\n--- RECENT ORDERS ---');
+  for (const o of orders) {
+    const loc = o.locutorId ? await prisma.locutor.findUnique({ 
+        where: { id: o.locutorId },
+        include: { suppliers: true }
+    }) : null;
+    
+    console.log(`ID: ${o.id} | Locutor: ${loc?.name || 'NULL'} | Orders.locutor string: ${o.locutor} | Suppliers: ${loc?.suppliers.length || 0}`);
+  }
+}
+
+main()
+  .catch(e => console.error(e))
+  .finally(async () => await prisma.$disconnect());

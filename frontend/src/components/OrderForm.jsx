@@ -48,6 +48,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
         costPerCreditSnapshot: order?.costPerCreditSnapshot || null,
         supplierId: order?.supplierId || '',
         cachePago: order?.cachePago || false,
+        isCachePrePaid: order?.isCachePrePaid || false,
         packageId: order?.packageId || null,
         isBonus: order?.isBonus || false,
         isBonus: order?.isBonus || false,
@@ -99,6 +100,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                             costPerCreditSnapshot: fullOrder.costPerCreditSnapshot || null,
                             supplierId: fullOrder.supplierId || '',
                             cachePago: fullOrder.cachePago || false,
+                            isCachePrePaid: fullOrder.isCachePrePaid || false,
                             packageId: fullOrder.packageId || null,
                             isBonus: fullOrder.isBonus || false,
                             date: fullOrder.date ? getLocalISODate(new Date(fullOrder.date)) : getLocalISODate(),
@@ -585,7 +587,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                 // Let's send only if truthy.
             };
 
-            if (formData.cachePago) {
+            if (formData.isCachePrePaid) {
                 dataToSend.cachePaymentDate = formData.cachePaymentDate || null;
                 dataToSend.cacheBank = formData.cacheBank || null;
             } else {
@@ -1457,8 +1459,8 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                     <div className="mt-1">
                                         <input
                                             type="checkbox"
-                                            name="cachePago"
-                                            checked={formData.cachePago}
+                                            name="isCachePrePaid"
+                                            checked={formData.isCachePrePaid}
                                             onChange={handleChange}
                                             className="w-5 h-5 rounded-lg bg-input-background border-border text-emerald-500 focus:ring-emerald-500/20 focus:ring-offset-0 transition-all cursor-pointer"
                                         />
@@ -1472,7 +1474,7 @@ const OrderForm = ({ order = null, initialStatus = 'PEDIDO', initialClient = nul
                                     </div>
                                 </label>
 
-                                {formData.cachePago && (
+                                {formData.isCachePrePaid && (
                                     <div className="mt-4 pt-4 border-t border-emerald-500/20 grid grid-cols-1 gap-4 animate-in slide-in-from-top-2">
                                         <div>
                                             <label className="block text-xs font-bold text-emerald-600 mb-1.5 uppercase tracking-wider">
