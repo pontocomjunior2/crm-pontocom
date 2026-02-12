@@ -39,7 +39,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [filters, setFilters] = useState({
-        type: '',
+        tipo: '',
         status: '',
         id: '' // Add ID filter support
     });
@@ -101,7 +101,7 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
 
     useEffect(() => {
         fetchOrders();
-    }, [pagination.page, pagination.limit, sortConfig, refreshTrigger]); // Incluído refreshTrigger para recarregar sem desmontar
+    }, [pagination.page, pagination.limit, sortConfig, refreshTrigger]); // Removed filters and search to require manual filter click
 
     // Handle initial filters
     useEffect(() => {
@@ -310,8 +310,8 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
 
                     <div className="flex gap-2">
                         <select
-                            value={filters.type}
-                            onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                            value={filters.tipo}
+                            onChange={(e) => setFilters(prev => ({ ...prev, tipo: e.target.value }))}
                             onKeyDown={(e) => { if (e.key === 'Enter') handleSearchSubmit(e); }}
                             className="bg-input-background border border-border rounded-xl px-3 py-2 text-foreground text-xs focus:outline-none focus:border-primary/50"
                         >
@@ -328,8 +328,6 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
                         >
                             <option value="">Todos os Status</option>
                             <option value="PEDIDO">Pedidos</option>
-                            <option value="VENDA">Vendas</option>
-                            <option value="entregue">Entregues</option>
                             <option value="faturado">Faturados</option>
                         </select>
 
@@ -362,10 +360,10 @@ const OrderList = ({ onEditOrder, onAddNewOrder, onNavigate, refreshTrigger, ini
                         </div>
                     )}
 
-                    {filters.type && (
+                    {filters.tipo && (
                         <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-primary/20 border border-primary/30 text-primary text-xs font-bold">
-                            <span>Tipo: {filters.type}</span>
-                            <button onClick={() => setFilters(prev => ({ ...prev, type: '' }))} className="hover:text-foreground transition-colors"><X size={12} /></button>
+                            <span>Tipo: {filters.tipo}</span>
+                            <button onClick={() => setFilters(prev => ({ ...prev, tipo: '' }))} className="hover:text-foreground transition-colors"><X size={12} /></button>
                         </div>
                     )}
                 </div>
