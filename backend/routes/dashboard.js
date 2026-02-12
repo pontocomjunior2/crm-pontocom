@@ -329,9 +329,19 @@ router.get('/details', async (req, res) => {
                 };
 
                 if (metric === 'orderRevenue') {
-                    revenueWhere.packageId = null;
-                    revenueWhere.packageBilling = null;
-                    revenueWhere.serviceType = { not: 'SERVIÇO RECORRENTE' };
+                    // NOT in Package
+                    revenueWhere.NOT = {
+                        OR: [
+                            { packageId: { not: null } },
+                            { packageBilling: { isNot: null } },
+                            { packageName: { not: null } }
+                        ]
+                    };
+                    // NOT in Recurring (Handle NULL correctly)
+                    revenueWhere.OR = [
+                        { serviceType: { not: 'SERVIÇO RECORRENTE' } },
+                        { serviceType: null }
+                    ];
                 } else if (metric === 'recurringRevenue') {
                     revenueWhere.serviceType = 'SERVIÇO RECORRENTE';
                 } else if (metric === 'packageRevenue') {
