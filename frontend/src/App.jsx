@@ -53,7 +53,7 @@ import DashboardDetailView from './components/DashboardDetailView';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { dashboardAPI, STORAGE_URL } from './services/api';
+import { dashboardAPI, searchAPI, STORAGE_URL } from './services/api';
 import { Toaster } from 'react-hot-toast';
 import { formatCurrency, getLocalISODate } from './utils/formatters';
 
@@ -81,6 +81,33 @@ const CRM = () => {
   // Dashboard Details State
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedMetric, setSelectedMetric] = useState(null);
+
+  // Global Search State
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
+
+  // Global Search Debounce
+  useEffect(() => {
+    if (globalSearch.length < 2) {
+      setSearchResults(null);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setIsSearchingGlobal(true);
+      try {
+        const results = await searchAPI.global(globalSearch);
+        setSearchResults(results);
+      } catch (error) {
+        console.error('Error fetching global search results:', error);
+      } finally {
+        setIsSearchingGlobal(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [globalSearch]);
 
   useEffect(() => {
     // Close mobile menu when tab changes
@@ -431,9 +458,87 @@ const CRM = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Pesquisar..."
+                value={globalSearch}
+                onChange={(e) => setGlobalSearch(e.target.value)}
+                placeholder="Pesquisar clientes, pedidos..."
                 className="w-full bg-input-background border border-border rounded-lg pl-10 pr-4 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50 transition-all"
               />
+
+              {/* Search Results Dropdown */}
+              {(searchResults || isSearchingGlobal) && globalSearch.length >= 2 && (
+                <div className="absolute top-12 left-0 right-0 bg-card border border-border rounded-xl shadow-2xl z-[100] overflow-hidden max-h-[400px] flex flex-col animate-in fade-in slide-in-from-top-2">
+                  <div className="overflow-y-auto custom-scrollbar">
+                    {isSearchingGlobal && (
+                      <div className="p-4 text-center text-muted-foreground flex items-center justify-center gap-2">
+                        <Loader2 className="animate-spin" size={16} />
+                        <span className="text-xs">Buscando...</span>
+                      </div>
+                    )}
+
+                    {!isSearchingGlobal && searchResults && (
+                      <>
+                        {/* Clients Section */}
+                        {searchResults.clients.length > 0 && (
+                          <div className="p-2 border-b border-border">
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground px-2 mb-1">Clientes</p>
+                            {searchResults.clients.map(client => (
+                              <button
+                                key={client.id}
+                                onClick={() => {
+                                  setActiveTab('clientes');
+                                  setNavParams({ id: client.id });
+                                  setGlobalSearch('');
+                                }}
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors flex items-center justify-between group"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{client.name}</span>
+                                  <span className="text-[10px] text-muted-foreground">{client.cnpj_cpf}</span>
+                                </div>
+                                <Users size={14} className="text-muted-foreground" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Orders Section */}
+                        {searchResults.orders.length > 0 && (
+                          <div className="p-2">
+                            <p className="text-[10px] uppercase font-bold text-muted-foreground px-2 mb-1">Pedidos e Vendas</p>
+                            {searchResults.orders.map(order => (
+                              <button
+                                key={order.id}
+                                onClick={() => {
+                                  setActiveTab('pedidos');
+                                  setNavParams({ id: order.id });
+                                  setGlobalSearch('');
+                                }}
+                                className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-colors flex items-center justify-between group"
+                              >
+                                <div className="flex flex-col">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium text-foreground group-hover:text-primary transition-colors truncate max-w-[180px]">{order.title}</span>
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-muted-foreground">#{order.numeroVenda}</span>
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground">{new Date(order.date).toLocaleDateString('pt-BR')} • {order.status}</span>
+                                </div>
+                                <ShoppingCart size={14} className="text-muted-foreground" />
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {searchResults.clients.length === 0 && searchResults.orders.length === 0 && (
+                          <div className="p-6 text-center text-muted-foreground flex flex-col items-center gap-2">
+                            <Search size={24} className="opacity-20" />
+                            <p className="text-xs">Nenhum resultado encontrado</p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <NotificationPanel onNavigate={(tab, params) => {
@@ -626,7 +731,13 @@ const CRM = () => {
 
           {activeTab === 'clientes' && (
             <div className="flex-1 overflow-hidden h-full max-w-[1400px] mx-auto w-full">
-              <ClientList refreshTrigger={refreshTrigger} onEditClient={(c) => { setSelectedClient(c); setShowClientForm(true); }} onAddNewClient={() => { setSelectedClient(null); setShowClientForm(true); }} />
+              <ClientList
+                refreshTrigger={refreshTrigger}
+                initialFilters={activeTab === 'clientes' ? navParams : null}
+                onEditClient={(c) => { setSelectedClient(c); setShowClientForm(true); }}
+                onAddNewClient={() => { setSelectedClient(null); setShowClientForm(true); }}
+                onClearFilters={() => setNavParams(null)}
+              />
             </div>
           )}
 

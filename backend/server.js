@@ -117,6 +117,7 @@ app.use('/api/client-packages', authMiddleware, clientPackageRoutes);
 app.use('/api/recurring-services', authMiddleware, recurringServicesRoutes);
 app.use('/api/notifications', authMiddleware, require('./routes/notifications'));
 app.use('/api/admin', authMiddleware, adminConfigRoutes);
+app.use('/api/search', authMiddleware, require('./routes/search'));
 // app.use('/api/upload', authenticateToken, uploadRoutes);
 
 // Health check

@@ -24,9 +24,27 @@ import {
 import { clientAPI, importAPI } from '../services/api';
 import { formatCNPJ, formatPhone, formatCurrency } from '../utils/formatters';
 
-const ClientList = ({ onEditClient, onAddNewClient, refreshTrigger }) => {
+const ClientList = ({ onEditClient, onAddNewClient, refreshTrigger, initialFilters, onClearFilters }) => {
     const [clients, setClients] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Handle initial filters (Global Search Navigation)
+    useEffect(() => {
+        if (initialFilters?.id) {
+            const checkAndOpen = async () => {
+                try {
+                    const client = await clientAPI.get(initialFilters.id);
+                    if (client && onEditClient) {
+                        onEditClient(client);
+                        if (onClearFilters) onClearFilters();
+                    }
+                } catch (error) {
+                    console.error('Error fetching client for auto-open:', error);
+                }
+            };
+            checkAndOpen();
+        }
+    }, [initialFilters, onEditClient, onClearFilters]);
     const [search, setSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('ativado');
     const [nameFilter, setNameFilter] = useState('');

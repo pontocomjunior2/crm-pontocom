@@ -566,3 +566,7 @@ export const adminAPI = {
         method: 'POST',
     }),
 };
+
+export const searchAPI = {
+    global: async (query) => fetchAPI(`/search/global?q=${encodeURIComponent(query)}`),
+};
