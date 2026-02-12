@@ -69,6 +69,17 @@ router.get('/financial-summary', async (req, res) => {
             .filter(o => ['VENDA', 'ENTREGUE'].includes(o.status) && !o.faturado)
             .reduce((sum, order) => sum + Number(order.vendaValor), 0);
 
+        // Get commission rate and rules from config
+        const [mainConfig, packConfig, orderConfig] = await Promise.all([
+            prisma.financialConfig.findUnique({ where: { id: 'default' } }),
+            prisma.financialConfig.findUnique({ where: { id: 'settings_comm_packages' } }),
+            prisma.financialConfig.findUnique({ where: { id: 'settings_comm_orders' } })
+        ]);
+
+        const commissionRate = mainConfig?.commissionRate ? Number(mainConfig.commissionRate) : 0.04;
+        const commissionOnPackages = packConfig ? Number(packConfig.taxRate) === 1 : true;
+        const commissionOnOrders = orderConfig ? Number(orderConfig.taxRate) === 1 : true;
+
         let commissionableProfit = 0;
         orders.forEach(order => {
             const revenue = Number(order.vendaValor);
@@ -81,17 +92,32 @@ router.get('/financial-summary', async (req, res) => {
                 cost = Number(order.locutorObj.valorFixoMensal) / count;
             }
 
-            const isRecurring = order.packageId !== null || order.packageBilling !== null || order.serviceType === 'SERVIÇO RECORRENTE';
+            const isRecurring = order.serviceType === 'SERVIÇO RECORRENTE';
+            const isPackage = order.packageId !== null || order.packageBilling !== null || order.packageName !== null;
+            const hasCommissionFlag = order.hasCommission === true;
 
-            // Commission only on "Avulsos" OR "Recurring with hasCommission flag"
-            if (!isRecurring || order.hasCommission) {
+            // Determinar se este pedido gera comissão baseada nas regras
+            let shouldCommission = false;
+
+            if (isRecurring) {
+                // Recorrentes: apenas se tiver flag específica no serviço
+                shouldCommission = hasCommissionFlag;
+            } else if (isPackage) {
+                // Pacotes: baseado na configuração global
+                shouldCommission = commissionOnPackages;
+            } else {
+                // Avulsos (Orders): baseado na configuração global
+                shouldCommission = commissionOnOrders;
+            }
+
+            if (shouldCommission) {
                 commissionableProfit += (revenue - cost);
             }
         });
 
         const netProfit = totalRevenue - totalCosts;
         const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
-        const commission = commissionableProfit > 0 ? commissionableProfit * 0.04 : 0;
+        const commission = commissionableProfit > 0 ? commissionableProfit * commissionRate : 0;
 
         res.json({
             totalRevenue,

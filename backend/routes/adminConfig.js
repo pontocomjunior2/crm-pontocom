@@ -21,7 +21,15 @@ router.get('/config', authMiddleware, adminMiddleware, async (req, res) => {
             });
         }
 
-        res.json(config);
+        // Buscar configurações extras de comissão (armazenadas como linhas extras para evitar migration)
+        const packConfig = await prisma.financialConfig.findUnique({ where: { id: 'settings_comm_packages' } });
+        const orderConfig = await prisma.financialConfig.findUnique({ where: { id: 'settings_comm_orders' } });
+
+        res.json({
+            ...config,
+            commissionOnPackages: packConfig ? packConfig.taxRate.toNumber() === 1 : true,
+            commissionOnOrders: orderConfig ? orderConfig.taxRate.toNumber() === 1 : true
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Erro ao buscar configurações financeiras' });
@@ -31,8 +39,9 @@ router.get('/config', authMiddleware, adminMiddleware, async (req, res) => {
 // PUT /api/admin/config - Atualizar configurações financeiras
 router.put('/config', authMiddleware, adminMiddleware, async (req, res) => {
     try {
-        const { taxRate, commissionRate } = req.body;
+        const { taxRate, commissionRate, commissionOnPackages, commissionOnOrders } = req.body;
 
+        // Atualizar config padrão
         const config = await prisma.financialConfig.upsert({
             where: { id: 'default' },
             update: {
@@ -46,7 +55,28 @@ router.put('/config', authMiddleware, adminMiddleware, async (req, res) => {
             }
         });
 
-        res.json(config);
+        // Salvar configurações de comissão em registros auxiliares
+        if (commissionOnPackages !== undefined) {
+            await prisma.financialConfig.upsert({
+                where: { id: 'settings_comm_packages' },
+                update: { taxRate: commissionOnPackages ? 1 : 0 },
+                create: { id: 'settings_comm_packages', taxRate: commissionOnPackages ? 1 : 0, commissionRate: 0 }
+            });
+        }
+
+        if (commissionOnOrders !== undefined) {
+            await prisma.financialConfig.upsert({
+                where: { id: 'settings_comm_orders' },
+                update: { taxRate: commissionOnOrders ? 1 : 0 },
+                create: { id: 'settings_comm_orders', taxRate: commissionOnOrders ? 1 : 0, commissionRate: 0 }
+            });
+        }
+
+        res.json({
+            ...config,
+            commissionOnPackages: commissionOnPackages ?? true,
+            commissionOnOrders: commissionOnOrders ?? true
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Erro ao atualizar configurações financeiras' });

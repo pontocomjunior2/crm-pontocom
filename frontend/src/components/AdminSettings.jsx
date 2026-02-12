@@ -20,7 +20,12 @@ const AdminSettings = () => {
     const { user } = useAuth();
     // Armazena os valores como STRING para edição (formato "10.00" ou "13,75")
     // O backend espera decimais (0.10, 0.04)
-    const [config, setConfig] = useState({ taxRate: '0', commissionRate: '0' });
+    const [config, setConfig] = useState({
+        taxRate: '0',
+        commissionRate: '0',
+        commissionOnPackages: true,
+        commissionOnOrders: true
+    });
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -39,13 +44,14 @@ const AdminSettings = () => {
             ]);
 
             // Converter decimal do backend (0.10) para porcentagem (10)
-            // Se vier undefined, usa 0
             const tax = configData.taxRate ? (parseFloat(configData.taxRate) * 100).toFixed(2) : '0';
             const comm = configData.commissionRate ? (parseFloat(configData.commissionRate) * 100).toFixed(2) : '0';
 
             setConfig({
                 taxRate: tax.replace('.', ','), // Mostrar com vírgula para BR
-                commissionRate: comm.replace('.', ',')
+                commissionRate: comm.replace('.', ','),
+                commissionOnPackages: configData.commissionOnPackages ?? true,
+                commissionOnOrders: configData.commissionOnOrders ?? true
             });
             setUsers(usersData);
         } catch (error) {
@@ -58,7 +64,6 @@ const AdminSettings = () => {
 
     const handleConfigChange = (e) => {
         const { name, value } = e.target;
-        // Permite digitar números e vírgula/ponto
         if (/^[\d,.]*$/.test(value)) {
             setConfig(prev => ({ ...prev, [name]: value }));
         }
@@ -66,10 +71,8 @@ const AdminSettings = () => {
 
     const parsePercentage = (value) => {
         if (!value) return 0;
-        // Troca vírgula por ponto para parsear
         const numberVal = parseFloat(value.replace(',', '.'));
         if (isNaN(numberVal)) return 0;
-        // Divide por 100 para voltar a decimal (13.75 -> 0.1375)
         return numberVal / 100;
     };
 
@@ -79,7 +82,9 @@ const AdminSettings = () => {
 
             const dataToSend = {
                 taxRate: parsePercentage(config.taxRate),
-                commissionRate: parsePercentage(config.commissionRate)
+                commissionRate: parsePercentage(config.commissionRate),
+                commissionOnPackages: config.commissionOnPackages,
+                commissionOnOrders: config.commissionOnOrders
             };
 
             await adminAPI.updateConfig(dataToSend);
@@ -131,7 +136,6 @@ const AdminSettings = () => {
 
     return (
         <div className="flex flex-col h-full animate-in fade-in duration-500 overflow-y-auto custom-scrollbar p-6">
-            {/* Header */}
             <div className="flex items-center gap-3 mb-8">
                 <div className="w-12 h-12 rounded-2xl bg-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/10">
                     <Settings size={24} />
@@ -143,7 +147,6 @@ const AdminSettings = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Configurações Financeiras Globais */}
                 <div className="card-dark p-6 space-y-6 h-fit">
                     <div className="flex items-center gap-3 border-b border-white/5 pb-4">
                         <DollarSign className="text-emerald-500" size={20} />
@@ -167,9 +170,6 @@ const AdminSettings = () => {
                                 />
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">%</div>
                             </div>
-                            <p className="text-[10px] text-muted-foreground">
-                                Valor usado para cálculo automático de impostos na venda. Ex: Digite <span className="text-primary font-bold">13,75</span> para 13.75%
-                            </p>
                         </div>
 
                         <div className="space-y-2">
@@ -188,9 +188,46 @@ const AdminSettings = () => {
                                 />
                                 <div className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">%</div>
                             </div>
-                            <p className="text-[10px] text-muted-foreground">
-                                Porcentagem padrão aplicada sobre o spread (Venda - Cache). Ex: Digite <span className="text-primary font-bold">4,00</span> para 4%
-                            </p>
+                        </div>
+
+                        <div className="pt-4 space-y-4 border-t border-white/5">
+                            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Regras de Geração de Comissão</h4>
+
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${config.commissionOnPackages ? 'bg-primary/20 text-primary' : 'bg-white/10 text-muted-foreground'}`}>
+                                        <CheckCircle2 size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-foreground">Pacotes e Extras</p>
+                                        <p className="text-[10px] text-muted-foreground">Gerar comissão para pedidos de pacotes</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setConfig(prev => ({ ...prev, commissionOnPackages: !prev.commissionOnPackages }))}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.commissionOnPackages ? 'bg-primary' : 'bg-white/10'}`}
+                                >
+                                    <span className={`${config.commissionOnPackages ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                </button>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5">
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${config.commissionOnOrders ? 'bg-primary/20 text-primary' : 'bg-white/10 text-muted-foreground'}`}>
+                                        <CheckCircle2 size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-foreground">Pedidos Avulsos</p>
+                                        <p className="text-[10px] text-muted-foreground">Gerar comissão para lançamentos avulsos</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setConfig(prev => ({ ...prev, commissionOnOrders: !prev.commissionOnOrders }))}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.commissionOnOrders ? 'bg-primary' : 'bg-white/10'}`}
+                                >
+                                    <span className={`${config.commissionOnOrders ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -208,24 +245,13 @@ const AdminSettings = () => {
                             onClick={handleRecalculate}
                             disabled={recalculating}
                             className="px-4 py-3 rounded-xl flex items-center justify-center gap-2 font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-amber-500/20 hover:border-amber-500/40 disabled:opacity-50 transition-all"
-                            title="Recalcular valores em todos os pedidos históricos"
                         >
                             {recalculating ? <Loader2 size={18} className="animate-spin" /> : <RotateCcw size={18} />}
                         </button>
                     </div>
-                    {recalculating && (
-                        <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-start gap-3">
-                            <Loader2 className="text-blue-400 animate-spin mt-0.5" size={16} />
-                            <div>
-                                <p className="text-xs font-bold text-blue-400">Processando Recálculo...</p>
-                                <p className="text-[10px] text-blue-300/80">Isso pode levar alguns instantes dependendo do volume de dados.</p>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
-                {/* Gestão de Usuários Comissionados */}
-                <div className="card-dark p-6 flex flex-col h-[500px]">
+                <div className="card-dark p-6 flex flex-col h-[600px]">
                     <div className="flex items-center gap-3 border-b border-white/5 pb-4 mb-4">
                         <Shield className="text-indigo-500" size={20} />
                         <div>
@@ -260,14 +286,9 @@ const AdminSettings = () => {
 
                                 <button
                                     onClick={() => handleToggleEligibility(userItem.id, userItem.isCommissionEligible)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-card
-                                        ${userItem.isCommissionEligible ? 'bg-primary' : 'bg-white/10'}
-                                    `}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${userItem.isCommissionEligible ? 'bg-primary' : 'bg-white/10'}`}
                                 >
-                                    <span
-                                        className={`${userItem.isCommissionEligible ? 'translate-x-6' : 'translate-x-1'
-                                            } inline-block h-4 w-4 transform rounded-full bg-white transition-transform`}
-                                    />
+                                    <span className={`${userItem.isCommissionEligible ? 'translate-x-6' : 'translate-x-1'} inline-block h-4 w-4 transform rounded-full bg-white transition-transform`} />
                                 </button>
                             </div>
                         ))}
@@ -279,3 +300,4 @@ const AdminSettings = () => {
 };
 
 export default AdminSettings;
+
