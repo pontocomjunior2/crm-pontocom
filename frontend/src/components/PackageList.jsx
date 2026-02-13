@@ -241,7 +241,7 @@ const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
         });
     };
 
-    const handleSavePackageEdit = async () => {
+    const handleSavePackageEdit = async (forceUpdate = false) => {
         try {
             // Validações
             if (!packageFormData.name.trim()) {
@@ -249,7 +249,7 @@ const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
                 return;
             }
 
-            if (parseFloat(packageFormData.audioLimit) < editingPackage.usedAudios) {
+            if (!forceUpdate && parseFloat(packageFormData.audioLimit) < editingPackage.usedAudios) {
                 showToast.error(`Limite de áudios não pode ser menor que o consumo atual (${editingPackage.usedAudios})`);
                 return;
             }
@@ -268,7 +268,8 @@ const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
                 startDate: packageFormData.startDate,
                 endDate: packageFormData.endDate,
                 clientCode: packageFormData.clientCode || null,
-                active: packageFormData.active
+                active: packageFormData.active,
+                forceUpdate
             };
 
             await clientPackageAPI.update(editingPackage.id, updateData);
@@ -277,7 +278,16 @@ const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
             fetchPackages();
         } catch (error) {
             console.error('Error updating package:', error);
-            showToast.error('Erro ao atualizar pacote');
+
+            // Handle specific conflict for already invoiced billing
+            if (error.message && error.message.includes('faturada')) {
+                if (window.confirm(`${error.message}\n\nDeseja forçar a atualização mesmo assim?`)) {
+                    handleSavePackageEdit(true);
+                    return;
+                }
+            } else {
+                showToast.error(error.message || 'Erro ao atualizar pacote');
+            }
         }
     };
 
@@ -1590,7 +1600,7 @@ const PackageList = ({ onAddNewOrder, refreshTrigger, initialFilters }) => {
                                 Cancelar
                             </button>
                             <button
-                                onClick={handleSavePackageEdit}
+                                onClick={() => handleSavePackageEdit(false)}
                                 className="flex-1 btn-primary py-3 rounded-xl font-bold shadow-lg shadow-primary/20"
                             >
                                 Salvar Alterações

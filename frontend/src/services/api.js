@@ -23,7 +23,7 @@ const fetchAPI = async (endpoint, options = {}) => {
         let customMessage = error.message;
 
         if (status === 409) {
-            customMessage = 'Este registro (CNPJ/CPF ou E-mail) já está cadastrado no sistema.';
+            customMessage = error.message || 'Este registro (CNPJ/CPF ou E-mail) já está cadastrado no sistema.';
         } else if (status === 403) {
             customMessage = 'Acesso negado ou Sessão expirada. Por favor, faça login novamente.';
         } else if (status === 401) {
