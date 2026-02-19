@@ -216,25 +216,25 @@ const PackageOrderForm = ({ pkg, onClose, onSuccess, orderToEdit = null }) => {
         // But existing useEffect dependency array handles that.
 
         if (formData.locutorId && formData.supplierId && locutores.length > 0) {
-            const locutor = locutores.find(l => l.id === formData.locutorId);
-            const supplier = locutor?.suppliers?.find(s => s.id === formData.supplierId);
+            const locutor = locutores.find(l => String(l.id) === String(formData.locutorId));
+            const supplier = locutor?.suppliers?.find(s => String(s.id) === String(formData.supplierId));
 
             if (supplier?.packages?.length > 0) {
-                const latestPackage = supplier.packages[0];
-                const cost = parseFloat(latestPackage.costPerCredit);
-                const credits = parseInt(formData.creditsToDebit) || 1;
+                // Find latest commercial package (price > 0), fallback to index 0 if none found
+                const referencePackage = supplier.packages.find(p => parseFloat(p.price) > 0) || supplier.packages[0];
+                const cost = parseFloat(referencePackage.costPerCredit);
+                const credits = parseInt(formData.creditsConsumedSupplier) || 1;
                 const newCache = cost * credits;
 
                 setFormData(prev => {
-                    if (parseFloat(prev.cacheValor) !== newCache) {
-                        // Only update if significantly different to assume reactive change
-                        // Or just Always update if supplier package exists logic prevails
+                    if (Math.abs(parseFloat(prev.cacheValor || 0) - newCache) > 0.01) {
                         return { ...prev, cacheValor: newCache };
                     }
                     return prev;
                 });
             }
         }
+
     }, [formData.locutorId, formData.supplierId, formData.creditsToDebit, locutores]);
 
     const handleSubmit = async (e) => {

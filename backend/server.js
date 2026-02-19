@@ -148,3 +148,17 @@ app.listen(PORT, async () => {
   const systemAlertService = require('./services/systemAlertService');
   await systemAlertService.initialize();
 });
+
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Shutting down gracefully...');
+  await prisma.$disconnect();
+  process.exit(0);
+});
+

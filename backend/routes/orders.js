@@ -426,7 +426,7 @@ router.post('/', async (req, res) => {
                 costPerCreditVal = refPackage.costPerCredit;
 
                 // If cache is 0 (auto-calc) and we have credits to consume
-                if (finalCacheValor === 0 && creditsToConsumeSupplier > 0) {
+                if ((finalCacheValor === 0 || isNaN(finalCacheValor)) && creditsToConsumeSupplier > 0) {
                     finalCacheValor = parseFloat(costPerCreditVal) * creditsToConsumeSupplier;
                 }
             }
@@ -793,9 +793,45 @@ router.put('/:id', async (req, res) => {
                         razaoSocial: true,
                         cnpj_cpf: true
                     }
+                },
+                locutorObj: {
+                    include: {
+                        suppliers: {
+                            include: {
+                                packages: {
+                                    orderBy: { purchaseDate: 'desc' }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         });
+
+        // AUTO-CALC CACHE AFTER UPDATE IF NEEDED
+        if (order.locutorId && order.supplierId && (parseFloat(order.cacheValor) === 0 || cacheValor === 0)) {
+            const locutor = order.locutorObj;
+            const selectedSupplier = locutor?.suppliers.find(s => s.id === order.supplierId);
+
+            if (selectedSupplier && selectedSupplier.packages.length > 0) {
+                const latestCommercialPackage = selectedSupplier.packages.find(p => Number(p.price) > 0);
+                const refPackage = latestCommercialPackage || selectedSupplier.packages[0];
+                const costPerCreditVal = refPackage.costPerCredit;
+                const creditsToConsumeSupplier = order.creditsConsumedSupplier || 1;
+
+                const calculatedCache = parseFloat(costPerCreditVal) * creditsToConsumeSupplier;
+
+                if (calculatedCache > 0) {
+                    await prisma.order.update({
+                        where: { id: order.id },
+                        data: {
+                            cacheValor: calculatedCache,
+                            costPerCreditSnapshot: parseFloat(costPerCreditVal)
+                        }
+                    });
+                }
+            }
+        }
 
         // Sync old and new package if changed
         if (existing.packageId) await PackageService.syncPackage(existing.packageId);

@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
                         include: {
                             packages: {
                                 orderBy: { purchaseDate: 'desc' },
-                                take: 1
+                                take: 10
                             }
                         }
                     }
@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
                     include: {
                         packages: {
                             orderBy: { purchaseDate: 'desc' },
-                            take: 1
+                            take: 10
                         }
                     }
                 }

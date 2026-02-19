@@ -44,8 +44,12 @@ router.get('/', async (req, res) => {
             const purchased = purchasedMap[s.id] || 0;
             const consumed = consumedMap[s.id] || 0;
 
+            // Find the latest commercial package (price > 0) to use as cost reference
+            const referencePackage = s.packages.find(p => parseFloat(p.price) > 0) || s.packages[0];
+
             return {
                 ...s,
+                referencePackage,
                 stats: {
                     totalPurchased: purchased,
                     totalConsumed: consumed,
@@ -56,6 +60,7 @@ router.get('/', async (req, res) => {
 
         res.json(enrichedSuppliers);
     } catch (error) {
+
         console.error('Error listing suppliers:', error);
         res.status(500).json({ error: 'Failed to list suppliers' });
     }
@@ -83,11 +88,13 @@ router.post('/:id/packages', async (req, res) => {
         const { id } = req.params;
         const { name, price, credits, purchaseDate } = req.body;
 
-        if (!price || !credits) return res.status(400).json({ error: 'Price and Credits are required' });
+        if (price === undefined || credits === undefined) return res.status(400).json({ error: 'Price and Credits are required' });
 
         const priceNum = parseFloat(price);
         const creditsNum = parseInt(credits);
-        const costPerCredit = priceNum / creditsNum;
+
+        // costPerCredit is 0 if credits is 0 (adjustment package)
+        const costPerCredit = creditsNum !== 0 ? priceNum / creditsNum : 0;
 
         const pkg = await prisma.creditPackage.create({
             data: {
@@ -107,4 +114,59 @@ router.post('/:id/packages', async (req, res) => {
     }
 });
 
+// Update Credit Package
+router.put('/:id/packages/:packageId', async (req, res) => {
+    try {
+        const { id, packageId } = req.params;
+        const { name, price, credits, purchaseDate } = req.body;
+
+        const existingPackage = await prisma.creditPackage.findUnique({
+            where: { id: packageId }
+        });
+
+        if (!existingPackage) {
+            return res.status(404).json({ error: 'Package not found' });
+        }
+
+        const priceNum = price !== undefined ? parseFloat(price) : parseFloat(existingPackage.price);
+        const creditsNum = credits !== undefined ? parseInt(credits) : existingPackage.credits;
+
+        // Recalculate costPerCredit
+        const costPerCredit = creditsNum !== 0 ? priceNum / creditsNum : 0;
+
+        const updatedPkg = await prisma.creditPackage.update({
+            where: { id: packageId },
+            data: {
+                name: name || existingPackage.name,
+                price: priceNum,
+                credits: creditsNum,
+                costPerCredit: costPerCredit,
+                purchaseDate: purchaseDate ? new Date(purchaseDate) : existingPackage.purchaseDate
+            }
+        });
+
+        res.json(updatedPkg);
+    } catch (error) {
+        console.error('Error updating package:', error);
+        res.status(500).json({ error: 'Failed to update package' });
+    }
+});
+
+// Delete Credit Package
+router.delete('/:id/packages/:packageId', async (req, res) => {
+    try {
+        const { packageId } = req.params;
+
+        await prisma.creditPackage.delete({
+            where: { id: packageId }
+        });
+
+        res.json({ message: 'Package deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting package:', error);
+        res.status(500).json({ error: 'Failed to delete package' });
+    }
+});
+
 module.exports = router;
+

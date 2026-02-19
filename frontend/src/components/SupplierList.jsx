@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Package, Calendar, DollarSign, History, Building2, Settings } from 'lucide-react';
+import { Plus, Package, Calendar, DollarSign, History, Building2, Settings, Edit2, Trash2, X } from 'lucide-react';
 import { supplierAPI } from '../services/api';
 import { formatCurrency, getLocalISODate } from '../utils/formatters';
 import { showToast } from '../utils/toast';
@@ -10,6 +10,7 @@ const SupplierList = () => {
     const [showNewSupplierModal, setShowNewSupplierModal] = useState(false);
     const [showNewPackageModal, setShowNewPackageModal] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const [selectedPackage, setSelectedPackage] = useState(null); // New state for editing
     const [newSupplierName, setNewSupplierName] = useState('');
 
     // New Package Form State
@@ -50,11 +51,21 @@ const SupplierList = () => {
         }
     };
 
-    const handleAddPackage = async (e) => {
+    const handleSavePackage = async (e) => {
         e.preventDefault();
         try {
-            await supplierAPI.addPackage(selectedSupplier.id, packageForm);
+            if (selectedPackage) {
+                // Update mode
+                await supplierAPI.updatePackage(selectedSupplier.id, selectedPackage.id, packageForm);
+                showToast.success('Pacote atualizado!');
+            } else {
+                // Create mode
+                await supplierAPI.addPackage(selectedSupplier.id, packageForm);
+                showToast.success('Pacote de créditos adicionado!');
+            }
+
             setShowNewPackageModal(false);
+            setSelectedPackage(null);
             setPackageForm({
                 name: '',
                 price: '',
@@ -62,16 +73,41 @@ const SupplierList = () => {
                 purchaseDate: getLocalISODate()
             });
             fetchSuppliers();
-            showToast.success('Pacote de créditos adicionado!');
         } catch (error) {
-            console.error('Error adding package:', error);
+            console.error('Error saving package:', error);
             showToast.error(error);
         }
+    };
+
+    const handleDeletePackage = async (supplierId, packageId) => {
+        if (!confirm('Tem certeza que deseja excluir este pacote? Esta ação não pode ser desfeita.')) return;
+
+        try {
+            await supplierAPI.deletePackage(supplierId, packageId);
+            fetchSuppliers();
+            showToast.success('Pacote excluído!');
+        } catch (error) {
+            console.error('Error deleting package:', error);
+            showToast.error(error);
+        }
+    };
+
+    const openEditPackageModal = (supplier, pkg) => {
+        setSelectedSupplier(supplier);
+        setSelectedPackage(pkg);
+        setPackageForm({
+            name: pkg.name,
+            price: pkg.price.toString(),
+            credits: pkg.credits.toString(),
+            purchaseDate: pkg.purchaseDate.split('T')[0] // format YYYY-MM-DD
+        });
+        setShowNewPackageModal(true);
     };
 
 
     const openPackageModal = (supplier) => {
         setSelectedSupplier(supplier);
+        setSelectedPackage(null); // Reset edit mode
         setPackageForm({
             name: `Pacote ${new Date().toLocaleString('default', { month: 'long' })}/${new Date().getFullYear()}`,
             price: '',
@@ -179,25 +215,26 @@ const SupplierList = () => {
                                         <Package size={14} />
                                         Pacote Ref. (Custo)
                                     </h4>
-                                    {latestPackage ? (
+                                    {supplier.referencePackage ? (
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
                                                 <span className="text-xs text-muted-foreground block mb-1">Custo por Crédito</span>
                                                 <span className="text-xl font-bold text-green-400">
-                                                    {formatCurrency(latestPackage.costPerCredit)}
+                                                    {formatCurrency(supplier.referencePackage.costPerCredit)}
                                                 </span>
                                             </div>
                                             <div>
                                                 <span className="text-xs text-muted-foreground block mb-1">Ult. Compra</span>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-medium text-foreground">{latestPackage.name}</span>
+                                                    <span className="text-sm font-medium text-foreground">{supplier.referencePackage.name}</span>
                                                     <span className="text-xs text-muted-foreground">
-                                                        {latestPackage.credits} x {formatCurrency(latestPackage.price)}
+                                                        {supplier.referencePackage.credits} x {formatCurrency(supplier.referencePackage.price)}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
                                     ) : (
+
                                         <div className="text-sm text-orange-400 font-medium py-2 flex items-center gap-2">
                                             <Calendar size={16} />
                                             Nenhum pacote cadastrado. Custos não serão calculados.
@@ -213,11 +250,27 @@ const SupplierList = () => {
                                     </h4>
                                     <div className="space-y-2">
                                         {historyPackages.map(pkg => (
-                                            <div key={pkg.id} className="flex justify-between items-center text-sm p-2 rounded hover:bg-input-background transition-colors">
+                                            <div key={pkg.id} className="flex justify-between items-center text-sm p-2 rounded hover:bg-input-background group transition-colors">
                                                 <span className="text-foreground">{pkg.name}</span>
                                                 <div className="flex items-center gap-4 text-muted-foreground">
                                                     <span>{new Date(pkg.purchaseDate).toLocaleDateString()}</span>
-                                                    <span className="font-medium text-foreground">{formatCurrency(pkg.price)}</span>
+                                                    <span className="font-medium text-foreground w-20 text-right">{formatCurrency(pkg.price)}</span>
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button
+                                                            onClick={() => openEditPackageModal(supplier, pkg)}
+                                                            className="p-1 hover:text-primary transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <Edit2 size={12} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeletePackage(supplier.id, pkg.id)}
+                                                            className="p-1 hover:text-red-500 transition-colors"
+                                                            title="Excluir"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -275,15 +328,17 @@ const SupplierList = () => {
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
                     <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col border border-border p-6 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                         <h3 className="text-xl font-bold text-foreground mb-1">
-                            {packageForm.price === '0' ? 'Ajuste Manual de Saldo' : 'Novo Pacote de Créditos'}
+                            {selectedPackage ? 'Editar Pacote' : (packageForm.price === '0' ? 'Ajuste Manual de Saldo' : 'Novo Pacote de Créditos')}
                         </h3>
                         <p className="text-sm text-muted-foreground mb-6">
-                            {packageForm.price === '0'
-                                ? `Corrigir saldo de ${selectedSupplier?.name}`
-                                : `Adicionar pacote para ${selectedSupplier?.name}`}
+                            {selectedPackage
+                                ? `Alterando dados do pacote para ${selectedSupplier?.name}`
+                                : (packageForm.price === '0'
+                                    ? `Corrigir saldo de ${selectedSupplier?.name}`
+                                    : `Adicionar pacote para ${selectedSupplier?.name}`)}
                         </p>
 
-                        <form onSubmit={handleAddPackage} className="flex flex-col flex-1 overflow-hidden">
+                        <form onSubmit={handleSavePackage} className="flex flex-col flex-1 overflow-hidden">
                             <div className="space-y-4 mb-6 flex-1 overflow-y-auto custom-scrollbar px-1">
                                 {packageForm.price !== '0' && (
                                     <>
@@ -389,7 +444,7 @@ const SupplierList = () => {
                                     type="submit"
                                     className="btn-primary px-6 py-2"
                                 >
-                                    {packageForm.price === '0' ? 'Salvar Ajuste' : 'Adicionar Pacote'}
+                                    {selectedPackage ? 'Salvar Alterações' : (packageForm.price === '0' ? 'Salvar Ajuste' : 'Adicionar Pacote')}
                                 </button>
                             </div>
                         </form>

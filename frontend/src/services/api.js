@@ -411,8 +411,22 @@ export const supplierAPI = {
             method: 'POST',
             body: JSON.stringify(data),
         });
+    },
+
+    updatePackage: async (supplierId, packageId, data) => {
+        return fetchAPI(`/suppliers/${supplierId}/packages/${packageId}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    },
+
+    deletePackage: async (supplierId, packageId) => {
+        return fetchAPI(`/suppliers/${supplierId}/packages/${packageId}`, {
+            method: 'DELETE',
+        });
     }
 };
+
 
 const buildQueryString = (params) => {
     if (typeof params === 'string') return params;
